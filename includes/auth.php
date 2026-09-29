@@ -35,7 +35,7 @@ if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity']) >
     // Session expired — destroy and redirect
     session_unset();
     session_destroy();
-    header('Location: ' . dirname($_SERVER['SCRIPT_NAME'], 2) . '/login.php?reason=timeout');
+    header('Location: ' . BASE_URL . '/login.php?reason=timeout');
     exit;
 }
 $_SESSION['last_activity'] = time();
@@ -45,8 +45,7 @@ $_SESSION['last_activity'] = time();
 // ─────────────────────────────────────────────────────────────────────────────
 if (!isset($_SESSION['lsu_logged_in']) || $_SESSION['lsu_logged_in'] !== true) {
     // Not authenticated — redirect to login
-    $login_url = dirname($_SERVER['SCRIPT_NAME'], 2) . '/login.php';
-    header('Location: ' . $login_url);
+    header('Location: ' . BASE_URL . '/login.php');
     exit;
 }
 
@@ -55,7 +54,7 @@ if (!isset($_SESSION['lsu_logged_in']) || $_SESSION['lsu_logged_in'] !== true) {
 // ─────────────────────────────────────────────────────────────────────────────
 function require_role(string $role): void {
     if (!isset($_SESSION['lsu_role']) || $_SESSION['lsu_role'] !== $role) {
-        header('Location: /LSU-PORTAL/login.php?reason=unauthorized');
+        header('Location: ' . BASE_URL . '/login.php?reason=unauthorized');
         exit;
     }
 }
@@ -71,9 +70,9 @@ function is_school(): bool {
 function require_admin(): void {
     if (!is_admin()) {
         if (is_school()) {
-            header('Location: /LSU-PORTAL/school/dashboard.php');
+            header('Location: ' . BASE_URL . '/school/dashboard.php');
         } else {
-            header('Location: /LSU-PORTAL/login.php?reason=unauthorized');
+            header('Location: ' . BASE_URL . '/login.php?reason=unauthorized');
         }
         exit;
     }
@@ -81,7 +80,7 @@ function require_admin(): void {
 
 function require_school(): void {
     if (!isset($_SESSION['lsu_logged_in']) || $_SESSION['lsu_logged_in'] !== true) {
-        header('Location: /LSU-PORTAL/login.php?reason=unauthorized');
+        header('Location: ' . BASE_URL . '/login.php?reason=unauthorized');
         exit;
     }
 }

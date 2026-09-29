@@ -1,0 +1,10 @@
+# LSU Portal — Root Directory Configuration
+DirectoryIndex index.php login.php index.html
+
+# Prevent directory browsing
+Options -Indexes
+
+# Enable follow symlinks if supported
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+</IfModule>

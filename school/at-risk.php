@@ -48,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_risk_action'])
                     'action_needed'  => $action
                 ]);
             }
-            header('Location: /LSU-PORTAL/school/at-risk.php?msg=updated');
+            header('Location: ' . BASE_URL . '/school/at-risk.php?msg=updated');
             exit;
         }
     }
@@ -149,7 +149,7 @@ $schoolAtRisk = array_values(array_filter($allAtRisk, function($r) use ($school_
             <h1 class="text-lg font-bold text-textMain">At-Risk &amp; Dropout Watch</h1>
             <p class="text-xs text-muted">Early intervention tracking for students with low attendance</p>
           </div>
-          <a href="/LSU-PORTAL/school/students.php" class="btn-secondary text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5 self-start">
+          <a href="<?= BASE_URL ?>/school/students.php" class="btn-secondary text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5 self-start">
             <span>View All Students &rarr;</span>
           </a>
         </div>
@@ -245,7 +245,7 @@ $schoolAtRisk = array_values(array_filter($allAtRisk, function($r) use ($school_
         <button onclick="closeInterventionModal()" class="text-muted hover:text-textMain text-xl leading-none">&times;</button>
       </div>
 
-      <form method="POST" action="/LSU-PORTAL/school/at-risk.php" class="space-y-3.5">
+      <form method="POST" action="<?= BASE_URL ?>/school/at-risk.php" class="space-y-3.5">
         <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>"/>
         <input type="hidden" name="update_risk_action" value="1"/>
         <input type="hidden" id="modal-stu-code" name="student_code" value=""/>

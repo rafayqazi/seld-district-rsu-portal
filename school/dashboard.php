@@ -160,7 +160,7 @@ $fac_net = $current_school['facility_internet'] ?? 'Broadband / 4G';
 
           <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
             <div class="flex items-start gap-4">
-              <?php if (!empty($school_logo) && file_exists(ROOT_PATH . str_replace('/LSU-PORTAL', '', $school_logo))): ?>
+              <?php if (!empty($school_logo) && file_exists(ROOT_PATH . str_replace(BASE_URL, '', $school_logo))): ?>
                 <img src="<?= e($school_logo) ?>" alt="School Logo" class="w-16 h-16 rounded-xl object-cover border-2 border-emerald-600/30 bg-white shadow-sm flex-shrink-0"/>
               <?php else: ?>
                 <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-emerald-700 to-govNavy flex items-center justify-center text-white font-bold text-2xl shadow-sm flex-shrink-0">
@@ -205,15 +205,15 @@ $fac_net = $current_school['facility_internet'] ?? 'Broadband / 4G';
 
             <!-- Quick Action Buttons -->
             <div class="flex flex-wrap items-center gap-2 pt-2 md:pt-0">
-              <a href="/LSU-PORTAL/school/profile.php" class="btn-primary text-xs font-semibold px-3.5 py-2 rounded-lg flex items-center gap-1.5 shadow-xs">
+              <a href="<?= BASE_URL ?>/school/profile.php" class="btn-primary text-xs font-semibold px-3.5 py-2 rounded-lg flex items-center gap-1.5 shadow-xs">
                 <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                 <span>School Profile</span>
               </a>
-              <a href="/LSU-PORTAL/school/profile.php" class="btn-secondary text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5">
+              <a href="<?= BASE_URL ?>/school/profile.php" class="btn-secondary text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5">
                 <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                 <span>Edit Profile</span>
               </a>
-              <a href="/LSU-PORTAL/school/settings.php" class="btn-secondary text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5" title="Change Password & Security">
+              <a href="<?= BASE_URL ?>/school/settings.php" class="btn-secondary text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5" title="Change Password & Security">
                 <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
                 <span>Password</span>
               </a>
@@ -250,7 +250,7 @@ $fac_net = $current_school['facility_internet'] ?? 'Broadband / 4G';
             <div class="text-2xl font-bold <?= count($schoolAtRisk) > 0 ? 'text-danger' : 'text-success' ?> font-mono"><?= count($schoolAtRisk) ?></div>
             <div class="flex items-center justify-between text-[11px] text-muted mt-2 pt-2 border-t border-border">
               <span>Require follow-up intervention</span>
-              <a href="/LSU-PORTAL/school/at-risk.php" class="text-danger hover:underline font-semibold">View &rarr;</a>
+              <a href="<?= BASE_URL ?>/school/at-risk.php" class="text-danger hover:underline font-semibold">View &rarr;</a>
             </div>
           </div>
 
@@ -280,7 +280,7 @@ $fac_net = $current_school['facility_internet'] ?? 'Broadband / 4G';
             <div class="text-2xl font-bold text-textMain font-mono"><?= $classrooms_count ?> <span class="text-xs font-normal text-muted">Rooms</span></div>
             <div class="flex items-center justify-between text-[11px] text-muted mt-2 pt-2 border-t border-border">
               <span>At-Risk Students: <strong class="<?= count($schoolAtRisk) > 0 ? 'text-danger' : 'text-success' ?>"><?= count($schoolAtRisk) ?></strong></span>
-              <a href="/LSU-PORTAL/school/at-risk.php" class="text-primary hover:underline font-semibold">View &rarr;</a>
+              <a href="<?= BASE_URL ?>/school/at-risk.php" class="text-primary hover:underline font-semibold">View &rarr;</a>
             </div>
           </div>
 
@@ -293,7 +293,7 @@ $fac_net = $current_school['facility_internet'] ?? 'Broadband / 4G';
               <h2 class="text-sm font-bold text-textMain">Basic Infrastructure &amp; Facilities Status</h2>
               <p class="text-xs text-muted">SELD Sindh compliance indicators for <?= e($school_name) ?></p>
             </div>
-            <a href="/LSU-PORTAL/school/profile.php" class="text-xs text-emerald-700 hover:text-emerald-900 font-semibold flex items-center gap-1">
+            <a href="<?= BASE_URL ?>/school/profile.php" class="text-xs text-emerald-700 hover:text-emerald-900 font-semibold flex items-center gap-1">
               Update Facilities &rarr;
             </a>
           </div>
@@ -359,7 +359,7 @@ $fac_net = $current_school['facility_internet'] ?? 'Broadband / 4G';
                 <p class="text-xs text-muted">Showing students registered under this school</p>
               </div>
               <div class="flex items-center gap-2">
-                <a href="/LSU-PORTAL/school/students.php" class="btn-primary text-xs font-semibold px-3 py-1.5 rounded flex items-center gap-1">
+                <a href="<?= BASE_URL ?>/school/students.php" class="btn-primary text-xs font-semibold px-3 py-1.5 rounded flex items-center gap-1">
                   <span>Manage All Students</span>
                   <span>&rarr;</span>
                 </a>
@@ -402,7 +402,7 @@ $fac_net = $current_school['facility_internet'] ?? 'Broadband / 4G';
                 <svg class="w-10 h-10 text-slate-300 mx-auto mb-2" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
                 <div class="text-xs font-semibold text-textMain">No individual student rows configured yet</div>
                 <p class="text-[11px] text-muted mt-0.5">Total Enrollment is <?= number_format($total_enrolled) ?>. You can add student records anytime.</p>
-                <a href="/LSU-PORTAL/school/students.php" class="inline-flex items-center gap-1.5 btn-primary text-xs font-semibold px-3 py-1.5 rounded mt-3">
+                <a href="<?= BASE_URL ?>/school/students.php" class="inline-flex items-center gap-1.5 btn-primary text-xs font-semibold px-3 py-1.5 rounded mt-3">
                   <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                   <span>Add First Student Record</span>
                 </a>
@@ -417,7 +417,7 @@ $fac_net = $current_school['facility_internet'] ?? 'Broadband / 4G';
             <div class="bg-surface rounded-xl border border-border p-5 shadow-xs">
               <div class="flex items-center justify-between pb-3 border-b border-border mb-3">
                 <h3 class="text-xs font-bold uppercase tracking-wider text-muted">Head Master Profile</h3>
-                <a href="/LSU-PORTAL/school/settings.php" class="text-xs text-primary hover:underline font-semibold">Edit</a>
+                <a href="<?= BASE_URL ?>/school/settings.php" class="text-xs text-primary hover:underline font-semibold">Edit</a>
               </div>
 
               <div class="flex items-center gap-3 mb-4">
@@ -445,7 +445,7 @@ $fac_net = $current_school['facility_internet'] ?? 'Broadband / 4G';
                 </div>
               </div>
 
-              <a href="/LSU-PORTAL/school/settings.php" class="mt-4 w-full block text-center btn-secondary text-xs font-semibold py-2 rounded-lg">
+              <a href="<?= BASE_URL ?>/school/settings.php" class="mt-4 w-full block text-center btn-secondary text-xs font-semibold py-2 rounded-lg">
                 Change Password / Account Settings
               </a>
             </div>

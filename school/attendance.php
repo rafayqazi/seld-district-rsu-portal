@@ -7,5 +7,5 @@
  */
 require_once __DIR__ . '/auth_guard.php';
 
-header('Location: /LSU-PORTAL/school/dashboard.php');
+header('Location: ' . BASE_URL . '/school/dashboard.php');
 exit;

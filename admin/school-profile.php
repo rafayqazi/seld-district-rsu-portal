@@ -28,7 +28,7 @@ if (!$school && !empty($allSchools)) {
 }
 
 if (!$school) {
-    header('Location: /LSU-PORTAL/admin/schools.php');
+    header('Location: ' . BASE_URL . '/admin/schools.php');
     exit;
 }
 
@@ -49,7 +49,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             'teachers'     => (string)$tchrs,
             'non_teaching' => (string)$nonTch,
         ]);
-        header('Location: /LSU-PORTAL/admin/school-profile.php?semis=' . urlencode($targetSemis) . '&msg=staff_updated');
+        header('Location: ' . BASE_URL . '/admin/school-profile.php?semis=' . urlencode($targetSemis) . '&msg=staff_updated');
         exit;
     } elseif (isset($_POST['update_facilities'])) {
         $targetSemis = trim($_POST['target_semis'] ?? $semis);
@@ -67,7 +67,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             'facility_boundary_wall' => $wall,
             'facility_internet'      => $net,
         ]);
-        header('Location: /LSU-PORTAL/admin/school-profile.php?semis=' . urlencode($targetSemis) . '&msg=facilities_updated');
+        header('Location: ' . BASE_URL . '/admin/school-profile.php?semis=' . urlencode($targetSemis) . '&msg=facilities_updated');
         exit;
     } elseif (isset($_POST['update_school_profile'])) {
         $targetSemis = trim($_POST['target_semis'] ?? $semis);
@@ -121,14 +121,14 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         ];
 
         ExcelDB::update('schools', 'semis_code', $targetSemis, $updateData);
-        header('Location: /LSU-PORTAL/admin/school-profile.php?semis=' . urlencode($targetSemis) . '&msg=updated');
+        header('Location: ' . BASE_URL . '/admin/school-profile.php?semis=' . urlencode($targetSemis) . '&msg=updated');
         exit;
     } elseif (isset($_POST['update_hm_password'])) {
         $targetSemis = trim($_POST['target_semis'] ?? $semis);
         $newPass     = trim($_POST['new_password'] ?? '');
         if (!empty($targetSemis) && !empty($newPass)) {
             ExcelDB::updateHeadMasterPassword($targetSemis, $newPass);
-            header('Location: /LSU-PORTAL/admin/school-profile.php?semis=' . urlencode($targetSemis) . '&msg=pass_updated');
+            header('Location: ' . BASE_URL . '/admin/school-profile.php?semis=' . urlencode($targetSemis) . '&msg=pass_updated');
             exit;
         }
     }
@@ -207,8 +207,8 @@ body{font-family:'Inter',system-ui,sans-serif;}
 
 <main class="flex-1 overflow-y-auto p-4 md:p-6">
   <nav class="text-xs text-muted mb-4 flex items-center gap-1.5">
-    <a href="/LSU-PORTAL/admin/dashboard.php" class="hover:text-primary">Dashboard</a><span>/</span>
-    <a href="/LSU-PORTAL/admin/schools.php" class="hover:text-primary">Schools</a><span>/</span>
+    <a href="<?= BASE_URL ?>/admin/dashboard.php" class="hover:text-primary">Dashboard</a><span>/</span>
+    <a href="<?= BASE_URL ?>/admin/schools.php" class="hover:text-primary">Schools</a><span>/</span>
     <span class="text-textMain font-medium"><?= e($school['semis_code'] ?? '') ?></span>
   </nav>
 
@@ -248,7 +248,7 @@ body{font-family:'Inter',system-ui,sans-serif;}
           <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           Edit School Info
         </button>
-        <a href="/LSU-PORTAL/admin/schools.php" class="btn-secondary px-3 py-2 rounded text-xs font-medium flex items-center gap-1.5">
+        <a href="<?= BASE_URL ?>/admin/schools.php" class="btn-secondary px-3 py-2 rounded text-xs font-medium flex items-center gap-1.5">
           <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
           Directory
         </a>
@@ -466,7 +466,7 @@ body{font-family:'Inter',system-ui,sans-serif;}
               <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
               <span>Change / Reset HM Password</span>
             </button>
-            <a href="/LSU-PORTAL/school/dashboard.php?semis=<?= urlencode($school['semis_code'] ?? '') ?>" target="_blank" class="w-full text-xs font-semibold py-2 px-3 rounded bg-emerald-700 hover:bg-emerald-800 text-white transition text-center flex items-center justify-center gap-1.5 shadow-xs">
+            <a href= BASE_URL . '/school/dashboard.php?semis=<?= urlencode($school['semis_code'] ?? '') ?>" target="_blank" class="w-full text-xs font-semibold py-2 px-3 rounded bg-emerald-700 hover:bg-emerald-800 text-white transition text-center flex items-center justify-center gap-1.5 shadow-xs">
               <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
               <span>Launch School Portal</span>
             </a>
@@ -481,11 +481,11 @@ body{font-family:'Inter',system-ui,sans-serif;}
             <svg width="14" height="14" fill="none" stroke="#123B63" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             Edit School Information
           </button>
-          <a href="/LSU-PORTAL/admin/attendance.php" class="flex items-center gap-2.5 p-2.5 rounded border border-border hover:bg-background text-sm text-textMain transition">
+          <a href="<?= BASE_URL ?>/admin/attendance.php" class="flex items-center gap-2.5 p-2.5 rounded border border-border hover:bg-background text-sm text-textMain transition">
             <svg width="14" height="14" fill="none" stroke="#0F766E" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/></svg>
             View Daily Attendance
           </a>
-          <a href="/LSU-PORTAL/admin/students.php" class="flex items-center gap-2.5 p-2.5 rounded border border-border hover:bg-background text-sm text-textMain transition">
+          <a href="<?= BASE_URL ?>/admin/students.php" class="flex items-center gap-2.5 p-2.5 rounded border border-border hover:bg-background text-sm text-textMain transition">
             <svg width="14" height="14" fill="none" stroke="#D97706" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
             Student Roster
           </a>

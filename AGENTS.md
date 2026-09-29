@@ -125,6 +125,20 @@ The portal follows the Sindh Government District Education aesthetic:
 
 ---
 
+---
+
+### CI/CD Deployment Architecture (GitHub Actions)
+- **Workflow File:** `.github/workflows/deploy.yml`
+- **Trigger:** On `push` to `master` or `main` branches, and manual `workflow_dispatch`.
+- **Target Host:** InfinityFree FTP (`ftpupload.net`) to remote `/htdocs/`.
+- **Secrets Configured on GitHub:**
+  - `FTP_SERVER`: `ftpupload.net` (optional, defaults to ftpupload.net)
+  - `FTP_USERNAME`: `if0_43042000` (optional, defaults to if0_43042000)
+  - `FTP_PASSWORD`: Secret FTP password (stored in GitHub Repository Secrets)
+- **Exclusions:** `.git*`, `.github*`, `.agents*`, `scratch*`, `task.md` are excluded from FTP deployment to keep production lightweight.
+
+---
+
 ## 5. Development & Contribution Rules for AI Models
 
 1. **Do not create `.html` files in this repository.** All view files must be `.php`.
@@ -144,6 +158,8 @@ The portal follows the Sindh Government District Education aesthetic:
 | 2026-09-29 | Antigravity AI | Implemented dedicated School Portal for Head Masters/Mistresses accessed via CNIC and default password `1122`. Built full `/school/` portal module (Dashboard, Profile & Facilities, Student Roster, Daily Attendance, At-Risk & Dropout Prevention, Settings & Password). Added password visibility and direct reset/update capabilities for District Admin across School Directory and Profile pages. Synced credentials in `users.csv`. |
 | 2026-09-29 | Antigravity AI | **Removed Daily Student Attendance feature** from both Admin and School portals. Deleted Attendance nav links from `includes/sidebar.php` and `school/includes/sidebar.php`. Replaced "Today's Attendance" KPI card on admin dashboard with "Active Schools". Replaced "Today's Attendance" KPI card on school dashboard with "At-Risk Students". Removed `Mark Attendance` quick-action button from school dashboard. Converted `admin/attendance.php` and `school/attendance.php` into redirect stubs pointing to their respective dashboards. Updated SELD guidelines notice on school dashboard. No data is deleted — `attendance.csv` remains on disk but is no longer read or written by any page. |
 | 2026-09-29 | Antigravity AI | **Production UI & Credential Security Cleanup:** Removed demo credential boxes, autofill JS buttons, and password helper text from `login.php`. Removed "Data Management -> Data Records" from Admin sidebar and converted `admin/excel-manager.php` into a security redirect stub to protect internal data tools. Updated `admin/dashboard.php` Excel DB badge to a static non-clickable indicator. Cleaned and synchronized developer skill (`lsu-portal/SKILL.md`) removing duplicate rules and obsolete credential hints. |
+| 2026-09-29 | Antigravity AI | **Automated CI/CD Deployment via GitHub Actions:** Created `.github/workflows/deploy.yml` using `SamKirkland/FTP-Deploy-Action` to automatically deploy repository changes on `git push` to `master`/`main` to InfinityFree FTP (`ftpupload.net` -> `/htdocs/`). Added local deployment fallback engine (`scratch/deploy_live.php`) and `.htaccess` DirectoryIndex configuration. |
+
 
 
 

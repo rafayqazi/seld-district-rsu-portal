@@ -9,5 +9,5 @@ require_once dirname(__DIR__) . '/includes/auth.php';
 require_once dirname(__DIR__) . '/config/config.php';
 require_admin();
 
-header('Location: /LSU-PORTAL/admin/dashboard.php');
+header('Location: ' . BASE_URL . '/admin/dashboard.php');
 exit;

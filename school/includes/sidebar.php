@@ -8,7 +8,7 @@
  *   $active_page (string) — One of: 'dashboard', 'profile', 'students', 'attendance', 'at-risk', 'settings'
  */
 
-$base = '/LSU-PORTAL/school/';
+$base = BASE_URL . '/school/';
 
 function school_sidebar_link(string $page, string $active): string {
     if ($page === $active) {
@@ -22,7 +22,7 @@ function school_sidebar_link(string $page, string $active): string {
   <!-- School Profile / Branding Header -->
   <div class="px-4 py-4 border-b border-white/10 bg-govNavy-dark/60">
     <div class="flex items-start gap-3">
-      <?php if (!empty($school_logo) && file_exists(ROOT_PATH . str_replace('/LSU-PORTAL', '', $school_logo))): ?>
+      <?php if (!empty($school_logo) && file_exists(ROOT_PATH . str_replace(BASE_URL, '', $school_logo))): ?>
         <img src="<?= e($school_logo) ?>" alt="School Logo" class="w-10 h-10 rounded-lg object-cover border border-emerald-400/30 flex-shrink-0 bg-white shadow-sm"/>
       <?php else: ?>
         <div class="w-10 h-10 rounded-lg bg-emerald-700/80 border border-emerald-400/40 flex items-center justify-center text-white font-bold text-base flex-shrink-0 shadow-inner">
@@ -113,14 +113,14 @@ function school_sidebar_link(string $page, string $active): string {
 
     <?php if (is_admin()): ?>
       <div class="px-2 pt-3 pb-1 text-[10px] tracking-wider font-bold uppercase text-amber-300">Admin Control</div>
-      <a href="/LSU-PORTAL/admin/dashboard.php" class="flex items-center gap-3 px-3 py-2 rounded-lg text-amber-200 hover:bg-amber-400/20 text-xs font-semibold">
+      <a href="<?= BASE_URL ?>/admin/dashboard.php" class="flex items-center gap-3 px-3 py-2 rounded-lg text-amber-200 hover:bg-amber-400/20 text-xs font-semibold">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
         Return to District Admin
       </a>
     <?php endif; ?>
 
     <!-- 7. Logout -->
-    <a href="/LSU-PORTAL/logout.php" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 hover:text-white hover:bg-red-900/30 text-sm transition-colors mt-2">
+    <a href="<?= BASE_URL ?>/logout.php" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 hover:text-white hover:bg-red-900/30 text-sm transition-colors mt-2">
       <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
         <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
         <polyline points="16 17 21 12 16 7"/>

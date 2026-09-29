@@ -99,10 +99,10 @@ $session_initial  = strtoupper(substr($session_username, 0, 1));
   <!-- User Profile (Links to Settings) -->
   <?php
     $session_avatar = $_SESSION['lsu_avatar'] ?? '';
-    $has_avatar = !empty($session_avatar) && file_exists(ROOT_PATH . str_replace('/LSU-PORTAL', '', $session_avatar));
+    $has_avatar = !empty($session_avatar) && file_exists(ROOT_PATH . str_replace(BASE_URL, '', $session_avatar));
   ?>
   <div class="flex items-center gap-2.5 pl-2 border-l border-border ml-1">
-    <a href="/LSU-PORTAL/admin/settings.php" class="flex items-center gap-2 hover:opacity-85 transition" title="Edit Profile &amp; Settings">
+    <a href="<?= BASE_URL ?>/admin/settings.php" class="flex items-center gap-2 hover:opacity-85 transition" title="Edit Profile &amp; Settings">
       <?php if ($has_avatar): ?>
         <img src="<?= e($session_avatar) ?>" alt="Avatar" class="w-8 h-8 rounded-full object-cover border border-primary/20 flex-shrink-0 shadow-xs"/>
       <?php else: ?>
@@ -115,7 +115,7 @@ $session_initial  = strtoupper(substr($session_username, 0, 1));
         <div class="text-xs text-muted"><?= $session_role ?></div>
       </div>
     </a>
-    <a href="/LSU-PORTAL/logout.php" class="ml-1 hidden md:flex items-center text-muted hover:text-danger text-xs gap-1 px-2 py-1 rounded hover:bg-red-50 transition" title="Logout">
+    <a href="<?= BASE_URL ?>/logout.php" class="ml-1 hidden md:flex items-center text-muted hover:text-danger text-xs gap-1 px-2 py-1 rounded hover:bg-red-50 transition" title="Logout">
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
         <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
         <polyline points="16 17 21 12 16 7"/>

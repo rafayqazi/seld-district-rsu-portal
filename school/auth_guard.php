@@ -42,7 +42,7 @@ if (!$current_school) {
     if (!empty($allSchools)) {
         $current_school = $allSchools[0];
     } else {
-        header('Location: /LSU-PORTAL/login.php?reason=no_school');
+        header('Location: ' . BASE_URL . '/login.php?reason=no_school');
         exit;
     }
 }

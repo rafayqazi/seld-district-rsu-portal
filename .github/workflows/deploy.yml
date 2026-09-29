@@ -1,0 +1,37 @@
+name: Auto Deploy to InfinityFree
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  workflow_dispatch:
+
+jobs:
+  web-deploy:
+    name: Deploy via FTP
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🚚 Get latest code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: 📂 Sync files to InfinityFree FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER || 'ftpupload.net' }}
+          username: ${{ secrets.FTP_USERNAME || 'if0_43042000' }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          port: 21
+          protocol: ftp
+          server-dir: /htdocs/
+          log-level: verbose
+          timeout: 60000
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.github*/**
+            **/.agents*/**
+            **/scratch*/**
+            task.md

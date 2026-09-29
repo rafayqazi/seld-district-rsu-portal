@@ -219,3 +219,18 @@ ExcelDB::updateSettings(['key' => 'value']);
 - [x] Zero hardcoded demo passwords or credentials shown in UI
 - [x] Internal data tools (`excel-manager.php`) restricted via redirect stubs
 - [x] NO native `alert()` or `confirm()` — use `showToast()` and `customConfirm()`
+
+---
+
+## 10. Automated CI/CD & Deployment (GitHub Actions)
+
+- **Workflow:** `.github/workflows/deploy.yml` triggers on every `git push` to `master` or `main`.
+- **Target:** InfinityFree FTP (`ftpupload.net`) synced to `/htdocs/`.
+- **Action:** `SamKirkland/FTP-Deploy-Action@v4.3.5`
+- **Secrets:**
+  - `FTP_SERVER`: `ftpupload.net`
+  - `FTP_USERNAME`: `if0_43042000`
+  - `FTP_PASSWORD`: InfinityFree FTP password
+- **Exclusions:** `.git`, `.github`, `.agents`, `scratch`, `task.md`
+- **Local Fallback:** Run `C:\xampp\php\php.exe scratch/deploy_live.php` for direct one-command local deploy.
+

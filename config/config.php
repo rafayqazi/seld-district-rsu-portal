@@ -14,6 +14,14 @@ if (!defined('INCLUDES_PATH')) define('INCLUDES_PATH', ROOT_PATH . '/includes');
 if (!defined('ADMIN_PATH'))    define('ADMIN_PATH',    ROOT_PATH . '/admin');
 if (!defined('DATA_PATH'))     define('DATA_PATH',     ROOT_PATH . '/data');
 
+// Dynamic BASE_URL detection (works seamlessly on root domain or subdirectory)
+if (!defined('BASE_URL')) {
+    $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? ''));
+    $scriptDir = preg_replace('#/(admin|school|includes|scratch|data|assets)(/.*)?$#i', '', $scriptDir);
+    $baseUrl = ($scriptDir === '/' || $scriptDir === '.' || empty($scriptDir)) ? '' : rtrim($scriptDir, '/');
+    define('BASE_URL', $baseUrl);
+}
+
 // Load Excel Database Engine
 require_once INCLUDES_PATH . '/excel_db.php';
 ExcelDB::init();

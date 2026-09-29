@@ -30,5 +30,5 @@ if (ini_get('session.use_cookies')) {
 session_destroy();
 
 // Redirect to login
-header('Location: /LSU-PORTAL/login.php');
+header('Location: ' . BASE_URL . '/login.php');
 exit;

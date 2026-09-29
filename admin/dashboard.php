@@ -138,7 +138,7 @@ tailwind.config = {
         <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2 text-xs">
           <span class="flex items-center gap-1.5 font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded">
             <span class="inline-block w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
-            Excel DB: Connected (4 Tables)
+            District Registry: Online
           </span>
           <span class="flex items-center gap-1.5 text-muted">
             <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -158,7 +158,7 @@ tailwind.config = {
             <div class="text-3xl font-bold text-textMain leading-tight mt-0.5"><?= $total_schools_count ?></div>
             <div class="text-xs text-success mt-1 flex items-center gap-1">
               <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
-              Live from schools.csv
+              Official SELD Census
             </div>
           </div>
         </div>
@@ -398,7 +398,7 @@ tailwind.config = {
             <h2 class="text-sm font-semibold text-textMain">School Monitoring Status</h2>
             <p class="text-xs text-muted mt-0.5">Overview of all schools in the district</p>
           </div>
-          <a href="/LSU-PORTAL/admin/schools.php" class="btn-secondary px-3 py-1.5 rounded text-xs font-medium flex items-center gap-1.5 w-fit">
+          <a href="<?= BASE_URL ?>/admin/schools.php" class="btn-secondary px-3 py-1.5 rounded text-xs font-medium flex items-center gap-1.5 w-fit">
             <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
             View All Schools
           </a>
@@ -445,7 +445,7 @@ tailwind.config = {
                 <td class="px-4 py-3"><span class="status-badge <?= e($s['status_badge'] ?? 'badge-good') ?>"><?= e($s['status'] ?? 'Active') ?></span></td>
                 <td class="px-4 py-3">
                   <div class="flex gap-1.5">
-                    <a href="/LSU-PORTAL/admin/school-profile.php?semis=<?= urlencode($s['semis_code'] ?? '') ?>" class="btn-secondary px-2.5 py-1 rounded text-xs">Profile</a>
+                    <a href= BASE_URL . '/admin/school-profile.php?semis=<?= urlencode($s['semis_code'] ?? '') ?>" class="btn-secondary px-2.5 py-1 rounded text-xs">Profile</a>
                   </div>
                 </td>
               </tr>
@@ -495,7 +495,7 @@ tailwind.config = {
     </div>
     <div class="px-5 py-4 border-t border-border flex gap-2 justify-end">
       <button onclick="closeModal('school-modal')" class="btn-secondary px-4 py-2 rounded text-xs font-medium">Close</button>
-      <a href="/LSU-PORTAL/admin/school-profile.php" class="btn-primary px-4 py-2 rounded text-xs font-medium">Full Profile</a>
+      <a href="<?= BASE_URL ?>/admin/school-profile.php" class="btn-primary px-4 py-2 rounded text-xs font-medium">Full Profile</a>
     </div>
   </div>
 </div>

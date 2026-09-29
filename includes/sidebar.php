@@ -14,7 +14,7 @@
  */
 
 // Base path for admin pages (relative to web root)
-$base = '/LSU-PORTAL/admin/';
+$base = BASE_URL . '/admin/';
 
 // Helper: returns CSS classes for active/inactive sidebar links
 function sidebar_link_class(string $page, string $active): string {
@@ -158,7 +158,7 @@ function sidebar_link_class(string $page, string $active): string {
       </svg>
       Settings &amp; Profile
     </a>
-    <a href="/LSU-PORTAL/logout.php" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded text-white/80 text-sm hover:text-white hover:bg-red-900/20">
+    <a href="<?= BASE_URL ?>/logout.php" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded text-white/80 text-sm hover:text-white hover:bg-red-900/20">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
         <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
         <polyline points="16 17 21 12 16 7"/>

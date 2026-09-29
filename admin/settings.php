@@ -56,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
                 $targetPath  = $avatarDir . '/' . $newFileName;
 
                 if (move_uploaded_file($fileTmp, $targetPath)) {
-                    $relativeUrl = '/LSU-PORTAL/assets/uploads/avatars/' . $newFileName;
+                    $relativeUrl = BASE_URL . '/assets/uploads/avatars/' . $newFileName;
                     $updatedData['avatar'] = $relativeUrl;
                     $_SESSION['lsu_avatar'] = $relativeUrl;
                 }
@@ -129,7 +129,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         } else {
             $added = ExcelDB::addTaluka($taluka_name, $currentDist);
             if ($added) {
-                header('Location: /LSU-PORTAL/admin/settings.php?tab=district&msg=taluka_added');
+                header('Location: ' . BASE_URL . '/admin/settings.php?tab=district&msg=taluka_added');
                 exit;
             } else {
                 $alert_message = 'Taluka "' . htmlspecialchars($taluka_name) . '" already exists or could not be added.';
@@ -140,7 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $taluka_name = trim($_POST['taluka_name'] ?? '');
         if (!empty($taluka_name)) {
             ExcelDB::deleteTaluka($taluka_name);
-            header('Location: /LSU-PORTAL/admin/settings.php?tab=district&msg=taluka_deleted');
+            header('Location: ' . BASE_URL . '/admin/settings.php?tab=district&msg=taluka_deleted');
             exit;
         }
     }
@@ -182,7 +182,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_settings'])) {
         }
 
         // Refresh global in-memory settings
-        header('Location: /LSU-PORTAL/admin/settings.php?tab=' . urlencode($active_tab) . '&msg=saved');
+        header('Location: ' . BASE_URL . '/admin/settings.php?tab=' . urlencode($active_tab) . '&msg=saved');
         exit;
     }
 }
@@ -263,7 +263,7 @@ body{font-family:'Inter',system-ui,sans-serif;}
 <main class="flex-1 overflow-y-auto p-4 md:p-6">
   <!-- Breadcrumb -->
   <nav class="text-xs text-muted mb-4 flex items-center gap-1.5" aria-label="Breadcrumb">
-    <a href="/LSU-PORTAL/admin/dashboard.php" class="hover:text-primary">Dashboard</a><span>/</span>
+    <a href="<?= BASE_URL ?>/admin/dashboard.php" class="hover:text-primary">Dashboard</a><span>/</span>
     <span class="text-textMain font-medium">Settings</span>
   </nav>
 
@@ -323,7 +323,7 @@ body{font-family:'Inter',system-ui,sans-serif;}
           <!-- Avatar Preview & Upload -->
           <div class="flex items-center gap-4">
             <div class="relative w-16 h-16 rounded-full overflow-hidden border-2 border-primary/20 bg-slate-100 flex items-center justify-center flex-shrink-0">
-              <?php if (!empty($user_avatar) && file_exists(ROOT_PATH . str_replace('/LSU-PORTAL', '', $user_avatar))): ?>
+              <?php if (!empty($user_avatar) && file_exists(ROOT_PATH . str_replace(BASE_URL, '', $user_avatar))): ?>
                 <img id="avatar-preview" src="<?= e($user_avatar) ?>" alt="Avatar" class="w-full h-full object-cover"/>
               <?php else: ?>
                 <div id="avatar-fallback" class="w-full h-full bg-primary flex items-center justify-center text-white text-xl font-bold">

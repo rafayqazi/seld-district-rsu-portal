@@ -25,9 +25,9 @@ if (session_status() === PHP_SESSION_NONE) {
 // If already logged in, redirect to dashboard
 if (isset($_SESSION['lsu_logged_in']) && $_SESSION['lsu_logged_in'] === true) {
     if (isset($_SESSION['lsu_login_type']) && $_SESSION['lsu_login_type'] === 'school') {
-        header('Location: /LSU-PORTAL/school/dashboard.php');
+        header('Location: ' . BASE_URL . '/school/dashboard.php');
     } else {
-        header('Location: /LSU-PORTAL/admin/dashboard.php');
+        header('Location: ' . BASE_URL . '/admin/dashboard.php');
     }
     exit;
 }
@@ -105,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['last_activity']   = time();
                     $_SESSION['csrf_token']      = bin2hex(random_bytes(32));
 
-                    header('Location: /LSU-PORTAL/admin/dashboard.php');
+                    header('Location: ' . BASE_URL . '/admin/dashboard.php');
                     exit;
                 } else {
                     sleep(1); // Anti-brute-force delay
@@ -177,7 +177,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['last_activity']    = time();
                     $_SESSION['csrf_token']       = bin2hex(random_bytes(32));
 
-                    header('Location: /LSU-PORTAL/school/dashboard.php');
+                    header('Location: ' . BASE_URL . '/school/dashboard.php');
                     exit;
                 } else {
                     sleep(1);
@@ -205,7 +205,7 @@ if (isset($_GET['reason'])) {
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Login &mdash; District RSU Portal | School Education &amp; Literacy Department</title>
-  <link rel="shortcut icon" href="/LSU-PORTAL/assets/images/rsu-favicon.png" type="image/png"/>
+  <link rel="shortcut icon" href="<?= BASE_URL ?>/assets/images/rsu-favicon.png" type="image/png"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Nastaliq+Urdu:wght@400;700&display=swap" rel="stylesheet"/>
@@ -357,8 +357,8 @@ if (isset($_GET['reason'])) {
       
       <!-- Official RSU Wide Logo from rsusindh.gov.pk -->
       <div class="flex items-center gap-3 sm:gap-4">
-        <a href="/LSU-PORTAL/" class="flex items-center gap-3">
-          <img src="/LSU-PORTAL/assets/images/rsu-logo-wide.png"
+        <a href="<?= BASE_URL ?>/" class="flex items-center gap-3">
+          <img src="<?= BASE_URL ?>/assets/images/rsu-logo-wide.png"
                alt="RSU Sindh Logo"
                class="h-10 sm:h-12 w-auto object-contain"
                onerror="this.style.display='none'; document.getElementById('fallback-logo').style.display='flex';"/>
@@ -404,7 +404,7 @@ if (isset($_GET['reason'])) {
         <!-- Card Header with Emblem -->
         <div class="p-6 pb-4 border-b border-slate-200 text-center bg-slate-50/70">
           <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white border border-slate-200 shadow-sm mb-3">
-            <img src="/LSU-PORTAL/assets/images/rsu-favicon.png"
+            <img src="<?= BASE_URL ?>/assets/images/rsu-favicon.png"
                  alt="Sindh Seal"
                  class="w-8 h-8 object-contain"
                  onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' fill=\'%23046A38\' viewBox=\'0 0 24 24\'><path d=\'M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z\'/></svg>'"/>
@@ -456,7 +456,7 @@ if (isset($_GET['reason'])) {
 
           <!-- ── TAB 1: DISTRICT ADMIN LOGIN ────────────────────────────────── -->
           <div id="content-admin" class="tab-content <?= ($active_tab === 'admin') ? 'active' : '' ?>">
-            <form method="POST" action="/LSU-PORTAL/login.php" onsubmit="handleLoginSubmit(this)">
+            <form method="POST" action="<?= BASE_URL ?>/login.php" onsubmit="handleLoginSubmit(this)">
               <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8') ?>"/>
               <input type="hidden" name="login_type" value="admin"/>
 
@@ -531,7 +531,7 @@ if (isset($_GET['reason'])) {
               </div>
             </div>
 
-            <form method="POST" action="/LSU-PORTAL/login.php" onsubmit="handleLoginSubmit(this)">
+            <form method="POST" action="<?= BASE_URL ?>/login.php" onsubmit="handleLoginSubmit(this)">
               <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8') ?>"/>
               <input type="hidden" name="login_type" value="school"/>
 

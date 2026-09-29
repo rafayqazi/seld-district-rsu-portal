@@ -80,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_hm_profile']))
                     $destPath = $targetDir . '/' . $newFilename;
 
                     if (move_uploaded_file($file['tmp_name'], $destPath)) {
-                        $logoUrl = '/LSU-PORTAL/assets/uploads/schools/' . $newFilename;
+                        $logoUrl = BASE_URL . '/assets/uploads/schools/' . $newFilename;
                         $updateData['logo'] = $logoUrl;
                         $_SESSION['lsu_avatar'] = $logoUrl;
                     }
@@ -207,7 +207,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_hm_profile']))
             </span>
           </div>
 
-          <form method="POST" action="/LSU-PORTAL/school/settings.php" class="space-y-4">
+          <form method="POST" action="<?= BASE_URL ?>/school/settings.php" class="space-y-4">
             <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>"/>
             <input type="hidden" name="change_password" value="1"/>
 
@@ -242,7 +242,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_hm_profile']))
             <p class="text-xs text-muted">Keep your leadership phone number and school visual badge up to date</p>
           </div>
 
-          <form method="POST" action="/LSU-PORTAL/school/settings.php" enctype="multipart/form-data" class="space-y-4">
+          <form method="POST" action="<?= BASE_URL ?>/school/settings.php" enctype="multipart/form-data" class="space-y-4">
             <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>"/>
             <input type="hidden" name="update_hm_profile" value="1"/>
 
@@ -261,7 +261,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_hm_profile']))
             <div>
               <label class="block text-xs font-semibold text-textMain mb-1.5">School Official Logo / Emblem</label>
               <div class="flex items-center gap-4">
-                <?php if (!empty($school_logo) && file_exists(ROOT_PATH . str_replace('/LSU-PORTAL', '', $school_logo))): ?>
+                <?php if (!empty($school_logo) && file_exists(ROOT_PATH . str_replace(BASE_URL, '', $school_logo))): ?>
                   <img src="<?= e($school_logo) ?>" alt="Logo" class="w-14 h-14 rounded-lg object-cover border border-slate-300 flex-shrink-0 bg-white shadow-xs"/>
                 <?php else: ?>
                   <div class="w-14 h-14 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center justify-center font-bold text-xs flex-shrink-0">

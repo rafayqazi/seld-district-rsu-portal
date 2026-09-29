@@ -127,7 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_student'])) {
                 'enrollment' => (string)count($allForSchool)
             ]);
 
-            header('Location: /LSU-PORTAL/school/students.php?msg=added&name=' . urlencode($name));
+            header('Location: ' . BASE_URL . '/school/students.php?msg=added&name=' . urlencode($name));
             exit;
         }
     }
@@ -154,7 +154,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_student'])) {
                 'enrollment' => (string)count($allForSchool)
             ]);
 
-            header('Location: /LSU-PORTAL/school/students.php?msg=deleted');
+            header('Location: ' . BASE_URL . '/school/students.php?msg=deleted');
             exit;
         }
     }
@@ -275,7 +275,7 @@ foreach ($schoolStudents as $s) {
             <p class="text-xs text-muted">Manage individual student enrollment and attendance for <?= e($school_name) ?></p>
           </div>
           <div class="flex items-center gap-2.5">
-            <a href="/LSU-PORTAL/school/students.php?action=export_students" class="btn-excel text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5 shadow-xs">
+            <a href="<?= BASE_URL ?>/school/students.php?action=export_students" class="btn-excel text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5 shadow-xs">
               <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               <span>Export CSV</span>
             </a>
@@ -421,7 +421,7 @@ foreach ($schoolStudents as $s) {
         <button onclick="closeAddModal()" class="text-muted hover:text-textMain text-xl leading-none">&times;</button>
       </div>
 
-      <form method="POST" action="/LSU-PORTAL/school/students.php" class="space-y-3.5">
+      <form method="POST" action="<?= BASE_URL ?>/school/students.php" class="space-y-3.5">
         <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>"/>
         <input type="hidden" name="add_student" value="1"/>
 
@@ -480,7 +480,7 @@ foreach ($schoolStudents as $s) {
       <p class="text-xs text-muted mb-4">
         Are you sure you want to remove <strong id="del-stu-name" class="text-textMain"></strong> (<span id="del-stu-code" class="font-mono text-primary font-semibold"></span>) from your school roster?
       </p>
-      <form method="POST" action="/LSU-PORTAL/school/students.php" class="flex items-center justify-end gap-2">
+      <form method="POST" action="<?= BASE_URL ?>/school/students.php" class="flex items-center justify-end gap-2">
         <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>"/>
         <input type="hidden" name="delete_student" value="1"/>
         <input type="hidden" id="del-stu-input" name="student_code" value=""/>

@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['log_followup'])) {
         ]);
 
         if ($updated) {
-            header('Location: /LSU-PORTAL/admin/at-risk-students.php?msg=updated');
+            header('Location: ' . BASE_URL . '/admin/at-risk-students.php?msg=updated');
             exit;
         } else {
             $notification = 'Unable to update record.';
@@ -106,8 +106,8 @@ body{font-family:'Inter',system-ui,sans-serif;}
 
 <main class="flex-1 overflow-y-auto p-4 md:p-6">
   <nav class="text-xs text-muted mb-4 flex items-center gap-1.5" aria-label="Breadcrumb">
-    <a href="/LSU-PORTAL/admin/dashboard.php" class="hover:text-primary">Dashboard</a><span>/</span>
-    <a href="/LSU-PORTAL/admin/students.php" class="hover:text-primary">Students</a><span>/</span>
+    <a href="<?= BASE_URL ?>/admin/dashboard.php" class="hover:text-primary">Dashboard</a><span>/</span>
+    <a href="<?= BASE_URL ?>/admin/students.php" class="hover:text-primary">Students</a><span>/</span>
     <span class="text-textMain font-medium">At-Risk Students</span>
   </nav>
 
@@ -117,15 +117,15 @@ body{font-family:'Inter',system-ui,sans-serif;}
         <h1 class="text-xl font-bold text-textMain">At-Risk Students</h1>
         <span class="text-[11px] bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
           <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-          Excel DB Connected
+          Registry: Active
         </span>
       </div>
-      <p class="text-muted text-sm mt-0.5">Students requiring immediate intervention (<code>/data/at_risk.csv</code>)</p>
+      <p class="text-muted text-sm mt-0.5">Students requiring immediate academic &amp; attendance intervention</p>
     </div>
     <div class="flex gap-2">
       <a href="?action=export_excel" class="btn-excel px-3 py-2 rounded text-xs font-medium flex items-center gap-1.5">
         <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Export Excel Report
+        Export Report (CSV)
       </a>
     </div>
   </div>

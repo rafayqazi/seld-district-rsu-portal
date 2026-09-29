@@ -6,7 +6,7 @@
  */
 
 $session_avatar = $school_logo ?? ($_SESSION['lsu_avatar'] ?? '');
-$has_avatar = !empty($session_avatar) && file_exists(ROOT_PATH . str_replace('/LSU-PORTAL', '', $session_avatar));
+$has_avatar = !empty($session_avatar) && file_exists(ROOT_PATH . str_replace(BASE_URL, '', $session_avatar));
 $hm_initial = strtoupper(substr($hm_name, 0, 1));
 ?>
 <header class="bg-surface border-b border-border px-4 md:px-6 py-3 flex items-center justify-between sticky top-0 z-20 shadow-xs">
@@ -55,7 +55,7 @@ $hm_initial = strtoupper(substr($hm_name, 0, 1));
     </div>
 
     <!-- Head Master Profile link -->
-    <a href="/LSU-PORTAL/school/settings.php" class="flex items-center gap-2.5 pl-2 border-l border-border hover:opacity-85 transition" title="School Account & Password Settings">
+    <a href="<?= BASE_URL ?>/school/settings.php" class="flex items-center gap-2.5 pl-2 border-l border-border hover:opacity-85 transition" title="School Account & Password Settings">
       <?php if ($has_avatar): ?>
         <img src="<?= e($session_avatar) ?>" alt="Avatar" class="w-8 h-8 rounded-full object-cover border border-emerald-600/30 flex-shrink-0 shadow-xs"/>
       <?php else: ?>
@@ -70,7 +70,7 @@ $hm_initial = strtoupper(substr($hm_name, 0, 1));
     </a>
 
     <!-- Logout -->
-    <a href="/LSU-PORTAL/logout.php" class="text-muted hover:text-danger p-1.5 rounded-md hover:bg-red-50 transition text-xs flex items-center gap-1" title="Logout">
+    <a href="<?= BASE_URL ?>/logout.php" class="text-muted hover:text-danger p-1.5 rounded-md hover:bg-red-50 transition text-xs flex items-center gap-1" title="Logout">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
         <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
         <polyline points="16 17 21 12 16 7"/>

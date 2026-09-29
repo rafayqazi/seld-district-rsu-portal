@@ -52,7 +52,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['update_hm_pas
         $newPass     = trim($_POST['new_password'] ?? '');
         if (!empty($targetSemis) && !empty($newPass)) {
             ExcelDB::updateHeadMasterPassword($targetSemis, $newPass);
-            header('Location: /LSU-PORTAL/admin/schools.php?msg=pass_updated&semis=' . urlencode($targetSemis));
+            header('Location: ' . BASE_URL . '/admin/schools.php?msg=pass_updated&semis=' . urlencode($targetSemis));
             exit;
         }
     }
@@ -69,7 +69,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['delete_school
             $existing = ExcelDB::find('schools', 'semis_code', $semis);
             $schName = $existing['school_name'] ?? $semis;
             ExcelDB::delete('schools', 'semis_code', $semis);
-            header('Location: /LSU-PORTAL/admin/schools.php?msg=deleted&sch=' . urlencode($schName) . '&semis=' . urlencode($semis));
+            header('Location: ' . BASE_URL . '/admin/schools.php?msg=deleted&sch=' . urlencode($schName) . '&semis=' . urlencode($semis));
             exit;
         }
     }
@@ -133,7 +133,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['add_school'])
                 'facility_boundary_wall' => trim($_POST['facility_boundary_wall'] ?? 'Secured & Complete'),
                 'facility_internet'      => trim($_POST['facility_internet'] ?? 'Broadband / 4G'),
             ]);
-            header('Location: /LSU-PORTAL/admin/schools.php?msg=added&semis=' . urlencode($semis));
+            header('Location: ' . BASE_URL . '/admin/schools.php?msg=added&semis=' . urlencode($semis));
             exit;
         }
     }
@@ -235,7 +235,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['import_school
             }
 
             ExcelDB::writeTable('schools', $existingSchools);
-            header("Location: /LSU-PORTAL/admin/schools.php?msg=imported&added={$addedCount}&updated={$updatedCount}&skipped={$skippedCount}&invalid={$invalidCount}");
+            header('Location: ' . BASE_URL . '/admin/schools.php?msg=imported&added={$addedCount}&updated={$updatedCount}&skipped={$skippedCount}&invalid={$invalidCount}');
             exit;
         }
     }
@@ -327,7 +327,7 @@ body{font-family:'Inter',system-ui,sans-serif;}
 
 <main class="flex-1 overflow-y-auto p-4 md:p-6">
   <nav class="text-xs text-muted mb-4 flex items-center gap-1.5" aria-label="Breadcrumb">
-    <a href="/LSU-PORTAL/admin/dashboard.php" class="hover:text-primary">Dashboard</a><span>/</span>
+    <a href="<?= BASE_URL ?>/admin/dashboard.php" class="hover:text-primary">Dashboard</a><span>/</span>
     <span class="text-textMain font-medium">School Directory</span>
   </nav>
 
@@ -457,7 +457,7 @@ body{font-family:'Inter',system-ui,sans-serif;}
             <td class="px-4 py-3"><span class="status-badge <?= e($s['status_badge'] ?? 'badge-active') ?>"><?= e($s['status'] ?? 'Active') ?></span></td>
             <td class="px-4 py-3 text-center">
               <div class="flex items-center justify-center gap-1.5">
-                <a href="/LSU-PORTAL/admin/school-profile.php?semis=<?= urlencode($s['semis_code'] ?? '') ?>" class="btn-primary px-2 py-1 rounded text-xs" title="View Full Profile">Profile</a>
+                <a href= BASE_URL . '/admin/school-profile.php?semis=<?= urlencode($s['semis_code'] ?? '') ?>" class="btn-primary px-2 py-1 rounded text-xs" title="View Full Profile">Profile</a>
                 <button type="button" onclick="openCredentialsModal('<?= e($s['semis_code'] ?? '') ?>', '<?= e(addslashes($s['school_name'] ?? '')) ?>', '<?= e(addslashes($s['head_master'] ?? 'HM')) ?>', '<?= e($cred['cnic'] ?? $s['cnic'] ?? '') ?>', '<?= e($cred['password_plain'] ?? '1122') ?>')" class="p-1 rounded text-emerald-700 hover:text-emerald-900 hover:bg-emerald-50 transition border border-emerald-200" title="View HM Portal Login & Password">
                   <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                 </button>
@@ -708,7 +708,7 @@ body{font-family:'Inter',system-ui,sans-serif;}
     </div>
 
     <!-- Update Password Form -->
-    <form method="POST" action="/LSU-PORTAL/admin/schools.php" class="border-t border-border pt-3 space-y-3">
+    <form method="POST" action="<?= BASE_URL ?>/admin/schools.php" class="border-t border-border pt-3 space-y-3">
       <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>"/>
       <input type="hidden" name="update_hm_password" value="1"/>
       <input type="hidden" name="target_semis" id="cred-form-semis" value=""/>
@@ -758,13 +758,13 @@ body{font-family:'Inter',system-ui,sans-serif;}
         <input type="file" id="csv-file-input" accept=".csv" class="hidden" onchange="handleCsvFile(this.files[0])"/>
         <svg class="mx-auto h-10 w-10 text-muted" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
         <p class="text-xs font-medium text-textMain mt-2">Click to browse or drop your CSV file here</p>
-        <p class="text-[11px] text-muted mt-1">Accepts standard UTF-8 or Excel CSV files</p>
+        <p class="text-[11px] text-muted mt-1">Accepts standard UTF-8 CSV files</p>
       </div>
 
       <div class="flex items-center justify-between p-3 rounded bg-blue-50 border border-blue-200 text-blue-900 text-xs">
         <div>
           <span class="font-semibold">Need a sample format?</span>
-          <p class="text-[11px] text-blue-800">Download our pre-structured Excel template with CNIC & Head Master columns.</p>
+          <p class="text-[11px] text-blue-800">Download our pre-structured template with CNIC &amp; Head Master columns.</p>
         </div>
         <a href="?action=download_template" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-3 py-1.5 rounded text-xs whitespace-nowrap">Download Sample CSV</a>
       </div>
@@ -1162,7 +1162,7 @@ function openCredentialsModal(semis, schoolName, hmName, cnic, pass) {
   document.getElementById('cred-hm-pass').innerText = pass || '1122';
   document.getElementById('cred-hm-pass').dataset.real = pass || '1122';
   document.getElementById('cred-new-pass-input').value = pass || '1122';
-  document.getElementById('cred-portal-link').href = `/LSU-PORTAL/school/dashboard.php?semis=${encodeURIComponent(semis)}`;
+  document.getElementById('cred-portal-link').href = `${BASE_URL || ""}/school/dashboard.php?semis=${encodeURIComponent(semis)}`;
   document.getElementById('credentials-school-modal').classList.remove('hidden');
 }
 

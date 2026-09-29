@@ -179,7 +179,7 @@ class ExcelDB {
             return [];
         }
 
-        flock($fp, LOCK_SH);
+        @flock($fp, LOCK_SH);
 
         $bom = fread($fp, 3);
         if ($bom !== "\xEF\xBB\xBF") {
@@ -209,7 +209,7 @@ class ExcelDB {
             $results[] = $row;
         }
 
-        flock($fp, LOCK_UN);
+        @flock($fp, LOCK_UN);
         fclose($fp);
 
         return $results;
@@ -236,7 +236,7 @@ class ExcelDB {
             return false;
         }
 
-        flock($fp, LOCK_EX);
+        @flock($fp, LOCK_EX);
 
         // UTF-8 BOM so Microsoft Excel opens it cleanly
         fwrite($fp, "\xEF\xBB\xBF");
@@ -254,7 +254,7 @@ class ExcelDB {
         }
 
         fflush($fp);
-        flock($fp, LOCK_UN);
+        @flock($fp, LOCK_UN);
         fclose($fp);
 
         return true;

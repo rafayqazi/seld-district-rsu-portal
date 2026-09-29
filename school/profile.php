@@ -85,7 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $destPath = $targetDir . '/' . $newFilename;
 
                 if (move_uploaded_file($file['tmp_name'], $destPath)) {
-                    $logoUrl = '/LSU-PORTAL/assets/uploads/schools/' . $newFilename;
+                    $logoUrl = BASE_URL . '/assets/uploads/schools/' . $newFilename;
                     $updateData['logo'] = $logoUrl;
                     $_SESSION['lsu_avatar'] = $logoUrl;
                 }
@@ -107,7 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['lsu_school_name'] = $name;
         $_SESSION['lsu_cnic'] = $cnic;
 
-        header('Location: /LSU-PORTAL/school/profile.php?msg=updated');
+        header('Location: ' . BASE_URL . '/school/profile.php?msg=updated');
         exit;
     }
 }
@@ -199,7 +199,7 @@ $current_school = ExcelDB::getSchoolBySemis($school_semis) ?? $current_school;
             <h1 class="text-lg font-bold text-textMain">School Profile &amp; Infrastructure Editor</h1>
             <p class="text-xs text-muted">Update institutional data, facilities checklist, leadership details, and upload school logo</p>
           </div>
-          <a href="/LSU-PORTAL/school/dashboard.php" class="btn-secondary text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5 self-start">
+          <a href="<?= BASE_URL ?>/school/dashboard.php" class="btn-secondary text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5 self-start">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
             <span>Back to Dashboard</span>
           </a>
@@ -217,7 +217,7 @@ $current_school = ExcelDB::getSchoolBySemis($school_semis) ?? $current_school;
         <?php endif; ?>
 
         <!-- ── Form Container ──────────────────────────────────────────────── -->
-        <form method="POST" action="/LSU-PORTAL/school/profile.php" enctype="multipart/form-data" class="space-y-6">
+        <form method="POST" action="<?= BASE_URL ?>/school/profile.php" enctype="multipart/form-data" class="space-y-6">
           <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>"/>
           <input type="hidden" name="save_school_profile" value="1"/>
 
@@ -295,7 +295,7 @@ $current_school = ExcelDB::getSchoolBySemis($school_semis) ?? $current_school;
             <div class="pt-2 border-t border-border">
               <label class="block text-xs font-semibold text-textMain mb-1.5">School Logo / Emblem / Photo</label>
               <div class="flex items-center gap-4">
-                <?php if (!empty($school_logo) && file_exists(ROOT_PATH . str_replace('/LSU-PORTAL', '', $school_logo))): ?>
+                <?php if (!empty($school_logo) && file_exists(ROOT_PATH . str_replace(BASE_URL, '', $school_logo))): ?>
                   <img src="<?= e($school_logo) ?>" alt="Logo" class="w-12 h-12 rounded-lg object-cover border border-slate-300 flex-shrink-0 bg-white shadow-xs"/>
                 <?php else: ?>
                   <div class="w-12 h-12 rounded-lg bg-slate-100 border border-slate-300 flex items-center justify-center text-slate-400 font-bold text-xs flex-shrink-0">
@@ -409,7 +409,7 @@ $current_school = ExcelDB::getSchoolBySemis($school_semis) ?? $current_school;
 
           <!-- Action Buttons -->
           <div class="flex items-center justify-end gap-3 pt-2">
-            <a href="/LSU-PORTAL/school/dashboard.php" class="btn-secondary text-xs font-semibold px-4 py-2.5 rounded-lg">
+            <a href="<?= BASE_URL ?>/school/dashboard.php" class="btn-secondary text-xs font-semibold px-4 py-2.5 rounded-lg">
               Cancel
             </a>
             <button type="submit" class="btn-primary text-xs font-semibold px-6 py-2.5 rounded-lg flex items-center gap-2 shadow-sm">

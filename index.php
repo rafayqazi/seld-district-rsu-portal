@@ -13,11 +13,11 @@ if (session_status() === PHP_SESSION_NONE) {
 
 if (isset($_SESSION['lsu_logged_in']) && $_SESSION['lsu_logged_in'] === true) {
     if (isset($_SESSION['lsu_login_type']) && $_SESSION['lsu_login_type'] === 'school') {
-        header('Location: /LSU-PORTAL/school/dashboard.php');
+        header('Location: ' . BASE_URL . '/school/dashboard.php');
     } else {
-        header('Location: /LSU-PORTAL/admin/dashboard.php');
+        header('Location: ' . BASE_URL . '/admin/dashboard.php');
     }
 } else {
-    header('Location: /LSU-PORTAL/login.php');
+    header('Location: ' . BASE_URL . '/login.php');
 }
 exit;
