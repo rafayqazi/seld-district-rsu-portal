@@ -1,0 +1,21 @@
+# LSU District Education Portal — .gitignore
+
+# IDE & OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp
+
+# Scratch & Temporary Logs
+/scratch/
+task.md
+*.log
+
+# Sensitive Database Files (Preserve data/.htaccess and repo templates)
+/data/*.csv
+
+# Vendor / Node (if any future packages added)
+/vendor/
+/node_modules/
