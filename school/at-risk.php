@@ -1,6 +1,6 @@
-<?php
+ï»¿<?php
 /**
- * school/at-risk.php — School Facility Risk Monitor
+ * school/at-risk.php â€” School Facility Risk Monitor
  *
  * Allows Head Master/Mistress to view infrastructure risk flags
  * reported for their school (from the district school_risks registry),
@@ -10,7 +10,7 @@
 require_once __DIR__ . '/auth_guard.php';
 
 $active_page = 'at-risk';
-$page_title  = 'School Facility Risks — ' . e($school_name);
+$page_title  = 'School Facility Risks â€” ' . e($school_name);
 
 $notification      = '';
 $notification_type = 'success';
@@ -97,7 +97,7 @@ $risk_categories = [
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 <script src="https://cdn.tailwindcss.com"></script>
-<script>tailwind.config={theme:{extend:{colors:{govNavy:'#0f2744',govNavyDark:'#0a1e35',primary:'#123B63',primaryDark:'#0B2946',secondary:'#0F766E',surface:'#FFFFFF',background:'#F5F7FA',textMain:'#172033',muted:'#64748B',border:'#E2E8F0',success:'#15803D',warning:'#D97706',danger:'#DC2626'},fontFamily:{sans:['Inter','system-ui','sans-serif']}}}}}</script>
+<script>tailwind.config={theme:{extend:{colors:{govNavy:'#0f2744',govNavyDark:'#0a1e35',primary:'#123B63',primaryDark:'#0B2946',secondary:'#0F766E',surface:'#FFFFFF',background:'#F5F7FA',textMain:'#172033',muted:'#64748B',border:'#E2E8F0',success:'#15803D',warning:'#D97706',danger:'#DC2626'},fontFamily:{sans:['Inter','system-ui','sans-serif']}}}}</script>
 <style>
 body{font-family:'Inter',system-ui,sans-serif;}
 .sidebar-link{transition:background .15s,color .15s;}
@@ -158,7 +158,7 @@ body{font-family:'Inter',system-ui,sans-serif;}
         </span>
         <?php endif; ?>
       </div>
-      <p class="text-muted text-sm mt-0.5">Infrastructure risk flags for <?= e($school_name) ?> — SEMIS: <?= e($school_semis) ?></p>
+      <p class="text-muted text-sm mt-0.5">Infrastructure risk flags for <?= e($school_name) ?> â€” SEMIS: <?= e($school_semis) ?></p>
     </div>
     <button onclick="openReportModal()" class="btn-primary px-4 py-2 rounded text-xs font-medium flex items-center gap-1.5 self-start">
       <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -255,19 +255,19 @@ body{font-family:'Inter',system-ui,sans-serif;}
             };
           ?>
           <tr class="table-row">
-            <td class="px-5 py-3"><span class="category-pill"><?= e($r['risk_category'] ?? '—') ?></span></td>
+            <td class="px-5 py-3"><span class="category-pill"><?= e($r['risk_category'] ?? 'â€”') ?></span></td>
             <td class="px-4 py-3"><span class="severity-badge <?= $sevBadge ?>"><?= e(ucfirst($r['severity'] ?? '')) ?></span></td>
             <td class="px-4 py-3 text-muted max-w-xs">
-              <div class="truncate" title="<?= e($r['details'] ?? '') ?>"><?= e($r['details'] ?? '—') ?></div>
+              <div class="truncate" title="<?= e($r['details'] ?? '') ?>"><?= e($r['details'] ?? 'â€”') ?></div>
             </td>
-            <td class="px-4 py-3 text-muted whitespace-nowrap"><?= e($r['reported_date'] ?? '—') ?></td>
-            <td class="px-4 py-3 text-muted whitespace-nowrap"><?= e($r['last_inspected'] ?? '—') ?></td>
+            <td class="px-4 py-3 text-muted whitespace-nowrap"><?= e($r['reported_date'] ?? 'â€”') ?></td>
+            <td class="px-4 py-3 text-muted whitespace-nowrap"><?= e($r['last_inspected'] ?? 'â€”') ?></td>
             <td class="px-4 py-3"><span class="status-tag <?= $statTag ?>"><?= e(ucfirst($r['status'] ?? 'Pending')) ?></span></td>
             <td class="px-4 py-3 text-muted max-w-xs">
               <?php if (!empty($r['notes'])): ?>
-              <span title="<?= e($r['notes']) ?>"><?= e(mb_strimwidth($r['notes'], 0, 50, '…')) ?></span>
+              <span title="<?= e($r['notes']) ?>"><?= e(mb_strimwidth($r['notes'], 0, 50, 'â€¦')) ?></span>
               <?php else: ?>
-              <span class="text-border">—</span>
+              <span class="text-border">â€”</span>
               <?php endif; ?>
             </td>
           </tr>
@@ -328,17 +328,17 @@ body{font-family:'Inter',system-ui,sans-serif;}
         <div>
           <label class="block text-xs font-semibold text-textMain mb-1">Severity Level *</label>
           <select name="severity" class="w-full text-xs border border-border rounded px-3 py-1.5 bg-background focus:outline-none focus:border-primary">
-            <option value="Critical">?? Critical — Immediate danger</option>
-            <option value="High">?? High — Priority repair needed</option>
-            <option value="Medium" selected>?? Medium — Scheduled attention</option>
-            <option value="Low">?? Low — Minor issue</option>
+            <option value="Critical">?? Critical â€” Immediate danger</option>
+            <option value="High">?? High â€” Priority repair needed</option>
+            <option value="Medium" selected>?? Medium â€” Scheduled attention</option>
+            <option value="Low">?? Low â€” Minor issue</option>
           </select>
         </div>
       </div>
 
       <div>
         <label class="block text-xs font-semibold text-textMain mb-1">Issue Description *</label>
-        <textarea name="details" rows="4" required class="w-full text-xs border border-border rounded p-2.5 bg-background focus:outline-none focus:border-primary" placeholder="Describe the exact condition observed: location, extent of damage, how long the issue has existed, and any immediate safety risk to students or staff…"></textarea>
+        <textarea name="details" rows="4" required class="w-full text-xs border border-border rounded p-2.5 bg-background focus:outline-none focus:border-primary" placeholder="Describe the exact condition observed: location, extent of damage, how long the issue has existed, and any immediate safety risk to students or staffâ€¦"></textarea>
       </div>
 
       <div class="pt-3 border-t border-border flex justify-end gap-2">
@@ -360,3 +360,4 @@ document.getElementById('report-modal').addEventListener('click',function(e){if(
 </script>
 </body>
 </html>
+
