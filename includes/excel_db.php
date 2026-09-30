@@ -81,16 +81,16 @@ class ExcelDB {
                 ['12', 'STU-1012', 'Tariq Baloch', 'Grade 5', 'Male', 'Absent', 'badge-absent', '51%', '2026-09-19', 'Government Primary School Station Road, Tando Allahyar']
             ]
         ],
-        'at_risk' => [
-            'headers' => ['id', 'student_code', 'full_name', 'school_name', 'grade', 'taluka', 'attendance_pct', 'risk_level', 'last_followup', 'status', 'action_needed'],
+        'school_risks' => [
+            'headers' => ['id', 'semis_code', 'school_name', 'taluka', 'risk_category', 'severity', 'details', 'reported_date', 'last_inspected', 'status', 'notes'],
             'seeds' => [
-                ['1', 'STU-1004', 'Sana Bibi', 'GBPS D, Nasarpur', 'Grade 3', 'Nasarpur', '54%', 'High', 'Never', 'Unresolved', 'Parental Contact Required'],
-                ['2', 'STU-1007', 'Asif Memon', 'GPS Model City, Tando Allahyar', 'Grade 2', 'Tando Allahyar', '48%', 'High', '2026-09-10', 'In Progress', 'Home Visit Scheduled'],
-                ['3', 'STU-1009', 'Zainab Solangi', 'GGSS E, Tando Allahyar', 'Grade 7', 'Tando Allahyar', '58%', 'High', '2026-09-12', 'Follow-up Due', 'Financial/Stipend Assessment'],
-                ['4', 'STU-1012', 'Tariq Baloch', 'GPS Station Road, Tando Allahyar', 'Grade 5', 'Tando Allahyar', '51%', 'High', 'Never', 'Unresolved', 'Health / Sickness Check'],
-                ['5', 'STU-1002', 'Fatima Noor', 'GGES B, Jhando Mari', 'Grade 6', 'Jhando Mari', '76%', 'Low', '2026-09-15', 'Monitored', 'Class Teacher Feedback'],
-                ['6', 'STU-1006', 'Hina Rehman', 'GPS G, Pyaro Lund', 'Grade 5', 'Jhando Mari', '69%', 'Medium', '2026-09-14', 'In Progress', 'Attendance Warning Issued'],
-                ['7', 'STU-1010', 'Kamran Abbasi', 'GBHS Missan, Chambar', 'Grade 8', 'Chambar', '74%', 'Medium', 'Never', 'Pending', 'Teacher Guidance Session']
+                ['1', '403010004', 'Government Boys Primary School D, Nasarpur', 'Nasarpur', 'Dangerous Building Structure', 'Critical', 'Main classroom block has visible structural cracks; roof at risk of collapse during rains', '2026-09-01', '2026-09-15', 'In Progress', 'Engineers from Works Dept. visited; repair order issued'],
+                ['2', '403010004', 'Government Boys Primary School D, Nasarpur', 'Nasarpur', 'No Boundary Wall', 'High', 'School has no boundary wall; children exposed to main road traffic', '2026-09-01', '2026-09-15', 'Pending', ''],
+                ['3', '403010010', 'Government Primary School Station Road, Tando Allahyar', 'Tando Allahyar', 'Damaged / Incomplete Wall', 'High', 'Boundary wall under construction since 2024; front section missing', '2026-09-05', '2026-09-20', 'In Progress', 'Contractor engaged; estimated completion Oct 2026'],
+                ['4', '403010002', 'Government Girls Elementary School B, Jhando Mari', 'Jhando Mari', 'Non-functional Toilets', 'High', 'Girls toilet block damaged and unusable; affecting enrollment and retention', '2026-09-08', '2026-09-22', 'Pending', ''],
+                ['5', '403010004', 'Government Boys Primary School D, Nasarpur', 'Nasarpur', 'No Electricity', 'Medium', 'No grid or solar connection; no fans or lighting in classrooms', '2026-09-01', '2026-09-15', 'Pending', 'Solar panel proposal submitted to DEO'],
+                ['6', '403010010', 'Government Primary School Station Road, Tando Allahyar', 'Tando Allahyar', 'No Drinking Water', 'Medium', 'Handpump non-functional since June 2026; students bring water from home', '2026-09-05', '2026-09-20', 'Pending', ''],
+                ['7', '403010007', 'Government Primary School G, Pyaro Lund', 'Jhando Mari', 'Flood / Disaster Prone Area', 'Critical', 'School flooded 3 times in last 2 years; located in low-lying flood-prone zone', '2026-09-10', '2026-09-25', 'Escalated', 'Referred to PDMA for disaster-resilient reconstruction plan']
             ]
         ],
         'users' => [
@@ -109,6 +109,28 @@ class ExcelDB {
                 ['2', 'Jhando Mari', 'Tando Allahyar District', '2026-09-19 22:00:00'],
                 ['3', 'Chambar', 'Tando Allahyar District', '2026-09-19 22:00:00'],
                 ['4', 'Nasarpur', 'Tando Allahyar District', '2026-09-19 22:00:00']
+            ]
+        ],
+        'complaints' => [
+            'headers' => ['id', 'ticket_no', 'semis_code', 'school_name', 'taluka', 'category', 'priority', 'subject', 'description', 'status', 'created_at', 'updated_at', 'unread_admin', 'unread_school'],
+            'seeds' => [
+                ['1', 'GRM-2026-0101', '403010001', 'Government Primary School Model City, Tando Allahyar', 'Tando Allahyar', 'SMC Funds & Grants', 'High', 'Delay in SMC 1st Quarter Non-Salary Budget Disbursement', 'The School Management Committee (SMC) first quarter grant has not yet been credited to the designated school bank account. Urgent release needed for white-washing, stationery, and utility bills.', 'Under Review', '2026-09-24 10:15:00', '2026-09-26 14:30:00', '0', '0'],
+                ['2', 'GRM-2026-0102', '403010002', 'Government Girls Elementary School B, Jhando Mari', 'Jhando Mari', 'Teacher Shortage & Absenteeism', 'Urgent', 'Severe shortage of Science & English PST/JEST teachers for Grade 6-8', 'Out of 6 sanctioned posts, 2 teachers retired last month. We urgently need 2 JEST (Science/Math) teachers to cover syllabus before midterm exams.', 'Pending', '2026-09-28 09:40:00', '2026-09-28 09:40:00', '1', '0'],
+                ['3', 'GRM-2026-0103', '403010004', 'Government Boys Primary School D, Nasarpur', 'Nasarpur', 'Textbooks & Free Supplies', 'Normal', 'Shortage of Sindhi and Math textbooks for Grade 4 and 5', 'Free textbook distribution arrived short by 45 sets of Grade 4 and 30 sets of Grade 5 Sindhi & Math. Students are sharing textbooks.', 'Resolved', '2026-09-15 11:00:00', '2026-09-20 16:15:00', '0', '0'],
+                ['4', 'GRM-2026-0104', '403010010', 'Government Primary School Station Road, Tando Allahyar', 'Tando Allahyar', 'Electricity & Water Outage', 'High', 'Transformer malfunction and electric wiring burn in main block', 'Electric pole transformer tripped causing a burnout of classroom main switch. Classes are running in dark and ceiling fans are inoperative.', 'In Progress', '2026-09-29 08:30:00', '2026-09-29 12:00:00', '0', '1'],
+            ]
+        ],
+        'complaint_replies' => [
+            'headers' => ['id', 'ticket_no', 'sender_role', 'sender_name', 'message', 'created_at'],
+            'seeds' => [
+                ['1', 'GRM-2026-0101', 'school', 'Muhammad Ishaq Memon (HM)', 'The School Management Committee (SMC) first quarter grant has not yet been credited to the designated school bank account. Urgent release needed for white-washing, stationery, and utility bills.', '2026-09-24 10:15:00'],
+                ['2', 'GRM-2026-0101', 'admin', 'District RSU Coordinator', 'Your grievance has been verified with the District Accounts Office. SMC sanction list #TAY-SMC-2026/04 has been signed by DEO. Funds will reflect in school account within 3 to 4 business days.', '2026-09-26 14:30:00'],
+                ['3', 'GRM-2026-0102', 'school', 'Nusrat Parveen Laghari (HM)', 'Out of 6 sanctioned posts, 2 teachers retired last month. We urgently need 2 JEST (Science/Math) teachers to cover syllabus before midterm exams.', '2026-09-28 09:40:00'],
+                ['4', 'GRM-2026-0103', 'school', 'Abdul Hameed Soomro (HM)', 'Free textbook distribution arrived short by 45 sets of Grade 4 and 30 sets of Grade 5 Sindhi & Math. Students are sharing textbooks.', '2026-09-15 11:00:00'],
+                ['5', 'GRM-2026-0103', 'admin', 'District RSU Coordinator', 'Additional consignment of 80 textbook sets received from Sindh Textbook Board warehouse Jamshoro. Kindly collect your quota from TEVO office Nasarpur on Monday.', '2026-09-18 10:00:00'],
+                ['6', 'GRM-2026-0103', 'school', 'Abdul Hameed Soomro (HM)', 'Received and distributed to all students. Thank you RSU team for swift redressal.', '2026-09-20 16:15:00'],
+                ['7', 'GRM-2026-0104', 'school', 'Mirza Bashir Baig (HM)', 'Electric pole transformer tripped causing a burnout of classroom main switch. Classes are running in dark and ceiling fans are inoperative.', '2026-09-29 08:30:00'],
+                ['8', 'GRM-2026-0104', 'admin', 'District RSU Coordinator', 'HESCO Sub-divisional officer has been officially requested via letter #RSU/EL/2026/89. Work team scheduled for inspection today.', '2026-09-29 12:00:00'],
             ]
         ]
     ];
@@ -839,5 +861,108 @@ class ExcelDB {
 
         return self::writeTable('users', $users);
     }
+
+    /**
+     * Get count of unread complaints or replies based on role.
+     */
+    public static function getUnreadComplaintsCount(string $role = 'admin', string $semisCode = ''): int {
+        $complaints = self::all('complaints');
+        $count = 0;
+        foreach ($complaints as $c) {
+            if ($role === 'admin') {
+                if (($c['unread_admin'] ?? '0') === '1' || strtolower($c['status'] ?? '') === 'pending') {
+                    $count++;
+                }
+            } elseif ($role === 'school') {
+                if (!empty($semisCode) && ($c['semis_code'] ?? '') === $semisCode) {
+                    if (($c['unread_school'] ?? '0') === '1') {
+                        $count++;
+                    }
+                }
+            }
+        }
+        return $count;
+    }
+
+    /**
+     * Generate unique tracking ticket number e.g. GRM-2026-0105
+     */
+    public static function generateTicketNo(): string {
+        $complaints = self::all('complaints');
+        $maxNum = 100;
+        foreach ($complaints as $c) {
+            if (preg_match('/GRM-\d{4}-(\d+)/', $c['ticket_no'] ?? '', $m)) {
+                $n = (int)$m[1];
+                if ($n > $maxNum) {
+                    $maxNum = $n;
+                }
+            }
+        }
+        $next = $maxNum + 1;
+        return 'GRM-' . date('Y') . '-' . str_pad((string)$next, 4, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Get all replies for a ticket sorted chronologically.
+     */
+    public static function getRepliesForTicket(string $ticketNo): array {
+        $allReplies = self::all('complaint_replies');
+        $replies = array_filter($allReplies, function($r) use ($ticketNo) {
+            return ($r['ticket_no'] ?? '') === $ticketNo;
+        });
+        usort($replies, function($a, $b) {
+            return strcmp($a['created_at'] ?? '', $b['created_at'] ?? '');
+        });
+        return array_values($replies);
+    }
+
+    /**
+     * Add a reply message to a complaint ticket and update ticket unread status.
+     */
+    public static function addReply(string $ticketNo, string $senderRole, string $senderName, string $message): bool {
+        $ticket = self::find('complaints', 'ticket_no', $ticketNo);
+        if (!$ticket) {
+            return false;
+        }
+
+        $replies = self::all('complaint_replies');
+        $maxId = 0;
+        foreach ($replies as $r) {
+            if (isset($r['id']) && is_numeric($r['id']) && (int)$r['id'] > $maxId) {
+                $maxId = (int)$r['id'];
+            }
+        }
+
+        $newReply = [
+            'id'          => (string)($maxId + 1),
+            'ticket_no'   => $ticketNo,
+            'sender_role' => $senderRole,
+            'sender_name' => $senderName,
+            'message'     => $message,
+            'created_at'  => date('Y-m-d H:i:s')
+        ];
+        $replies[] = $newReply;
+        self::writeTable('complaint_replies', $replies);
+
+        // Update parent complaint ticket metadata
+        $updateData = [
+            'updated_at' => date('Y-m-d H:i:s')
+        ];
+        if ($senderRole === 'admin') {
+            $updateData['unread_school'] = '1';
+            $updateData['unread_admin'] = '0';
+            // If status was pending, advance to Under Review / In Progress
+            if (strtolower($ticket['status'] ?? '') === 'pending') {
+                $updateData['status'] = 'Under Review';
+            }
+        } else {
+            $updateData['unread_admin'] = '1';
+            $updateData['unread_school'] = '0';
+        }
+
+        self::update('complaints', 'ticket_no', $ticketNo, $updateData);
+        return true;
+    }
 }
+
 

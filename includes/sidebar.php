@@ -6,7 +6,7 @@
  *
  * Required variables (set before including):
  *   $active_page (string) — One of: 'dashboard', 'schools', 'school-profile',
- *                           'students', 'attendance', 'at-risk-students'
+ *                           'at-risk-schools', 'students', 'settings'
  *
  * Usage:
  *   $active_page = 'dashboard';
@@ -74,6 +74,13 @@ function sidebar_link_class(string $page, string $active): string {
       </svg>
       School Profile
     </a>
+    <a href="<?= $base ?>at-risk-schools.php" class="<?= sidebar_link_class('at-risk-schools', $active_page) ?>">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+      At-Risk Schools
+    </a>
 
     <!-- Students -->
     <div class="px-2 pt-3 pb-1 sidebar-group-title text-white/40">Students</div>
@@ -84,14 +91,6 @@ function sidebar_link_class(string $page, string $active): string {
         <path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
       </svg>
       Student Overview
-    </a>
-    <!-- At-Risk -->
-    <a href="<?= $base ?>at-risk-students.php" class="<?= sidebar_link_class('at-risk-students', $active_page) ?>">
-      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-        <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-        <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-      </svg>
-      At-Risk Students
     </a>
 
     <!-- Teachers & Staff -->
@@ -121,12 +120,18 @@ function sidebar_link_class(string $page, string $active): string {
     </a>
 
     <!-- Complaints / Redress -->
+    <?php $admin_unread_complaints = ExcelDB::getUnreadComplaintsCount('admin'); ?>
     <div class="px-2 pt-3 pb-1 sidebar-group-title text-white/40">Complaints / Redress</div>
-    <a href="#" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded text-white/80 text-sm hover:text-white opacity-60 cursor-not-allowed">
-      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
-      </svg>
-      Complaints
+    <a href="<?= $base ?>complaints.php" class="<?= sidebar_link_class('complaints', $active_page) ?> justify-between">
+      <div class="flex items-center gap-3">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+        </svg>
+        <span>Complaints</span>
+      </div>
+      <span class="complaints-badge-count <?= ($admin_unread_complaints > 0 ? '' : 'hidden') ?> px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-red-500 text-white">
+        <?= $admin_unread_complaints ?>
+      </span>
     </a>
 
     <!-- Reports -->

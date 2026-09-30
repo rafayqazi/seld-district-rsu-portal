@@ -54,6 +54,20 @@ $hm_initial = strtoupper(substr($hm_name, 0, 1));
       <span>SELD Sindh &bull; <?= APP_DISTRICT ?></span>
     </div>
 
+    <!-- Notification Bell -->
+    <?php 
+      $school_unread_count = ExcelDB::getUnreadComplaintsCount('school', $school_semis);
+    ?>
+    <div class="relative">
+      <a href="<?= BASE_URL ?>/school/complaints.php" class="relative text-muted hover:text-emerald-700 p-1.5 rounded-lg hover:bg-emerald-50 transition block" title="Grievance Alerts &amp; Messages">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+          <path d="M13.73 21a2 2 0 01-3.46 0"/>
+        </svg>
+        <span class="complaints-header-dot absolute top-0.5 right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-surface <?= $school_unread_count > 0 ? '' : 'hidden' ?>"></span>
+      </a>
+    </div>
+
     <!-- Head Master Profile link -->
     <a href="<?= BASE_URL ?>/school/settings.php" class="flex items-center gap-2.5 pl-2 border-l border-border hover:opacity-85 transition" title="School Account & Password Settings">
       <?php if ($has_avatar): ?>
@@ -82,3 +96,9 @@ $hm_initial = strtoupper(substr($hm_name, 0, 1));
   </div>
 
 </header>
+
+<script>
+  window.LSU_BASE_URL = '<?= BASE_URL ?>';
+</script>
+<script src="<?= BASE_URL ?>/assets/js/notifications.js"></script>
+

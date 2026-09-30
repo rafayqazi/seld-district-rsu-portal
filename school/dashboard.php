@@ -205,13 +205,13 @@ $fac_net = $current_school['facility_internet'] ?? 'Broadband / 4G';
 
             <!-- Quick Action Buttons -->
             <div class="flex flex-wrap items-center gap-2 pt-2 md:pt-0">
+              <a href="<?= BASE_URL ?>/school/complaints.php" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold px-3.5 py-2 rounded-lg flex items-center gap-1.5 shadow-xs transition">
+                <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                <span>Lodge Grievance</span>
+              </a>
               <a href="<?= BASE_URL ?>/school/profile.php" class="btn-primary text-xs font-semibold px-3.5 py-2 rounded-lg flex items-center gap-1.5 shadow-xs">
                 <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                 <span>School Profile</span>
-              </a>
-              <a href="<?= BASE_URL ?>/school/profile.php" class="btn-secondary text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5">
-                <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                <span>Edit Profile</span>
               </a>
               <a href="<?= BASE_URL ?>/school/settings.php" class="btn-secondary text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5" title="Change Password & Security">
                 <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
@@ -239,18 +239,28 @@ $fac_net = $current_school['facility_internet'] ?? 'Broadband / 4G';
             </div>
           </div>
 
-          <!-- At-Risk Students KPI -->
+          <!-- Grievance & Complaints KPI -->
+          <?php 
+            $allSchoolComplaints = ExcelDB::all('complaints');
+            $myComplaints = array_filter($allSchoolComplaints, fn($c) => ($c['semis_code'] ?? '') === $school_semis);
+            $myUnreadCount = ExcelDB::getUnreadComplaintsCount('school', $school_semis);
+          ?>
           <div class="kpi-card bg-surface border border-border rounded-xl p-4 shadow-xs">
             <div class="flex items-center justify-between text-muted text-xs font-semibold uppercase tracking-wider mb-2">
-              <span>At-Risk Students</span>
-              <div class="w-8 h-8 rounded-lg bg-red-50 text-danger flex items-center justify-center">
-                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <span>Grievances / Tickets</span>
+              <div class="w-8 h-8 rounded-lg bg-teal-50 text-emerald-700 flex items-center justify-center">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
               </div>
             </div>
-            <div class="text-2xl font-bold <?= count($schoolAtRisk) > 0 ? 'text-danger' : 'text-success' ?> font-mono"><?= count($schoolAtRisk) ?></div>
+            <div class="text-2xl font-bold text-textMain font-mono flex items-center gap-2">
+              <span><?= count($myComplaints) ?></span>
+              <?php if ($myUnreadCount > 0): ?>
+                <span class="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full animate-pulse"><?= $myUnreadCount ?> New Reply</span>
+              <?php endif; ?>
+            </div>
             <div class="flex items-center justify-between text-[11px] text-muted mt-2 pt-2 border-t border-border">
-              <span>Require follow-up intervention</span>
-              <a href="<?= BASE_URL ?>/school/at-risk.php" class="text-danger hover:underline font-semibold">View &rarr;</a>
+              <span>District RSU Desk</span>
+              <a href="<?= BASE_URL ?>/school/complaints.php" class="text-emerald-700 hover:underline font-semibold">View Tickets &rarr;</a>
             </div>
           </div>
 
@@ -279,7 +289,7 @@ $fac_net = $current_school['facility_internet'] ?? 'Broadband / 4G';
             </div>
             <div class="text-2xl font-bold text-textMain font-mono"><?= $classrooms_count ?> <span class="text-xs font-normal text-muted">Rooms</span></div>
             <div class="flex items-center justify-between text-[11px] text-muted mt-2 pt-2 border-t border-border">
-              <span>At-Risk Students: <strong class="<?= count($schoolAtRisk) > 0 ? 'text-danger' : 'text-success' ?>"><?= count($schoolAtRisk) ?></strong></span>
+              <span>School Facility Risks</span>
               <a href="<?= BASE_URL ?>/school/at-risk.php" class="text-primary hover:underline font-semibold">View &rarr;</a>
             </div>
           </div>

@@ -101,7 +101,7 @@ When a new page is added, update the appropriate sidebar component (`includes/si
 ```
 
 ### Active Pages Registry
-- **Admin Portal:** `'dashboard'`, `'schools'`, `'school-profile'`, `'students'`, `'at-risk'`, `'settings'`
+- **Admin Portal:** `'dashboard'`, `'schools'`, `'school-profile'`, `'at-risk-schools'`, `'students'`, `'settings'`
 - **School Portal:** `'dashboard'`, `'profile'`, `'students'`, `'at-risk'`, `'settings'`
 
 ---
@@ -178,7 +178,7 @@ $talukas = ExcelDB::getTalukas(true); // active only
 
 - **Engine:** `includes/excel_db.php` (`ExcelDB` static class)
 - **Storage:** `/data/*.csv` protected by `.htaccess`
-- **Tables:** `schools.csv`, `students.csv`, `at_risk.csv`, `users.csv`, `settings.csv`, `talukas.csv`
+- **Tables:** `schools.csv`, `students.csv`, `school_risks.csv`, `users.csv`, `settings.csv`, `talukas.csv`
 
 ### Common Operations
 ```php

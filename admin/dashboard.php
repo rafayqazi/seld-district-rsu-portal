@@ -12,7 +12,7 @@ $page_title  = 'Dashboard — ' . APP_NAME;
 // Retrieve live metrics from Excel database
 $schoolsData    = ExcelDB::all('schools');
 $studentsData   = ExcelDB::all('students');
-$atRiskData     = ExcelDB::all('at_risk');
+$atRiskData     = ExcelDB::all('school_risks');
 $available_talukas = ExcelDB::getTalukas();
 
 $total_schools_count  = count($schoolsData);
@@ -40,12 +40,27 @@ foreach ($studentsData as $st) {
     }
 }
 
-// At Risk stats from Excel
+// School Infrastructure Risk stats
 $high_risk_count     = 0;
-$total_at_risk_count = count($atRiskData);
+$total_at_risk_count = 0;
 foreach ($atRiskData as $ar) {
-    if (strtolower($ar['risk_level'] ?? '') === 'high') {
-        $high_risk_count++;
+    $stat = strtolower($ar['status'] ?? '');
+    if ($stat !== 'resolved') {
+        $total_at_risk_count++;
+        $sev = strtolower($ar['severity'] ?? '');
+        if ($sev === 'critical') {
+            $high_risk_count++;
+        }
+    }
+}
+
+// Grievance & Complaints stats
+$complaintsData = ExcelDB::all('complaints');
+$total_complaints_count = count($complaintsData);
+$pending_complaints_count = 0;
+foreach ($complaintsData as $c) {
+    if (strtolower($c['status'] ?? '') === 'pending' || ($c['unread_admin'] ?? '0') === '1') {
+        $pending_complaints_count++;
     }
 }
 ?>
@@ -190,9 +205,9 @@ tailwind.config = {
             <svg width="20" height="20" fill="none" stroke="#DC2626" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
           </div>
           <div class="flex-1 min-w-0">
-            <div class="text-xs text-muted font-medium uppercase tracking-wide">High Risk Students</div>
+            <div class="text-xs text-muted font-medium uppercase tracking-wide">Critical Schools</div>
             <div class="text-3xl font-bold text-danger leading-tight mt-0.5"><?= $high_risk_count ?></div>
-            <div class="text-xs text-danger mt-1"><?= $total_at_risk_count ?> total requiring follow-up</div>
+            <div class="text-xs text-danger mt-1"><?= $total_at_risk_count ?> schools flagged at-risk</div>
           </div>
         </div>
         <div class="kpi-card bg-surface border border-border rounded-lg p-4 flex gap-3">
@@ -216,24 +231,27 @@ tailwind.config = {
             <div class="text-xs text-muted mt-1">1,876 teachers, 308 non-teaching</div>
           </div>
         </div>
-        <div class="kpi-card bg-surface border border-border rounded-lg p-4 flex gap-3">
-          <div class="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
-            <svg width="20" height="20" fill="none" stroke="#D97706" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <a href="<?= BASE_URL ?>/admin/complaints.php" class="kpi-card bg-surface border border-border rounded-lg p-4 flex gap-3 hover:border-primary transition group">
+          <div class="w-10 h-10 rounded-lg bg-teal-50 text-secondary flex items-center justify-center flex-shrink-0">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
           </div>
           <div class="flex-1 min-w-0">
-            <div class="text-xs text-muted font-medium uppercase tracking-wide">Schools Monitored</div>
-            <div class="text-3xl font-bold text-textMain leading-tight mt-0.5">334</div>
-            <div class="text-xs text-muted mt-1">78% of total &mdash; 94 remaining</div>
+            <div class="text-xs text-muted font-medium uppercase tracking-wide group-hover:text-primary transition-colors">School Complaints</div>
+            <div class="text-3xl font-bold text-textMain leading-tight mt-0.5"><?= $total_complaints_count ?></div>
+            <div class="text-xs text-danger mt-1 flex items-center gap-1 font-semibold">
+              <span class="w-2 h-2 rounded-full bg-red-500 <?= $pending_complaints_count > 0 ? 'animate-pulse' : '' ?>"></span>
+              <?= $pending_complaints_count ?> Pending Action
+            </div>
           </div>
-        </div>
+        </a>
         <div class="kpi-card bg-surface border border-border rounded-lg p-4 flex gap-3">
           <div class="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0">
-            <svg width="20" height="20" fill="none" stroke="#EA580C" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <svg width="20" height="20" fill="none" stroke="#EA580C" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
           </div>
           <div class="flex-1 min-w-0">
-            <div class="text-xs text-muted font-medium uppercase tracking-wide">At-Risk Students</div>
-            <div class="text-3xl font-bold text-textMain leading-tight mt-0.5">1,284</div>
-            <div class="text-xs text-warning mt-1">Requires follow-up action</div>
+            <div class="text-xs text-muted font-medium uppercase tracking-wide">At-Risk Schools</div>
+            <div class="text-3xl font-bold text-orange-700 leading-tight mt-0.5"><?= $total_at_risk_count ?></div>
+            <div class="text-xs text-warning mt-1">Infrastructure issues flagged</div>
           </div>
         </div>
       </section>

@@ -50,48 +50,58 @@ $session_initial  = strtoupper(substr($session_username, 0, 1));
   <div class="flex-1"></div>
 
   <!-- Notifications -->
+  <?php 
+    $header_unread_complaints = ExcelDB::getUnreadComplaintsCount('admin');
+    $allComplaintsList = ExcelDB::all('complaints');
+    usort($allComplaintsList, fn($a, $b) => strcmp($b['updated_at'] ?? $b['created_at'] ?? '', $a['updated_at'] ?? $a['created_at'] ?? ''));
+    $recentNotifs = array_slice($allComplaintsList, 0, 4);
+  ?>
   <div class="relative">
     <button id="notif-btn" onclick="toggleNotif()" class="relative text-muted hover:text-primary p-1.5 rounded hover:bg-background" aria-label="Notifications">
       <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
         <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
         <path d="M13.73 21a2 2 0 01-3.46 0"/>
       </svg>
-      <span class="absolute top-0.5 right-0.5 w-2 h-2 bg-danger rounded-full"></span>
+      <span class="complaints-header-dot absolute top-0.5 right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-surface <?= $header_unread_complaints > 0 ? '' : 'hidden' ?>"></span>
     </button>
     <!-- Notification Dropdown -->
-    <div id="notif-dropdown" class="hidden absolute right-0 top-10 w-80 bg-surface border border-border rounded-lg shadow-lg z-50 overflow-hidden">
-      <div class="flex items-center justify-between px-4 py-3 border-b border-border">
-        <span class="font-semibold text-sm text-textMain">Notifications</span>
-        <span class="text-xs text-secondary font-medium cursor-pointer hover:underline">Mark all read</span>
+    <div id="notif-dropdown" class="hidden absolute right-0 top-10 w-80 bg-surface border border-border rounded-xl shadow-xl z-50 overflow-hidden">
+      <div class="flex items-center justify-between px-4 py-3 border-b border-border bg-slate-50/50">
+        <div class="flex items-center gap-1.5">
+          <span class="font-bold text-xs text-textMain">Complaints &amp; Alerts</span>
+          <span class="complaints-header-count text-[10px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded-full <?= $header_unread_complaints > 0 ? '' : 'hidden' ?>">
+            <?= $header_unread_complaints ?> New
+          </span>
+        </div>
+        <button onclick="window.playNotificationChime()" class="text-[11px] text-secondary hover:underline flex items-center gap-1">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+          <span>Test Sound</span>
+        </button>
       </div>
-      <div class="divide-y divide-border max-h-72 overflow-y-auto">
-        <div class="px-4 py-3 hover:bg-background flex gap-3 cursor-pointer">
-          <div class="w-2 h-2 mt-1.5 rounded-full bg-primary flex-shrink-0"></div>
-          <div>
-            <div class="text-sm font-medium text-textMain">New Monitoring Report</div>
-            <div class="text-xs text-muted mt-0.5">GPS Ranipur submitted a monitoring report.</div>
-            <div class="text-xs text-muted mt-1">10 minutes ago</div>
-          </div>
-        </div>
-        <div class="px-4 py-3 hover:bg-background flex gap-3 cursor-pointer">
-          <div class="w-2 h-2 mt-1.5 rounded-full bg-warning flex-shrink-0"></div>
-          <div>
-            <div class="text-sm font-medium text-textMain">Attendance Alert</div>
-            <div class="text-xs text-muted mt-0.5">12 students marked absent — GGSS Tando Allahyar.</div>
-            <div class="text-xs text-muted mt-1">25 minutes ago</div>
-          </div>
-        </div>
-        <div class="px-4 py-3 hover:bg-background flex gap-3 cursor-pointer">
-          <div class="w-2 h-2 mt-1.5 rounded-full bg-success flex-shrink-0"></div>
-          <div>
-            <div class="text-sm font-medium text-textMain">Complaint Resolved</div>
-            <div class="text-xs text-muted mt-0.5">Complaint #GRM-1024 was resolved.</div>
-            <div class="text-xs text-muted mt-1">1 hour ago</div>
-          </div>
-        </div>
+      <div class="divide-y divide-border max-h-72 overflow-y-auto text-xs">
+        <?php if (empty($recentNotifs)): ?>
+          <div class="p-4 text-center text-muted text-xs">No notifications recorded yet.</div>
+        <?php else: ?>
+          <?php foreach ($recentNotifs as $notif): 
+            $isUnreadNotif = ($notif['unread_admin'] ?? '0') === '1' || strtolower($notif['status'] ?? '') === 'pending';
+          ?>
+            <a href="<?= BASE_URL ?>/admin/complaint-details.php?ticket=<?= urlencode($notif['ticket_no'] ?? '') ?>" class="px-4 py-3 hover:bg-background flex gap-3 cursor-pointer block transition <?= $isUnreadNotif ? 'bg-amber-50/30' : '' ?>">
+              <div class="w-2 h-2 mt-1.5 rounded-full <?= $isUnreadNotif ? 'bg-red-500' : 'bg-slate-300' ?> flex-shrink-0"></div>
+              <div class="overflow-hidden">
+                <div class="text-xs font-semibold text-textMain truncate"><?= e($notif['school_name'] ?? 'School') ?></div>
+                <div class="text-[11px] text-muted truncate mt-0.5"><?= e($notif['subject'] ?? '') ?></div>
+                <div class="text-[10px] text-slate-400 mt-1 flex items-center gap-2">
+                  <span class="font-mono"><?= e($notif['ticket_no'] ?? '') ?></span>
+                  <span>&bull;</span>
+                  <span><?= date('M d, H:i', strtotime($notif['updated_at'] ?? $notif['created_at'] ?? 'now')) ?></span>
+                </div>
+              </div>
+            </a>
+          <?php endforeach; ?>
+        <?php endif; ?>
       </div>
-      <div class="px-4 py-2.5 border-t border-border text-center">
-        <span class="text-xs text-primary font-medium cursor-pointer hover:underline">View all notifications</span>
+      <div class="px-4 py-2.5 border-t border-border text-center bg-slate-50/50">
+        <a href="<?= BASE_URL ?>/admin/complaints.php" class="text-xs text-primary font-bold hover:underline">View All Grievances &rarr;</a>
       </div>
     </div>
   </div>
@@ -126,4 +136,21 @@ $session_initial  = strtoupper(substr($session_username, 0, 1));
   </div>
 
 </header>
+
+<script>
+  window.LSU_BASE_URL = '<?= BASE_URL ?>';
+  function toggleNotif() {
+    const dropdown = document.getElementById('notif-dropdown');
+    if (dropdown) dropdown.classList.toggle('hidden');
+  }
+  document.addEventListener('click', function(e) {
+    const btn = document.getElementById('notif-btn');
+    const dropdown = document.getElementById('notif-dropdown');
+    if (btn && dropdown && !btn.contains(e.target) && !dropdown.contains(e.target)) {
+      dropdown.classList.add('hidden');
+    }
+  });
+</script>
+<script src="<?= BASE_URL ?>/assets/js/notifications.js"></script>
+
 

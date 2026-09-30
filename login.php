@@ -637,6 +637,23 @@ if (isset($_GET['reason'])) {
     </div>
   </footer>
 
+  <!-- ─── Developer Branding Strip ───────────────────────────────────────── -->
+  <div class="bg-[#061528] text-white/50 text-[11px] py-2.5 px-4 flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-3 border-t border-white/5">
+    <span class="flex items-center gap-1.5">
+      <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="opacity-60"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+      <span>Developed by</span>
+      <a href="https://rafayqazi.github.io/ar-portfolio/" target="_blank" rel="noopener noreferrer"
+         class="font-semibold text-white/80 hover:text-white transition-colors underline underline-offset-2 decoration-white/20 hover:decoration-white/60">
+        Abdul Rafay Qazi
+      </a>
+    </span>
+    <span class="hidden sm:inline text-white/20">&bull;</span>
+    <a href="tel:03710273699" class="flex items-center gap-1 hover:text-white/80 transition-colors">
+      <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.67A2 2 0 012 .03h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+      0371-0273699
+    </a>
+  </div>
+
   <!-- ── JavaScript Handlers ────────────────────────────────────────────────── -->
   <script>
     // Tab switcher between Admin and School
