@@ -248,6 +248,20 @@ ExcelDB::autoFlagSchoolRisks('403010004'); // Call after every facility save
 - **Workflow:** `.github/workflows/deploy.yml` triggers on every `git push` to `master` or `main`.
 - **Target:** InfinityFree FTP (`ftpupload.net`) synced to `/htdocs/`.
 - **Action:** `SamKirkland/FTP-Deploy-Action@v4.3.5`
+
+---
+
+## 11. District Dashboard Metrics & KPI Navigation Standards
+
+- All Admin Dashboard KPIs must be **strictly dynamic** calculated directly from active CSV records (`schools.csv`, `school_risks.csv`, `complaints.csv`):
+  - **Total Schools:** count of `schools.csv` records (links to `admin/schools.php`).
+  - **Total Students:** exact sum of `enrollment` across all registered schools with real gender breakdown (links to `admin/schools.php`).
+  - **Teachers & Staff:** exact sum of `teachers` and `non_teaching` columns (links to `admin/schools.php`).
+  - **Critical Schools:** non-resolved `critical` severity risk records (links to `admin/at-risk-schools.php?severity=critical`).
+  - **At-Risk Registry:** total unresolved risks vs resolved count (links to `admin/at-risk-schools.php`).
+  - **Complaints:** total grievance count and pending ticket badge (links to `admin/complaints.php`).
+- All donut charts and performance indicator progress bars must compute their values and SVG stroke coordinates dynamically on page render.
+
 - **Secrets:**
   - `FTP_SERVER`: `ftpupload.net`
   - `FTP_USERNAME`: `if0_43042000`

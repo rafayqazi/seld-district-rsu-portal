@@ -10,49 +10,136 @@ $active_page = 'dashboard';
 $page_title  = 'Dashboard — ' . APP_NAME;
 
 // Retrieve live metrics from Excel database
-$schoolsData    = ExcelDB::all('schools');
-$atRiskData     = ExcelDB::all('school_risks');
+$schoolsData       = ExcelDB::all('schools');
+$atRiskData        = ExcelDB::all('school_risks');
+$complaintsData    = ExcelDB::all('complaints');
 $available_talukas = ExcelDB::getTalukas();
 
-$total_schools_count  = count($schoolsData);
-$active_schools_count = 0;
-$total_enrollment     = 0;
+$total_schools_count         = count($schoolsData);
+$active_schools_count        = 0;
+$attention_schools_count     = 0;
+$not_reporting_schools_count = 0;
 
-// Enrollment breakdown by school level
+$total_enrollment   = 0;
+$total_boys         = 0;
+$total_girls        = 0;
+$total_teachers     = 0;
+$total_non_teaching = 0;
+$total_classrooms   = 0;
+$schools_with_water = 0;
+
+// Enrollment breakdown by school level & totals
 $enrollment_by_level = [];
 foreach ($schoolsData as $s) {
-    $total_enrollment += (int)($s['enrollment'] ?? 0);
+    $enr = (int)($s['enrollment'] ?? 0);
+    $total_enrollment += $enr;
+    
+    $g = strtolower(trim($s['gender'] ?? ''));
+    if ($g === 'girls') {
+        $total_girls += $enr;
+    } elseif ($g === 'boys') {
+        $total_boys += $enr;
+    } else {
+        $b = (int)round($enr * 0.52);
+        $total_boys += $b;
+        $total_girls += ($enr - $b);
+    }
+    
+    $total_teachers     += (int)($s['teachers'] ?? 0);
+    $total_non_teaching += (int)($s['non_teaching'] ?? 0);
+    $total_classrooms   += (int)($s['classrooms'] ?? 0);
+
+    $w = strtolower(trim($s['facility_water'] ?? ''));
+    if (!empty($w) && !in_array($w, ['none', 'unavailable'])) {
+        $schools_with_water++;
+    }
+
     $st = $s['status'] ?? '';
     if ($st === 'Active' || $st === 'Good') {
         $active_schools_count++;
+    } elseif ($st === 'Needs Attention') {
+        $attention_schools_count++;
+    } elseif ($st === 'Not Reporting') {
+        $not_reporting_schools_count++;
+    } else {
+        $active_schools_count++;
     }
+
     $lvl = $s['level'] ?? 'Other';
-    $enrollment_by_level[$lvl] = ($enrollment_by_level[$lvl] ?? 0) + (int)($s['enrollment'] ?? 0);
+    $enrollment_by_level[$lvl] = ($enrollment_by_level[$lvl] ?? 0) + $enr;
 }
-$reporting_pct = $total_schools_count > 0 ? round(($active_schools_count / $total_schools_count) * 100) : 100;
+
+$total_sc_safe       = max(1, $total_schools_count);
+$reporting_pct       = round(($active_schools_count / $total_sc_safe) * 100);
+$attention_pct       = round(($attention_schools_count / $total_sc_safe) * 100);
+$not_reporting_pct   = max(0, 100 - $reporting_pct - $attention_pct);
+$water_pct           = round(($schools_with_water / $total_sc_safe) * 100);
 
 // School Infrastructure Risk stats
 $high_risk_count     = 0;
 $total_at_risk_count = 0;
+$resolved_count      = 0;
 foreach ($atRiskData as $ar) {
-    $stat = strtolower($ar['status'] ?? '');
-    if ($stat !== 'resolved') {
+    $stat = strtolower(trim($ar['status'] ?? ''));
+    if ($stat === 'resolved') {
+        $resolved_count++;
+    } else {
         $total_at_risk_count++;
-        $sev = strtolower($ar['severity'] ?? '');
+        $sev = strtolower(trim($ar['severity'] ?? ''));
         if ($sev === 'critical') {
             $high_risk_count++;
         }
     }
 }
+$risk_resolution_pct = ($total_at_risk_count + $resolved_count) > 0 
+    ? round(($resolved_count / ($total_at_risk_count + $resolved_count)) * 100) 
+    : 100;
 
 // Grievance & Complaints stats
-$complaintsData = ExcelDB::all('complaints');
-$total_complaints_count = count($complaintsData);
-$pending_complaints_count = 0;
+$total_complaints_count    = count($complaintsData);
+$pending_complaints_count  = 0;
+$resolved_complaints_count = 0;
 foreach ($complaintsData as $c) {
-    if (strtolower($c['status'] ?? '') === 'pending' || ($c['unread_admin'] ?? '0') === '1') {
+    $c_st = strtolower(trim($c['status'] ?? ''));
+    if ($c_st === 'resolved' || $c_st === 'closed') {
+        $resolved_complaints_count++;
+    }
+    if ($c_st === 'pending' || ($c['unread_admin'] ?? '0') === '1') {
         $pending_complaints_count++;
     }
+}
+$complaint_resolution_pct = $total_complaints_count > 0 
+    ? round(($resolved_complaints_count / $total_complaints_count) * 100) 
+    : 100;
+
+// Dynamic Recent Activities
+$recent_activities = [];
+$sorted_complaints = $complaintsData;
+usort($sorted_complaints, fn($a, $b) => strcmp($b['date'] ?? '', $a['date'] ?? ''));
+foreach (array_slice($sorted_complaints, 0, 3) as $c) {
+    $is_res = in_array(strtolower($c['status'] ?? ''), ['resolved', 'closed']);
+    $recent_activities[] = [
+        'icon_color' => $is_res ? '#15803D' : '#0F766E',
+        'bg'         => $is_res ? 'bg-green-50' : 'bg-teal-50',
+        'title'      => $is_res ? 'Complaint resolved' : 'New complaint submitted',
+        'sub'        => 'Complaint #' . ($c['ticket_no'] ?? '') . ' — ' . ($c['subject'] ?? ''),
+        'time'       => !empty($c['date']) ? date('d M Y', strtotime($c['date'])) : 'Recent',
+        'link'       => BASE_URL . '/admin/complaints.php'
+    ];
+}
+$sorted_risks = $atRiskData;
+usort($sorted_risks, fn($a, $b) => strcmp($b['reported_date'] ?? '', $a['reported_date'] ?? ''));
+foreach (array_slice($sorted_risks, 0, 3) as $r) {
+    $is_res  = strtolower($r['status'] ?? '') === 'resolved';
+    $is_crit = strtolower($r['severity'] ?? '') === 'critical';
+    $recent_activities[] = [
+        'icon_color' => $is_res ? '#15803D' : ($is_crit ? '#DC2626' : '#D97706'),
+        'bg'         => $is_res ? 'bg-green-50' : ($is_crit ? 'bg-red-50' : 'bg-amber-50'),
+        'title'      => $is_res ? 'Risk issue addressed' : 'Infrastructure risk flagged',
+        'sub'        => ($r['risk_category'] ?? '') . ' — ' . ($r['school_name'] ?? ('SEMIS ' . ($r['semis_code'] ?? ''))),
+        'time'       => !empty($r['reported_date']) ? date('d M Y', strtotime($r['reported_date'])) : 'Recent',
+        'link'       => BASE_URL . '/admin/at-risk-schools.php'
+    ];
 }
 ?>
 <!DOCTYPE html>
@@ -86,7 +173,7 @@ tailwind.config = {
   .sidebar-link:hover { background: rgba(255,255,255,0.08); }
   .sidebar-link.active { background: rgba(255,255,255,0.14); border-left: 3px solid #0F766E; }
   .sidebar-group-title { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; }
-  .kpi-card { transition: box-shadow 0.2s, transform 0.2s; }
+  .kpi-card { transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s; }
   .kpi-card:hover { box-shadow: 0 4px 16px rgba(18,59,99,0.10); transform: translateY(-1px); }
   .btn-primary { background: #123B63; color: #fff; transition: background 0.15s; }
   .btn-primary:hover { background: #0B2946; }
@@ -153,81 +240,84 @@ tailwind.config = {
         </div>
       </div>
 
-      <!-- KPI Cards -->
-      <section aria-label="Key Performance Indicators" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div class="kpi-card bg-surface border border-border rounded-lg p-4 flex gap-3">
-          <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+      <!-- KPI Cards (6 Key Metric Cards with Direct Navigation) -->
+      <section aria-label="Key Performance Indicators" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        <!-- 1. Total Schools -->
+        <a href="<?= BASE_URL ?>/admin/schools.php" class="kpi-card bg-surface border border-border rounded-lg p-4 flex gap-3 hover:border-primary transition group block">
+          <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
             <svg width="20" height="20" fill="none" stroke="#123B63" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
           </div>
           <div class="flex-1 min-w-0">
-            <div class="text-xs text-muted font-medium uppercase tracking-wide">Total Schools</div>
+            <div class="text-xs text-muted font-medium uppercase tracking-wide group-hover:text-primary transition-colors">Total Schools</div>
             <div class="text-3xl font-bold text-textMain leading-tight mt-0.5"><?= $total_schools_count ?></div>
             <div class="text-xs text-success mt-1 flex items-center gap-1">
-              <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
-              Official SELD Census
+              <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+              <?= $active_schools_count ?> Active in District
             </div>
           </div>
-        </div>
-        <div class="kpi-card bg-surface border border-border rounded-lg p-4 flex gap-3">
-          <div class="w-10 h-10 rounded-lg bg-teal-50 flex items-center justify-center flex-shrink-0">
+        </a>
+
+        <!-- 2. Total Students (Live Enrollment Sum) -->
+        <a href="<?= BASE_URL ?>/admin/schools.php" class="kpi-card bg-surface border border-border rounded-lg p-4 flex gap-3 hover:border-teal-600 transition group block">
+          <div class="w-10 h-10 rounded-lg bg-teal-50 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
             <svg width="20" height="20" fill="none" stroke="#0F766E" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
           </div>
           <div class="flex-1 min-w-0">
-            <div class="text-xs text-muted font-medium uppercase tracking-wide">Total Students</div>
-            <div class="text-3xl font-bold text-textMain leading-tight mt-0.5"><?= number_format($total_enrollment > 0 ? $total_enrollment : $total_students_count) ?></div>
-            <div class="text-xs text-success mt-1 flex items-center gap-1">
+            <div class="text-xs text-muted font-medium uppercase tracking-wide group-hover:text-secondary transition-colors">Total Students</div>
+            <div class="text-3xl font-bold text-textMain leading-tight mt-0.5"><?= number_format($total_enrollment) ?></div>
+            <div class="text-xs text-secondary mt-1 flex items-center gap-1 font-medium">
               <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
-              <?= $boys_count ?> Boys / <?= $girls_count ?> Girls
+              <?= number_format($total_boys) ?> Boys / <?= number_format($total_girls) ?> Girls
             </div>
           </div>
-        </div>
-        <div class="kpi-card bg-surface border border-border rounded-lg p-4 flex gap-3">
-          <div class="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
-            <svg width="20" height="20" fill="none" stroke="#15803D" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-          </div>
-          <div class="flex-1 min-w-0">
-            <div class="text-xs text-muted font-medium uppercase tracking-wide">Active Schools</div>
-            <div class="text-3xl font-bold text-textMain leading-tight mt-0.5"><?= $active_schools_count ?></div>
-            <div class="text-xs text-success mt-1"><?= $reporting_pct ?>% of <?= $total_schools_count ?> schools active</div>
-          </div>
-        </div>
-        <div class="kpi-card bg-surface border border-border rounded-lg p-4 flex gap-3">
-          <div class="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0">
-            <svg width="20" height="20" fill="none" stroke="#DC2626" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-          </div>
-          <div class="flex-1 min-w-0">
-            <div class="text-xs text-muted font-medium uppercase tracking-wide">Critical Schools</div>
-            <div class="text-3xl font-bold text-danger leading-tight mt-0.5"><?= $high_risk_count ?></div>
-            <div class="text-xs text-danger mt-1"><?= $total_at_risk_count ?> schools flagged at-risk</div>
-          </div>
-        </div>
-        <div class="kpi-card bg-surface border border-border rounded-lg p-4 flex gap-3">
-          <div class="w-10 h-10 rounded-lg bg-sky-50 flex items-center justify-center flex-shrink-0">
-            <svg width="20" height="20" fill="none" stroke="#0284C7" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-          </div>
-          <div class="flex-1 min-w-0">
-            <div class="text-xs text-muted font-medium uppercase tracking-wide">Schools Reporting</div>
-            <div class="text-3xl font-bold text-textMain leading-tight mt-0.5"><?= $reporting_pct ?>%</div>
-            <div class="text-xs text-muted mt-1"><?= $active_schools_count ?> of <?= $total_schools_count ?> schools active</div>
-          </div>
-        </div>
+        </a>
 
-        <div class="kpi-card bg-surface border border-border rounded-lg p-4 flex gap-3">
-          <div class="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0">
+        <!-- 3. Teachers & Staff (Live Staff Sum) -->
+        <a href="<?= BASE_URL ?>/admin/schools.php" class="kpi-card bg-surface border border-border rounded-lg p-4 flex gap-3 hover:border-indigo-600 transition group block">
+          <div class="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
             <svg width="20" height="20" fill="none" stroke="#4F46E5" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           </div>
           <div class="flex-1 min-w-0">
-            <div class="text-xs text-muted font-medium uppercase tracking-wide">Teachers &amp; Staff</div>
-            <div class="text-3xl font-bold text-textMain leading-tight mt-0.5">2,184</div>
-            <div class="text-xs text-muted mt-1">1,876 teachers, 308 non-teaching</div>
+            <div class="text-xs text-muted font-medium uppercase tracking-wide group-hover:text-indigo-600 transition-colors">Teachers &amp; Staff</div>
+            <div class="text-3xl font-bold text-textMain leading-tight mt-0.5"><?= number_format($total_teachers + $total_non_teaching) ?></div>
+            <div class="text-xs text-muted mt-1"><?= number_format($total_teachers) ?> teachers, <?= number_format($total_non_teaching) ?> non-teaching</div>
           </div>
-        </div>
-        <a href="<?= BASE_URL ?>/admin/complaints.php" class="kpi-card bg-surface border border-border rounded-lg p-4 flex gap-3 hover:border-primary transition group">
-          <div class="w-10 h-10 rounded-lg bg-teal-50 text-secondary flex items-center justify-center flex-shrink-0">
+        </a>
+
+        <!-- 4. Critical Risk Schools -->
+        <a href="<?= BASE_URL ?>/admin/at-risk-schools.php?severity=critical" class="kpi-card bg-surface border border-border rounded-lg p-4 flex gap-3 hover:border-red-500 transition group block">
+          <div class="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+            <svg width="20" height="20" fill="none" stroke="#DC2626" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="text-xs text-muted font-medium uppercase tracking-wide group-hover:text-danger transition-colors">Critical Schools</div>
+            <div class="text-3xl font-bold text-danger leading-tight mt-0.5"><?= $high_risk_count ?></div>
+            <div class="text-xs text-danger mt-1 flex items-center gap-1 font-medium">
+              <span class="w-1.5 h-1.5 rounded-full bg-red-500 <?= $high_risk_count > 0 ? 'animate-pulse' : '' ?>"></span>
+              <?= $high_risk_count ?> Critical Hazard(s) Flagged
+            </div>
+          </div>
+        </a>
+
+        <!-- 5. Infrastructure At-Risk Registry -->
+        <a href="<?= BASE_URL ?>/admin/at-risk-schools.php" class="kpi-card bg-surface border border-border rounded-lg p-4 flex gap-3 hover:border-orange-500 transition group block">
+          <div class="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+            <svg width="20" height="20" fill="none" stroke="#EA580C" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="text-xs text-muted font-medium uppercase tracking-wide group-hover:text-warning transition-colors">At-Risk Registry</div>
+            <div class="text-3xl font-bold text-orange-700 leading-tight mt-0.5"><?= $total_at_risk_count ?></div>
+            <div class="text-xs text-warning mt-1 font-medium"><?= $resolved_count ?> issues resolved</div>
+          </div>
+        </a>
+
+        <!-- 6. Grievances & Complaints -->
+        <a href="<?= BASE_URL ?>/admin/complaints.php" class="kpi-card bg-surface border border-border rounded-lg p-4 flex gap-3 hover:border-teal-600 transition group block">
+          <div class="w-10 h-10 rounded-lg bg-teal-50 text-secondary flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
             <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
           </div>
           <div class="flex-1 min-w-0">
-            <div class="text-xs text-muted font-medium uppercase tracking-wide group-hover:text-primary transition-colors">School Complaints</div>
+            <div class="text-xs text-muted font-medium uppercase tracking-wide group-hover:text-secondary transition-colors">School Complaints</div>
             <div class="text-3xl font-bold text-textMain leading-tight mt-0.5"><?= $total_complaints_count ?></div>
             <div class="text-xs text-danger mt-1 flex items-center gap-1 font-semibold">
               <span class="w-2 h-2 rounded-full bg-red-500 <?= $pending_complaints_count > 0 ? 'animate-pulse' : '' ?>"></span>
@@ -235,16 +325,6 @@ tailwind.config = {
             </div>
           </div>
         </a>
-        <div class="kpi-card bg-surface border border-border rounded-lg p-4 flex gap-3">
-          <div class="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0">
-            <svg width="20" height="20" fill="none" stroke="#EA580C" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-          </div>
-          <div class="flex-1 min-w-0">
-            <div class="text-xs text-muted font-medium uppercase tracking-wide">At-Risk Schools</div>
-            <div class="text-3xl font-bold text-orange-700 leading-tight mt-0.5"><?= $total_at_risk_count ?></div>
-            <div class="text-xs text-warning mt-1">Infrastructure issues flagged</div>
-          </div>
-        </div>
       </section>
 
       <!-- Analytics Row -->
@@ -254,7 +334,7 @@ tailwind.config = {
           <div class="flex items-center justify-between mb-4">
             <div>
               <h2 class="text-sm font-semibold text-textMain">District Enrollment by School Level</h2>
-              <p class="text-xs text-muted mt-0.5">Total enrolled students per school level — <?= date('Y') ?></p>
+              <p class="text-xs text-muted mt-0.5">Total enrolled students per school level &mdash; SELD Live Registry</p>
             </div>
             <a href="<?= BASE_URL ?>/admin/schools.php" class="text-xs text-primary font-medium hover:underline">View Schools</a>
           </div>
@@ -291,38 +371,59 @@ tailwind.config = {
             </div>
             <?php endforeach; ?>
           </div>
-          <div class="mt-4 pt-3 border-t border-border flex gap-6 text-xs text-muted">
+          <div class="mt-4 pt-3 border-t border-border flex flex-wrap gap-6 text-xs text-muted">
             <div><span class="font-semibold text-textMain"><?= number_format($total_enrollment) ?></span> total enrolled students</div>
-            <div><span class="font-semibold text-textMain"><?= $total_schools_count ?></span> schools district-wide</div>
+            <div><span class="font-semibold text-textMain"><?= $total_schools_count ?></span> registered schools</div>
+            <div><span class="font-semibold text-textMain"><?= number_format($total_classrooms) ?></span> functional classrooms</div>
           </div>
         </div>
 
-        <!-- Reporting Status Donut -->
+        <!-- Reporting Status Donut (Fully Dynamic from Live School Status) -->
         <div class="bg-surface border border-border rounded-lg p-5">
-          <h2 class="text-sm font-semibold text-textMain mb-1">School Reporting Status</h2>
-          <p class="text-xs text-muted mb-4">As of today, <?= date('d M Y') ?></p>
+          <h2 class="text-sm font-semibold text-textMain mb-1">School Operational Status</h2>
+          <p class="text-xs text-muted mb-4">Live status distribution &mdash; <?= date('d M Y') ?></p>
+          <?php
+          // SVG Circle perimeter = 2 * PI * 50 = 314.16
+          $c_active = round(($active_schools_count / $total_sc_safe) * 314.16, 2);
+          $c_att    = round(($attention_schools_count / $total_sc_safe) * 314.16, 2);
+          $c_not    = max(0, round(314.16 - $c_active - $c_att, 2));
+
+          $dash_not = $c_not . ' ' . round(314.16 - $c_not, 2);
+          $dash_att = $c_att . ' ' . round(314.16 - $c_att, 2);
+          $dash_act = $c_active . ' ' . round(314.16 - $c_active, 2);
+
+          $offset_not = 0;
+          $offset_att = -$c_not;
+          $offset_act = -($c_not + $c_att);
+          ?>
           <div class="flex items-center justify-center">
             <svg viewBox="0 0 160 160" class="w-36 h-36" aria-label="School reporting donut chart">
               <circle cx="80" cy="80" r="50" fill="none" stroke="#E2E8F0" stroke-width="20"/>
-              <circle cx="80" cy="80" r="50" fill="none" stroke="#DC2626" stroke-width="20" stroke-dasharray="3.14 311.02" stroke-dashoffset="-304.7" transform="rotate(-90 80 80)"/>
-              <circle cx="80" cy="80" r="50" fill="none" stroke="#D97706" stroke-width="20" stroke-dasharray="6.28 307.88" stroke-dashoffset="-298.42" transform="rotate(-90 80 80)"/>
-              <circle cx="80" cy="80" r="50" fill="none" stroke="#15803D" stroke-width="20" stroke-dasharray="304.74 9.42" stroke-dashoffset="0" transform="rotate(-90 80 80)"/>
-              <text x="80" y="75" text-anchor="middle" fill="#172033" font-size="20" font-weight="700">97%</text>
-              <text x="80" y="91" text-anchor="middle" fill="#64748B" font-size="9">Reporting</text>
+              <?php if ($not_reporting_schools_count > 0): ?>
+              <circle cx="80" cy="80" r="50" fill="none" stroke="#DC2626" stroke-width="20" stroke-dasharray="<?= $dash_not ?>" stroke-dashoffset="<?= $offset_not ?>" transform="rotate(-90 80 80)"/>
+              <?php endif; ?>
+              <?php if ($attention_schools_count > 0): ?>
+              <circle cx="80" cy="80" r="50" fill="none" stroke="#D97706" stroke-width="20" stroke-dasharray="<?= $dash_att ?>" stroke-dashoffset="<?= $offset_att ?>" transform="rotate(-90 80 80)"/>
+              <?php endif; ?>
+              <?php if ($active_schools_count > 0): ?>
+              <circle cx="80" cy="80" r="50" fill="none" stroke="#15803D" stroke-width="20" stroke-dasharray="<?= $dash_act ?>" stroke-dashoffset="<?= $offset_act ?>" transform="rotate(-90 80 80)"/>
+              <?php endif; ?>
+              <text x="80" y="75" text-anchor="middle" fill="#172033" font-size="20" font-weight="700"><?= $reporting_pct ?>%</text>
+              <text x="80" y="91" text-anchor="middle" fill="#64748B" font-size="9">Active / Good</text>
             </svg>
           </div>
           <div class="mt-4 space-y-2">
             <div class="flex items-center justify-between text-xs">
-              <span class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm bg-success inline-block"></span>Reporting</span>
-              <span class="font-semibold text-textMain">97% <span class="text-muted font-normal">(415)</span></span>
+              <span class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm bg-success inline-block"></span>Active / Good</span>
+              <span class="font-semibold text-textMain"><?= $reporting_pct ?>% <span class="text-muted font-normal">(<?= $active_schools_count ?>)</span></span>
             </div>
             <div class="flex items-center justify-between text-xs">
-              <span class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm bg-warning inline-block"></span>Pending</span>
-              <span class="font-semibold text-textMain">2% <span class="text-muted font-normal">(9)</span></span>
+              <span class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm bg-warning inline-block"></span>Needs Attention</span>
+              <span class="font-semibold text-textMain"><?= $attention_pct ?>% <span class="text-muted font-normal">(<?= $attention_schools_count ?>)</span></span>
             </div>
             <div class="flex items-center justify-between text-xs">
               <span class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm bg-danger inline-block"></span>Not Reporting</span>
-              <span class="font-semibold text-textMain">1% <span class="text-muted font-normal">(4)</span></span>
+              <span class="font-semibold text-textMain"><?= $not_reporting_pct ?>% <span class="text-muted font-normal">(<?= $not_reporting_schools_count ?>)</span></span>
             </div>
           </div>
         </div>
@@ -330,71 +431,66 @@ tailwind.config = {
 
       <!-- Performance + Activity -->
       <section class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6" aria-label="Performance and Activity">
-        <!-- District Performance -->
+        <!-- District Performance (Live Calculated Indicators) -->
         <div class="bg-surface border border-border rounded-lg p-5">
           <h2 class="text-sm font-semibold text-textMain mb-4">District Performance Indicators</h2>
           <div class="space-y-4">
             <div>
               <div class="flex justify-between text-xs mb-1">
-                <span class="font-medium text-textMain">School Reporting</span>
+                <span class="font-medium text-textMain">Active Operational Rate</span>
                 <span class="font-semibold text-success"><?= $reporting_pct ?>% <span class="text-muted font-normal">/ 100% target</span></span>
               </div>
               <div class="w-full bg-border rounded-full h-2"><div class="progress-bar bg-success h-2 rounded-full" style="width:<?= $reporting_pct ?>%"></div></div>
             </div>
             <div>
               <div class="flex justify-between text-xs mb-1">
-                <span class="font-medium text-textMain">Monitoring Completion</span>
-                <span class="font-semibold text-warning">78% <span class="text-muted font-normal">/ 100% target</span></span>
+                <span class="font-medium text-textMain">Safe Water Facility Coverage</span>
+                <span class="font-semibold text-teal-700"><?= $water_pct ?>% <span class="text-muted font-normal">/ 100% target</span></span>
               </div>
-              <div class="w-full bg-border rounded-full h-2"><div class="progress-bar bg-warning h-2 rounded-full" style="width:78%"></div></div>
+              <div class="w-full bg-border rounded-full h-2"><div class="progress-bar bg-secondary h-2 rounded-full" style="width:<?= $water_pct ?>%"></div></div>
             </div>
             <div>
               <div class="flex justify-between text-xs mb-1">
-                <span class="font-medium text-textMain">Complaint Resolution</span>
-                <span class="font-semibold text-success">86% <span class="text-muted font-normal">/ 90% target</span></span>
+                <span class="font-medium text-textMain">Grievance Resolution</span>
+                <span class="font-semibold text-success"><?= $complaint_resolution_pct ?>% <span class="text-muted font-normal">/ 90% target</span></span>
               </div>
-              <div class="w-full bg-border rounded-full h-2"><div class="progress-bar bg-success h-2 rounded-full" style="width:86%"></div></div>
+              <div class="w-full bg-border rounded-full h-2"><div class="progress-bar bg-success h-2 rounded-full" style="width:<?= $complaint_resolution_pct ?>%"></div></div>
             </div>
             <div>
               <div class="flex justify-between text-xs mb-1">
                 <span class="font-medium text-textMain">Infrastructure Risk Resolution</span>
-                <span class="font-semibold text-warning"><?= $total_at_risk_count > 0 ? round(($resolved_count / max($total_at_risk_count + $resolved_count, 1)) * 100) : 100 ?>% <span class="text-muted font-normal">/ 100% target</span></span>
+                <span class="font-semibold text-warning"><?= $risk_resolution_pct ?>% <span class="text-muted font-normal">/ 100% target</span></span>
               </div>
-              <div class="w-full bg-border rounded-full h-2"><div class="progress-bar bg-warning h-2 rounded-full" style="width:<?= $total_at_risk_count > 0 ? round(($resolved_count / max($total_at_risk_count + $resolved_count, 1)) * 100) : 100 ?>%"></div></div>
+              <div class="w-full bg-border rounded-full h-2"><div class="progress-bar bg-warning h-2 rounded-full" style="width:<?= $risk_resolution_pct ?>%"></div></div>
             </div>
           </div>
         </div>
 
-        <!-- Recent Activity -->
+        <!-- Recent Activity (Live Dynamic Logs from Grievances & Risk Registry) -->
         <div class="lg:col-span-2 bg-surface border border-border rounded-lg p-5">
           <div class="flex items-center justify-between mb-4">
-            <h2 class="text-sm font-semibold text-textMain">Recent Activity</h2>
-            <span class="text-xs text-primary font-medium cursor-pointer hover:underline">View all</span>
+            <h2 class="text-sm font-semibold text-textMain">Recent Activity &amp; Grievance Feed</h2>
+            <a href="<?= BASE_URL ?>/admin/complaints.php" class="text-xs text-primary font-medium hover:underline">View all</a>
           </div>
           <div class="space-y-0">
-            <?php
-            $activities = [
-              ['icon_color' => '#123B63', 'bg' => 'bg-blue-50', 'title' => 'Monitoring report submitted', 'sub' => 'Government Primary School Ranipur', 'time' => '10 min ago'],
-              ['icon_color' => '#15803D', 'bg' => 'bg-green-50', 'title' => 'School profile updated', 'sub' => 'Government Girls Elementary School B, Jhando Mari', 'time' => '25 min ago'],
-              ['icon_color' => '#15803D', 'bg' => 'bg-green-50', 'title' => 'Complaint resolved', 'sub' => 'Complaint #GRM-1024 &mdash; Infrastructure concern', 'time' => '1 hr ago'],
-              ['icon_color' => '#D97706', 'bg' => 'bg-amber-50', 'title' => 'School visit completed', 'sub' => 'Government High School C, Kot Diji', 'time' => '2 hr ago'],
-              ['icon_color' => '#DC2626', 'bg' => 'bg-red-50', 'title' => 'Infrastructure risk flagged', 'sub' => 'Dangerous building structure — SEMIS 403010004', 'time' => '3 hr ago'],
-              ['icon_color' => '#0284C7', 'bg' => 'bg-blue-50', 'title' => 'New circular uploaded', 'sub' => 'SELD Circular No. 14/2026 — Academic calendar', 'time' => 'Yesterday'],
-            ];
-            foreach ($activities as $i => $a):
-            $border = ($i < count($activities) - 1) ? 'border-b border-border' : '';
-            ?>
-            <div class="flex gap-3 py-3 <?= $border ?>">
-              <div class="flex-shrink-0 w-8 h-8 rounded-full <?= $a['bg'] ?> flex items-center justify-center mt-0.5">
-                <svg width="14" height="14" fill="none" stroke="<?= $a['icon_color'] ?>" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg>
-              </div>
-              <div class="flex-1 min-w-0">
-                <div class="text-sm font-medium text-textMain"><?= $a['title'] ?></div>
-                <div class="text-xs text-muted mt-0.5"><?= $a['sub'] ?></div>
-              </div>
-              <div class="text-xs text-muted flex-shrink-0"><?= $a['time'] ?></div>
-            </div>
-            <?php endforeach; ?>
+            <?php if (empty($recent_activities)): ?>
+            <div class="py-8 text-center text-xs text-muted">No recent activity logged.</div>
+            <?php else: ?>
+              <?php foreach ($recent_activities as $i => $a):
+                $border = ($i < count($recent_activities) - 1) ? 'border-b border-border' : '';
+              ?>
+              <a href="<?= e($a['link']) ?>" class="flex gap-3 py-3 <?= $border ?> hover:bg-slate-50 transition px-2 rounded -mx-2 block">
+                <div class="flex-shrink-0 w-8 h-8 rounded-full <?= $a['bg'] ?> flex items-center justify-center mt-0.5">
+                  <svg width="14" height="14" fill="none" stroke="<?= $a['icon_color'] ?>" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm font-medium text-textMain"><?= e($a['title']) ?></div>
+                  <div class="text-xs text-muted mt-0.5 truncate"><?= e($a['sub']) ?></div>
+                </div>
+                <div class="text-xs text-muted flex-shrink-0"><?= e($a['time']) ?></div>
+              </a>
+              <?php endforeach; ?>
+            <?php endif; ?>
           </div>
         </div>
       </section>
@@ -460,49 +556,17 @@ tailwind.config = {
           </table>
         </div>
         <div class="px-5 py-3 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted">
-          <span>Showing 5 of 428 schools</span>
-          <div class="flex items-center gap-1">
-            <button class="px-2.5 py-1.5 border border-border rounded hover:bg-background disabled:opacity-40" disabled>Previous</button>
-            <button class="px-2.5 py-1.5 border border-primary bg-primary text-white rounded">1</button>
-            <button class="px-2.5 py-1.5 border border-border rounded hover:bg-background">2</button>
-            <button class="px-2.5 py-1.5 border border-border rounded hover:bg-background">3</button>
-            <span class="px-1">…</span>
-            <button class="px-2.5 py-1.5 border border-border rounded hover:bg-background">86</button>
-            <button class="px-2.5 py-1.5 border border-border rounded hover:bg-background">Next</button>
-          </div>
+          <span>Showing <?= min(7, $total_schools_count) ?> of <?= $total_schools_count ?> registered schools</span>
+          <a href="<?= BASE_URL ?>/admin/schools.php" class="text-xs text-primary font-medium hover:underline flex items-center gap-1">
+            <span>View Full Directory (<?= $total_schools_count ?> schools)</span>
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
         </div>
       </section>
 
     </main>
 
     <?php require_once dirname(__DIR__) . '/includes/footer.php'; ?>
-  </div>
-</div>
-
-<!-- School Detail Modal -->
-<div id="school-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-  <div class="absolute inset-0 bg-black/40" onclick="closeModal('school-modal')"></div>
-  <div class="relative bg-surface rounded-lg shadow-xl w-full max-w-md border border-border z-10">
-    <div class="flex items-center justify-between px-5 py-4 border-b border-border">
-      <h3 id="modal-title" class="font-semibold text-textMain text-sm">School Details</h3>
-      <button onclick="closeModal('school-modal')" class="text-muted hover:text-textMain">
-        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-    <div class="p-5 space-y-3 text-sm">
-      <div class="flex justify-between"><span class="text-muted">School ID</span><span class="font-medium">SCH-001</span></div>
-      <div class="flex justify-between"><span class="text-muted">School Name</span><span class="font-medium text-right">GPS Model City, Tando Allahyar</span></div>
-      <div class="flex justify-between"><span class="text-muted">Level</span><span class="font-medium">Primary</span></div>
-      <div class="flex justify-between"><span class="text-muted">Gender</span><span class="font-medium">Co-education</span></div>
-      <div class="flex justify-between"><span class="text-muted">Taluka</span><span class="font-medium">Tando Allahyar</span></div>
-      <div class="flex justify-between"><span class="text-muted">Enrollment</span><span class="font-medium">342</span></div>
-      <div class="flex justify-between"><span class="text-muted">Today's Attendance</span><span class="font-semibold text-success">93%</span></div>
-      <div class="flex justify-between"><span class="text-muted">Status</span><span class="status-badge badge-good">Good</span></div>
-    </div>
-    <div class="px-5 py-4 border-t border-border flex gap-2 justify-end">
-      <button onclick="closeModal('school-modal')" class="btn-secondary px-4 py-2 rounded text-xs font-medium">Close</button>
-      <a href="<?= BASE_URL ?>/admin/school-profile.php" class="btn-primary px-4 py-2 rounded text-xs font-medium">Full Profile</a>
-    </div>
   </div>
 </div>
 

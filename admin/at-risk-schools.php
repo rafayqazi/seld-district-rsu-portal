@@ -614,6 +614,14 @@ function confirmDeleteRisk(id,name){
 ['update-modal','add-modal'].forEach(id=>{
   document.getElementById(id).addEventListener('click',function(e){if(e.target===this)this.classList.add('hidden');});
 });
+
+// Auto-filter by URL parameter (e.g. ?severity=critical)
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.has('severity')) {
+  const sevEl = document.getElementById('risk-severity-filter');
+  if (sevEl) sevEl.value = urlParams.get('severity').toLowerCase();
+}
+
 filterRisks();
 </script>
 </body>
