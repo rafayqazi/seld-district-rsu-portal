@@ -15,22 +15,27 @@ $page_title  = 'School Dashboard — ' . e($school_name) . ' (' . e($school_semi
 // ─── Fetch Fresh School-Specific Data from Excel DB ─────────────────────────
 $current_school = ExcelDB::getSchoolBySemis($school_semis) ?? $current_school;
 
-$total_enrolled     = max(0, (int)($current_school['enrollment'] ?? 0));
+$boys_count         = isset($current_school['enrollment_boys']) && $current_school['enrollment_boys'] !== '' ? max(0, (int)$current_school['enrollment_boys']) : null;
+$girls_count        = isset($current_school['enrollment_girls']) && $current_school['enrollment_girls'] !== '' ? max(0, (int)$current_school['enrollment_girls']) : null;
+
+// Fallback if not explicitly set
+if ($boys_count === null || $girls_count === null) {
+    $raw_enroll = max(0, (int)($current_school['enrollment'] ?? 0));
+    if (strcasecmp($school_gender, 'girls') === 0) {
+        $girls_count = $raw_enroll;
+        $boys_count  = 0;
+    } elseif (strcasecmp($school_gender, 'boys') === 0) {
+        $boys_count  = $raw_enroll;
+        $girls_count = 0;
+    } else {
+        $boys_count  = (int)round($raw_enroll * 0.52);
+        $girls_count = $raw_enroll - $boys_count;
+    }
+}
+$total_enrolled     = $boys_count + $girls_count;
 $teachers_count     = max(0, (int)($current_school['teachers'] ?? 0));
 $classrooms_count   = max(0, (int)($current_school['classrooms'] ?? 0));
 $non_teaching_count = max(0, (int)($current_school['non_teaching'] ?? 0));
-
-// Gender split based on actual school enrollment
-if (strcasecmp($school_gender, 'girls') === 0) {
-    $girls_count = $total_enrolled;
-    $boys_count  = 0;
-} elseif (strcasecmp($school_gender, 'boys') === 0) {
-    $boys_count  = $total_enrolled;
-    $girls_count = 0;
-} else {
-    $boys_count  = (int)round($total_enrolled * 0.52);
-    $girls_count = $total_enrolled - $boys_count;
-}
 
 // Facilities status
 $fac_elec    = $current_school['facility_electricity'] ?? 'Solar + Grid';

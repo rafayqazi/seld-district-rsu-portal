@@ -88,7 +88,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         $taluka  = trim($_POST['taluka'] ?? 'Tando Allahyar');
         $level   = trim($_POST['level'] ?? 'Primary');
         $gender  = trim($_POST['gender'] ?? 'Co-education');
-        $enroll  = (int)($_POST['enrollment'] ?? 0);
+        $boys    = max(0, (int)($_POST['enrollment_boys'] ?? 0));
+        $girls   = max(0, (int)($_POST['enrollment_girls'] ?? 0));
+        $enroll  = $boys + $girls;
+        if ($enroll === 0 && isset($_POST['enrollment'])) {
+            $enroll = max(0, (int)$_POST['enrollment']);
+        }
         $att     = trim($_POST['attendance_pct'] ?? '90');
         if (!str_ends_with($att, '%') && is_numeric($att)) $att .= '%';
         $status  = trim($_POST['status'] ?? 'Active');
@@ -120,6 +125,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             'level'                  => $level,
             'gender'                 => $gender,
             'enrollment'             => (string)$enroll,
+            'enrollment_boys'        => (string)$boys,
+            'enrollment_girls'       => (string)$girls,
             'attendance_pct'         => $att,
             'status'                 => $status,
             'status_badge'           => $badge,
@@ -173,15 +180,22 @@ $hm_credentials = ExcelDB::getHeadMasterCredentials($semis);
 // Re-read latest data in case it was updated
 $school = ExcelDB::find('schools', 'semis_code', $semis);
 $totalEnrollment = (int)($school['enrollment'] ?? 0);
-$boysEst = (int)round($totalEnrollment * 0.52);
-$girlsEst = max(0, $totalEnrollment - $boysEst);
-if (($school['gender'] ?? '') === 'Boys') {
-    $boysEst = $totalEnrollment;
-    $girlsEst = 0;
-} elseif (($school['gender'] ?? '') === 'Girls') {
-    $boysEst = 0;
-    $girlsEst = $totalEnrollment;
+$boysEst  = isset($school['enrollment_boys']) && $school['enrollment_boys'] !== '' ? (int)$school['enrollment_boys'] : null;
+$girlsEst = isset($school['enrollment_girls']) && $school['enrollment_girls'] !== '' ? (int)$school['enrollment_girls'] : null;
+
+if ($boysEst === null || $girlsEst === null) {
+    if (($school['gender'] ?? '') === 'Boys') {
+        $boysEst  = $totalEnrollment;
+        $girlsEst = 0;
+    } elseif (($school['gender'] ?? '') === 'Girls') {
+        $boysEst  = 0;
+        $girlsEst = $totalEnrollment;
+    } else {
+        $boysEst  = (int)round($totalEnrollment * 0.52);
+        $girlsEst = max(0, $totalEnrollment - $boysEst);
+    }
 }
+$totalEnrollment = $boysEst + $girlsEst;
 
 $cleanAtt = (int)preg_replace('/[^0-9]/', '', $school['attendance_pct'] ?? '90');
 if ($cleanAtt <= 0) $cleanAtt = 90;
@@ -553,19 +567,37 @@ body{font-family:'Inter',system-ui,sans-serif;}
             <?php endforeach; ?>
           </select>
         </div>
-        <div>
-          <label class="block text-xs font-semibold text-textMain mb-1">Gender</label>
-          <select name="gender" class="w-full text-xs border border-border rounded px-3 py-1.5 bg-background focus:outline-none focus:border-primary">
-            <?php foreach (['Co-education', 'Boys', 'Girls'] as $g): ?>
-            <option <?= ($school['gender'] ?? '') === $g ? 'selected' : '' ?>><?= $g ?></option>
-            <?php endforeach; ?>
-          </select>
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-textMain mb-1">Gender</label>
+            <select name="gender" class="w-full text-xs border border-border rounded px-3 py-1.5 bg-background focus:outline-none focus:border-primary">
+              <?php foreach (['Co-education', 'Boys', 'Girls'] as $g): ?>
+              <option <?= ($school['gender'] ?? '') === $g ? 'selected' : '' ?>><?= $g ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-textMain mb-1 flex items-center justify-between">
+              <span>Boys</span>
+              <span class="text-[10px] text-blue-700 font-bold">Boys</span>
+            </label>
+            <input type="number" id="admin_enrollment_boys" name="enrollment_boys" min="0" value="<?= (int)($school['enrollment_boys'] ?? $boysEst) ?>" class="w-full text-xs border border-border rounded px-3 py-1.5 bg-background focus:outline-none focus:border-primary font-mono" oninput="adminCalcEnrollment()"/>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-textMain mb-1 flex items-center justify-between">
+              <span>Girls</span>
+              <span class="text-[10px] text-pink-700 font-bold">Girls</span>
+            </label>
+            <input type="number" id="admin_enrollment_girls" name="enrollment_girls" min="0" value="<?= (int)($school['enrollment_girls'] ?? $girlsEst) ?>" class="w-full text-xs border border-border rounded px-3 py-1.5 bg-background focus:outline-none focus:border-primary font-mono" oninput="adminCalcEnrollment()"/>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-textMain mb-1 flex items-center justify-between">
+              <span>Total</span>
+              <span class="text-[10px] text-emerald-700 font-bold">Auto</span>
+            </label>
+            <input type="number" id="admin_total_enrollment" name="enrollment" min="0" readonly value="<?= (int)($school['enrollment'] ?? $totalEnrollment) ?>" class="w-full text-xs font-bold text-emerald-800 border border-emerald-300 rounded px-3 py-1.5 bg-emerald-50/50 cursor-not-allowed font-mono"/>
+          </div>
         </div>
-        <div>
-          <label class="block text-xs font-semibold text-textMain mb-1">Total Enrollment</label>
-          <input type="number" name="enrollment" required value="<?= (int)($school['enrollment'] ?? 0) ?>" class="w-full text-xs border border-border rounded px-3 py-1.5 bg-background focus:outline-none focus:border-primary"/>
-        </div>
-      </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
@@ -900,6 +932,13 @@ function openEditSchoolModal() {
 }
 function closeEditSchoolModal() {
   document.getElementById('edit-school-modal').classList.add('hidden');
+}
+
+function adminCalcEnrollment() {
+  const b = parseInt(document.getElementById('admin_enrollment_boys')?.value) || 0;
+  const g = parseInt(document.getElementById('admin_enrollment_girls')?.value) || 0;
+  const tot = document.getElementById('admin_total_enrollment');
+  if (tot) tot.value = b + g;
 }
 
 function openEditStaffModal() {

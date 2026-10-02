@@ -188,7 +188,9 @@ $talukas = ExcelDB::getTalukas(true); // active only
 |---|---|
 | `semis_code` | Unique numerical string — primary lookup key |
 | `cnic` | HM CNIC — immutable from School Portal, login key |
-| `enrollment` | Aggregate only (no per-student records) |
+| `enrollment` | Total student enrollment (auto-sum: `enrollment_boys + enrollment_girls`) |
+| `enrollment_boys` | Boys enrolled count |
+| `enrollment_girls` | Girls enrolled count |
 | `building_structure` | Good Condition / Needs Repair / Dangerous / Unsafe / Condemned / Closed |
 | `drainage_sewerage` | Functional Drainage / Partial Drainage / Broken / None |
 | `flood_prone` | No / Yes |

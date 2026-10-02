@@ -30,7 +30,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $taluka  = trim($_POST['taluka'] ?? $school_taluka);
         $level   = trim($_POST['level'] ?? 'Primary');
         $gender  = trim($_POST['gender'] ?? 'Co-education');
-        $enroll  = (int)($_POST['enrollment'] ?? 0);
+        $boys    = max(0, (int)($_POST['enrollment_boys'] ?? 0));
+        $girls   = max(0, (int)($_POST['enrollment_girls'] ?? 0));
+        $enroll  = $boys + $girls;
+        if ($enroll === 0 && isset($_POST['enrollment'])) {
+            $enroll = max(0, (int)$_POST['enrollment']);
+        }
         $status  = trim($_POST['status'] ?? 'Active');
         $rooms   = max(0, (int)($_POST['classrooms'] ?? 4));
         $tchrs   = max(0, (int)($_POST['teachers'] ?? 6));
@@ -69,6 +74,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'level'                  => $level,
                 'gender'                 => $gender,
                 'enrollment'             => (string)$enroll,
+                'enrollment_boys'        => (string)$boys,
+                'enrollment_girls'       => (string)$girls,
                 'status'                 => $status,
                 'status_badge'           => $badge,
                 'classrooms'             => (string)$rooms,
@@ -305,10 +312,27 @@ $current_school = ExcelDB::getSchoolBySemis($school_semis) ?? $current_school;
               </div>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
               <div>
-                <label class="block text-xs font-semibold text-textMain mb-1.5">Total Enrolled Students</label>
-                <input type="number" name="enrollment" min="0" value="<?= (int)($current_school['enrollment'] ?? 0) ?>" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:border-govGreen"/>
+                <label class="block text-xs font-semibold text-textMain mb-1.5 flex items-center justify-between">
+                  <span>Boys Enrolled</span>
+                  <span class="text-[10px] text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded font-bold">Boys</span>
+                </label>
+                <input type="number" id="enrollment_boys" name="enrollment_boys" min="0" value="<?= (int)($current_school['enrollment_boys'] ?? 0) ?>" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:border-govGreen font-mono" oninput="calcTotalEnrollment()"/>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-textMain mb-1.5 flex items-center justify-between">
+                  <span>Girls Enrolled</span>
+                  <span class="text-[10px] text-pink-700 bg-pink-50 px-1.5 py-0.5 rounded font-bold">Girls</span>
+                </label>
+                <input type="number" id="enrollment_girls" name="enrollment_girls" min="0" value="<?= (int)($current_school['enrollment_girls'] ?? 0) ?>" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:border-govGreen font-mono" oninput="calcTotalEnrollment()"/>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-textMain mb-1.5 flex items-center justify-between">
+                  <span>Total Enrolled</span>
+                  <span class="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-bold">Total</span>
+                </label>
+                <input type="number" id="total_enrollment" name="enrollment" min="0" readonly value="<?= (int)($current_school['enrollment'] ?? 0) ?>" class="w-full text-xs font-bold text-emerald-800 border border-emerald-300 rounded-lg px-3 py-2 bg-emerald-50/50 cursor-not-allowed font-mono"/>
               </div>
               <div>
                 <label class="block text-xs font-semibold text-textMain mb-1.5">Operational Status</label>
@@ -511,6 +535,13 @@ $current_school = ExcelDB::getSchoolBySemis($school_semis) ?? $current_school;
   </div>
 
   <script>
+    function calcTotalEnrollment() {
+      const b = parseInt(document.getElementById('enrollment_boys')?.value) || 0;
+      const g = parseInt(document.getElementById('enrollment_girls')?.value) || 0;
+      const tot = document.getElementById('total_enrollment');
+      if (tot) tot.value = b + g;
+    }
+
     function openSidebar() {
       const s = document.getElementById('sidebar');
       const o = document.getElementById('overlay');

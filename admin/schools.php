@@ -26,9 +26,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'download_template') {
     header('Expires: 0');
     $fp = fopen('php://output', 'w');
     fwrite($fp, "\xEF\xBB\xBF");
-    fputcsv($fp, ['SEMIS CODE', 'School Name', 'Head Master', 'CNIC', 'Taluka', 'Level', 'Gender', 'Enrollment', 'Attendance %', 'Status', 'Phone', 'Address', 'Teaching Staff', 'Non-teaching Staff', 'Classrooms', 'Electricity', 'Drinking Water', 'Toilets', 'Boundary Wall', 'Internet']);
-    fputcsv($fp, ['403010101', 'Government Primary School Model Sample', 'Muhammad Aslam Kumbhar', '41302-1234567-1', 'Tando Allahyar', 'Primary', 'Co-education', '250', '92%', 'Active', '+92 300 1234567', 'Main Station Road, Tando Allahyar', '7', '2', '5', 'Solar + Grid', 'Filtered Plant', 'Functional Blocks', 'Secured & Complete', 'Broadband / 4G']);
-    fputcsv($fp, ['403010102', 'Government Girls Middle School Sample', 'Rasheeda Begum Laghari', '41302-7654321-2', 'Jhando Mari', 'Middle', 'Girls', '195', '88%', 'Good', '+92 301 2345678', 'Village School Mohalla, Jhando Mari', '5', '2', '4', 'Grid Only', 'Handpump / Tap', 'Functional Blocks', 'Partial / Damaged', 'Partial / Mobile Data']);
+    fputcsv($fp, ['SEMIS CODE', 'School Name', 'Head Master', 'CNIC', 'Taluka', 'Level', 'Gender', 'Total Enrollment', 'Boys Enrollment', 'Girls Enrollment', 'Attendance %', 'Status', 'Phone', 'Address', 'Teaching Staff', 'Non-teaching Staff', 'Classrooms', 'Electricity', 'Drinking Water', 'Toilets', 'Boundary Wall', 'Internet']);
+    fputcsv($fp, ['403010101', 'Government Primary School Model Sample', 'Muhammad Aslam Kumbhar', '41302-1234567-1', 'Tando Allahyar', 'Primary', 'Co-education', '250', '130', '120', '92%', 'Active', '+92 300 1234567', 'Main Station Road, Tando Allahyar', '7', '2', '5', 'Solar + Grid', 'Filtered Plant', 'Functional Blocks', 'Secured & Complete', 'Broadband / 4G']);
+    fputcsv($fp, ['403010102', 'Government Girls Middle School Sample', 'Rasheeda Begum Laghari', '41302-7654321-2', 'Jhando Mari', 'Middle', 'Girls', '195', '0', '195', '88%', 'Good', '+92 301 2345678', 'Village School Mohalla, Jhando Mari', '5', '2', '4', 'Grid Only', 'Handpump / Tap', 'Functional Blocks', 'Partial / Damaged', 'Partial / Mobile Data']);
     fclose($fp);
     exit;
 }
@@ -88,7 +88,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['add_school'])
         $level  = trim($_POST['level'] ?? 'Primary');
         $gender = trim($_POST['gender'] ?? 'Co-education');
         $taluka = trim($_POST['taluka'] ?? 'Tando Allahyar');
-        $enroll = (int)($_POST['enrollment'] ?? 0);
+        $boys   = max(0, (int)($_POST['enrollment_boys'] ?? 0));
+        $girls  = max(0, (int)($_POST['enrollment_girls'] ?? 0));
+        $enroll = $boys + $girls;
+        if ($enroll === 0 && isset($_POST['enrollment'])) {
+            $enroll = max(0, (int)$_POST['enrollment']);
+        }
         $status = trim($_POST['status'] ?? 'Active');
         $attPct = trim($_POST['attendance_pct'] ?? '90') . '%';
         $phone  = trim($_POST['phone'] ?? '');
@@ -121,6 +126,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['add_school'])
                 'gender'                 => $gender,
                 'taluka'                 => $taluka,
                 'enrollment'             => (string)$enroll,
+                'enrollment_boys'        => (string)$boys,
+                'enrollment_girls'       => (string)$girls,
                 'attendance_pct'         => $attPct,
                 'status'                 => $status,
                 'status_badge'           => $badge,
@@ -451,7 +458,21 @@ body{font-family:'Inter',system-ui,sans-serif;}
             <td class="px-4 py-3 text-muted"><?= e($s['level'] ?? '') ?></td>
             <td class="px-4 py-3 text-muted"><?= e($s['gender'] ?? '') ?></td>
             <td class="px-4 py-3 text-muted"><?= e($s['taluka'] ?? '') ?></td>
-            <td class="px-4 py-3 text-right font-mono"><?= number_format((int)($s['enrollment'] ?? 0)) ?></td>
+            <td class="px-4 py-3 text-right">
+              <?php 
+                $b_cnt = isset($s['enrollment_boys']) && $s['enrollment_boys'] !== '' ? (int)$s['enrollment_boys'] : null;
+                $g_cnt = isset($s['enrollment_girls']) && $s['enrollment_girls'] !== '' ? (int)$s['enrollment_girls'] : null;
+                $tot_e = (int)($s['enrollment'] ?? 0);
+                if ($b_cnt === null || $g_cnt === null) {
+                  $gen = strtolower($s['gender'] ?? '');
+                  if ($gen === 'girls') { $g_cnt = $tot_e; $b_cnt = 0; }
+                  elseif ($gen === 'boys') { $b_cnt = $tot_e; $g_cnt = 0; }
+                  else { $b_cnt = (int)round($tot_e * 0.52); $g_cnt = $tot_e - $b_cnt; }
+                }
+              ?>
+              <div class="font-mono font-bold text-textMain"><?= number_format($tot_e) ?></div>
+              <div class="text-[10px] text-muted font-mono"><?= number_format($b_cnt) ?>B / <?= number_format($g_cnt) ?>G</div>
+            </td>
             <td class="px-4 py-3"><span class="status-badge <?= e($s['status_badge'] ?? 'badge-active') ?>"><?= e($s['status'] ?? 'Active') ?></span></td>
             <td class="px-4 py-3 text-center">
               <div class="flex items-center justify-center gap-1.5">
@@ -539,7 +560,7 @@ body{font-family:'Inter',system-ui,sans-serif;}
         </div>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
         <div>
           <label class="block text-xs font-semibold text-textMain mb-1">Level</label>
           <select name="level" class="w-full text-xs border border-border rounded px-3 py-1.5 bg-background focus:outline-none focus:border-primary">
@@ -553,10 +574,21 @@ body{font-family:'Inter',system-ui,sans-serif;}
           </select>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-textMain mb-1">Enrollment</label>
-          <input type="number" name="enrollment" value="180" required class="w-full text-xs border border-border rounded px-3 py-1.5 bg-background focus:outline-none focus:border-primary"/>
+          <label class="block text-xs font-semibold text-textMain mb-1 flex items-center justify-between">
+            <span>Boys</span>
+            <span class="text-[10px] text-blue-700 font-bold">Boys</span>
+          </label>
+          <input type="number" id="add_enrollment_boys" name="enrollment_boys" value="95" min="0" class="w-full text-xs border border-border rounded px-3 py-1.5 bg-background focus:outline-none focus:border-primary font-mono" oninput="addCalcEnrollment()"/>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-textMain mb-1 flex items-center justify-between">
+            <span>Girls</span>
+            <span class="text-[10px] text-pink-700 font-bold">Girls</span>
+          </label>
+          <input type="number" id="add_enrollment_girls" name="enrollment_girls" value="85" min="0" class="w-full text-xs border border-border rounded px-3 py-1.5 bg-background focus:outline-none focus:border-primary font-mono" oninput="addCalcEnrollment()"/>
         </div>
       </div>
+      <input type="hidden" id="add_total_enrollment" name="enrollment" value="180"/>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
@@ -1194,6 +1226,13 @@ function openCredentialsModal(semis, schoolName, hmName, cnic, pass) {
   if (modal) {
     modal.classList.remove('hidden');
   }
+}
+
+function addCalcEnrollment() {
+  const b = parseInt(document.getElementById('add_enrollment_boys')?.value) || 0;
+  const g = parseInt(document.getElementById('add_enrollment_girls')?.value) || 0;
+  const tot = document.getElementById('add_total_enrollment');
+  if (tot) tot.value = b + g;
 }
 
 function closeCredentialsModal() {

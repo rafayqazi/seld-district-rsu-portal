@@ -34,16 +34,23 @@ foreach ($schoolsData as $s) {
     $enr = (int)($s['enrollment'] ?? 0);
     $total_enrollment += $enr;
     
-    $g = strtolower(trim($s['gender'] ?? ''));
-    if ($g === 'girls') {
-        $total_girls += $enr;
-    } elseif ($g === 'boys') {
-        $total_boys += $enr;
-    } else {
-        $b = (int)round($enr * 0.52);
-        $total_boys += $b;
-        $total_girls += ($enr - $b);
+    $b  = isset($s['enrollment_boys']) && $s['enrollment_boys'] !== '' ? (int)$s['enrollment_boys'] : null;
+    $gl = isset($s['enrollment_girls']) && $s['enrollment_girls'] !== '' ? (int)$s['enrollment_girls'] : null;
+    if ($b === null || $gl === null) {
+        $g = strtolower(trim($s['gender'] ?? ''));
+        if ($g === 'girls') {
+            $gl = $enr;
+            $b  = 0;
+        } elseif ($g === 'boys') {
+            $b  = $enr;
+            $gl = 0;
+        } else {
+            $b  = (int)round($enr * 0.52);
+            $gl = $enr - $b;
+        }
     }
+    $total_boys  += $b;
+    $total_girls += $gl;
     
     $total_teachers     += (int)($s['teachers'] ?? 0);
     $total_non_teaching += (int)($s['non_teaching'] ?? 0);
