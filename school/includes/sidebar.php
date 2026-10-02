@@ -79,19 +79,7 @@ function school_sidebar_link(string $page, string $active): string {
       <span>School Profile &amp; Facilities</span>
     </a>
 
-    <div class="px-2 pt-4 pb-1 text-[10px] tracking-wider font-bold uppercase text-white/40">Student Management</div>
-
-    <!-- 3. Student Roster -->
-    <a href="<?= $base ?>students.php" class="<?= school_sidebar_link('students', $active_page) ?>">
-      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
-        <circle cx="9" cy="7" r="4"/>
-        <path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
-      </svg>
-      <span>Students Roster</span>
-    </a>
-
-    <!-- 4. School Facility Risks -->
+    <!-- 3. School Facility Risks -->
     <a href="<?= $base ?>at-risk.php" class="<?= school_sidebar_link('at-risk', $active_page) ?>">
       <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
         <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>

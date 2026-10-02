@@ -427,7 +427,6 @@ body{font-family:'Inter',system-ui,sans-serif;}
           <th class="px-4 py-3 font-semibold">Gender</th>
           <th class="px-4 py-3 font-semibold">Taluka</th>
           <th class="px-4 py-3 font-semibold text-right">Enrollment</th>
-          <th class="px-4 py-3 font-semibold text-right">Attendance</th>
           <th class="px-4 py-3 font-semibold">Status</th>
           <th class="px-4 py-3 font-semibold text-center">Actions</th>
         </tr></thead>
@@ -453,12 +452,19 @@ body{font-family:'Inter',system-ui,sans-serif;}
             <td class="px-4 py-3 text-muted"><?= e($s['gender'] ?? '') ?></td>
             <td class="px-4 py-3 text-muted"><?= e($s['taluka'] ?? '') ?></td>
             <td class="px-4 py-3 text-right font-mono"><?= number_format((int)($s['enrollment'] ?? 0)) ?></td>
-            <td class="px-4 py-3 text-right font-medium"><?= e($s['attendance_pct'] ?? '0%') ?></td>
             <td class="px-4 py-3"><span class="status-badge <?= e($s['status_badge'] ?? 'badge-active') ?>"><?= e($s['status'] ?? 'Active') ?></span></td>
             <td class="px-4 py-3 text-center">
               <div class="flex items-center justify-center gap-1.5">
-                <a href= BASE_URL . '/admin/school-profile.php?semis=<?= urlencode($s['semis_code'] ?? '') ?>" class="btn-primary px-2 py-1 rounded text-xs" title="View Full Profile">Profile</a>
-                <button type="button" onclick="openCredentialsModal('<?= e($s['semis_code'] ?? '') ?>', '<?= e(addslashes($s['school_name'] ?? '')) ?>', '<?= e(addslashes($s['head_master'] ?? 'HM')) ?>', '<?= e($cred['cnic'] ?? $s['cnic'] ?? '') ?>', '<?= e($cred['password_plain'] ?? '1122') ?>')" class="p-1 rounded text-emerald-700 hover:text-emerald-900 hover:bg-emerald-50 transition border border-emerald-200" title="View HM Portal Login & Password">
+                <a href="<?= BASE_URL ?>/admin/school-profile.php?semis=<?= urlencode($s['semis_code'] ?? '') ?>" class="btn-primary px-2 py-1 rounded text-xs" title="View Full Profile">Profile</a>
+                <button type="button" 
+                        data-semis="<?= e($s['semis_code'] ?? '') ?>"
+                        data-school="<?= e($s['school_name'] ?? '') ?>"
+                        data-hm="<?= e($s['head_master'] ?? '') ?>"
+                        data-cnic="<?= e($cred['cnic'] ?? $s['cnic'] ?? '') ?>"
+                        data-pass="<?= e($cred['password_plain'] ?? '1122') ?>"
+                        onclick="openCredentialsModalFromBtn(this)" 
+                        class="p-1 rounded text-emerald-700 hover:text-emerald-900 hover:bg-emerald-50 transition border border-emerald-200" 
+                        title="View HM Portal Login & Password">
                   <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                 </button>
                 <button onclick="confirmDeleteSchool('<?= e($s['semis_code'] ?? '') ?>', '<?= e(addslashes($s['school_name'] ?? '')) ?>')" class="p-1 rounded text-muted hover:text-danger hover:bg-red-50 transition" title="Delete School">
@@ -552,11 +558,7 @@ body{font-family:'Inter',system-ui,sans-serif;}
         </div>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div>
-          <label class="block text-xs font-semibold text-textMain mb-1">Attendance Rate (%)</label>
-          <input type="number" name="attendance_pct" min="0" max="100" value="90" class="w-full text-xs border border-border rounded px-3 py-1.5 bg-background focus:outline-none focus:border-primary"/>
-        </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label class="block text-xs font-semibold text-textMain mb-1">Status</label>
           <select name="status" class="w-full text-xs border border-border rounded px-3 py-1.5 bg-background focus:outline-none focus:border-primary">
@@ -1153,21 +1155,50 @@ function runImportAnalysis() {
 }
 
 // Head Master Credentials Modal Handlers
+function openCredentialsModalFromBtn(btn) {
+  if (!btn) return;
+  const semis = btn.getAttribute('data-semis') || '';
+  const schoolName = btn.getAttribute('data-school') || '';
+  const hmName = btn.getAttribute('data-hm') || '';
+  const cnic = btn.getAttribute('data-cnic') || '';
+  const pass = btn.getAttribute('data-pass') || '1122';
+  openCredentialsModal(semis, schoolName, hmName, cnic, pass);
+}
+
 function openCredentialsModal(semis, schoolName, hmName, cnic, pass) {
-  document.getElementById('cred-form-semis').value = semis;
-  document.getElementById('cred-school-title').innerText = `${schoolName} (SEMIS: ${semis})`;
-  document.getElementById('cred-hm-name').innerText = hmName || 'Not Assigned';
-  document.getElementById('cred-semis-code').innerText = semis;
-  document.getElementById('cred-hm-cnic').innerText = cnic || 'N/A';
-  document.getElementById('cred-hm-pass').innerText = pass || '1122';
-  document.getElementById('cred-hm-pass').dataset.real = pass || '1122';
-  document.getElementById('cred-new-pass-input').value = pass || '1122';
-  document.getElementById('cred-portal-link').href = `${BASE_URL || ""}/school/dashboard.php?semis=${encodeURIComponent(semis)}`;
-  document.getElementById('credentials-school-modal').classList.remove('hidden');
+  const formSemis = document.getElementById('cred-form-semis');
+  const title = document.getElementById('cred-school-title');
+  const hmNameEl = document.getElementById('cred-hm-name');
+  const semisCodeEl = document.getElementById('cred-semis-code');
+  const hmCnicEl = document.getElementById('cred-hm-cnic');
+  const hmPassEl = document.getElementById('cred-hm-pass');
+  const newPassInput = document.getElementById('cred-new-pass-input');
+  const portalLink = document.getElementById('cred-portal-link');
+  const modal = document.getElementById('credentials-school-modal');
+
+  if (formSemis) formSemis.value = semis;
+  if (title) title.innerText = `${schoolName} (SEMIS: ${semis})`;
+  if (hmNameEl) hmNameEl.innerText = hmName || 'Not Assigned';
+  if (semisCodeEl) semisCodeEl.innerText = semis;
+  if (hmCnicEl) hmCnicEl.innerText = cnic || 'N/A';
+  if (hmPassEl) {
+    hmPassEl.innerText = pass || '1122';
+    hmPassEl.dataset.real = pass || '1122';
+  }
+  if (newPassInput) newPassInput.value = pass || '1122';
+  
+  const baseUrl = (typeof window.LSU_BASE_URL !== 'undefined' ? window.LSU_BASE_URL : '<?= BASE_URL ?>');
+  if (portalLink) {
+    portalLink.href = `${baseUrl}/school/dashboard.php?semis=${encodeURIComponent(semis)}`;
+  }
+  if (modal) {
+    modal.classList.remove('hidden');
+  }
 }
 
 function closeCredentialsModal() {
-  document.getElementById('credentials-school-modal').classList.add('hidden');
+  const modal = document.getElementById('credentials-school-modal');
+  if (modal) modal.classList.add('hidden');
 }
 
 function copyCredText(elemId, btn) {

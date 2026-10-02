@@ -53,12 +53,16 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         exit;
     } elseif (isset($_POST['update_facilities'])) {
         $targetSemis = trim($_POST['target_semis'] ?? $semis);
-        $rooms = max(0, (int)($_POST['classrooms'] ?? 6));
-        $elec  = trim($_POST['facility_electricity'] ?? 'Solar + Grid');
-        $water = trim($_POST['facility_water'] ?? 'Filtered Plant');
-        $toil  = trim($_POST['facility_toilets'] ?? 'Functional Blocks');
-        $wall  = trim($_POST['facility_boundary_wall'] ?? 'Secured & Complete');
-        $net   = trim($_POST['facility_internet'] ?? 'Broadband / 4G');
+        $rooms       = max(0, (int)($_POST['classrooms'] ?? 6));
+        $elec        = trim($_POST['facility_electricity'] ?? 'Solar + Grid');
+        $water       = trim($_POST['facility_water'] ?? 'Filtered Plant');
+        $toil        = trim($_POST['facility_toilets'] ?? 'Functional Blocks');
+        $wall        = trim($_POST['facility_boundary_wall'] ?? 'Secured & Complete');
+        $net         = trim($_POST['facility_internet'] ?? 'Broadband / 4G');
+        $bldg        = trim($_POST['building_structure'] ?? 'Good Condition');
+        $drain       = trim($_POST['drainage_sewerage'] ?? 'Functional Drainage');
+        $flood       = trim($_POST['flood_prone'] ?? 'No');
+        $furniture   = trim($_POST['furniture_condition'] ?? 'Adequate');
         ExcelDB::update('schools', 'semis_code', $targetSemis, [
             'classrooms'             => (string)$rooms,
             'facility_electricity'   => $elec,
@@ -66,7 +70,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             'facility_toilets'       => $toil,
             'facility_boundary_wall' => $wall,
             'facility_internet'      => $net,
+            'building_structure'     => $bldg,
+            'drainage_sewerage'      => $drain,
+            'flood_prone'            => $flood,
+            'furniture_condition'    => $furniture,
         ]);
+        ExcelDB::autoFlagSchoolRisks($targetSemis);
         header('Location: ' . BASE_URL . '/admin/school-profile.php?semis=' . urlencode($targetSemis) . '&msg=facilities_updated');
         exit;
     } elseif (isset($_POST['update_school_profile'])) {
@@ -91,6 +100,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         $toil    = trim($_POST['facility_toilets'] ?? 'Functional Blocks');
         $wall    = trim($_POST['facility_boundary_wall'] ?? 'Secured & Complete');
         $net     = trim($_POST['facility_internet'] ?? 'Broadband / 4G');
+        $bldg    = trim($_POST['building_structure'] ?? 'Good Condition');
+        $drain   = trim($_POST['drainage_sewerage'] ?? 'Functional Drainage');
+        $flood   = trim($_POST['flood_prone'] ?? 'No');
+        $furn    = trim($_POST['furniture_condition'] ?? 'Adequate');
 
         $badge = 'badge-active';
         if ($status === 'Good') $badge = 'badge-good';
@@ -118,9 +131,14 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             'facility_toilets'       => $toil,
             'facility_boundary_wall' => $wall,
             'facility_internet'      => $net,
+            'building_structure'     => $bldg,
+            'drainage_sewerage'      => $drain,
+            'flood_prone'            => $flood,
+            'furniture_condition'    => $furn,
         ];
 
         ExcelDB::update('schools', 'semis_code', $targetSemis, $updateData);
+        ExcelDB::autoFlagSchoolRisks($targetSemis);
         header('Location: ' . BASE_URL . '/admin/school-profile.php?semis=' . urlencode($targetSemis) . '&msg=updated');
         exit;
     } elseif (isset($_POST['update_hm_password'])) {
@@ -145,7 +163,7 @@ if (isset($_GET['msg'])) {
         $notification = 'Teaching and non-teaching staff counts successfully updated!';
         $notification_type = 'success';
     } elseif ($_GET['msg'] === 'facilities_updated') {
-        $notification = 'Facilities and infrastructure status successfully updated!';
+        $notification = 'Facilities and infrastructure status updated! Schools at-risk registry has been automatically reviewed and updated.';
         $notification_type = 'success';
     }
 }
@@ -399,27 +417,6 @@ body{font-family:'Inter',system-ui,sans-serif;}
 
     <!-- Right Column -->
     <div class="space-y-5">
-      <section class="bg-surface border border-border rounded-lg p-5 shadow-sm">
-        <h2 class="text-sm font-semibold text-textMain mb-4">Attendance Summary</h2>
-        <div class="space-y-3">
-          <div>
-            <div class="flex justify-between text-xs mb-1"><span class="text-muted">Reported Attendance</span><span class="font-semibold text-success"><?= e($school['attendance_pct'] ?? '90%') ?></span></div>
-            <div class="w-full bg-border rounded-full h-2"><div class="bg-success h-2 rounded-full" style="width:<?= min(100, $cleanAtt) ?>%"></div></div>
-          </div>
-          <div>
-            <div class="flex justify-between text-xs mb-1"><span class="text-muted">Weekly Average</span><span class="font-semibold text-success"><?= max(50, $cleanAtt - 2) ?>%</span></div>
-            <div class="w-full bg-border rounded-full h-2"><div class="bg-success h-2 rounded-full" style="width:<?= max(50, $cleanAtt - 2) ?>%"></div></div>
-          </div>
-          <div>
-            <div class="flex justify-between text-xs mb-1"><span class="text-muted">Monthly Average</span><span class="font-semibold text-primary"><?= max(50, $cleanAtt - 4) ?>%</span></div>
-            <div class="w-full bg-border rounded-full h-2"><div class="bg-primary h-2 rounded-full" style="width:<?= max(50, $cleanAtt - 4) ?>%"></div></div>
-          </div>
-        </div>
-        <div class="mt-4 pt-4 border-t border-border text-xs text-muted flex items-center justify-between">
-          <span>District Target: 95%</span>
-          <span class="<?= $cleanAtt >= 90 ? 'text-success' : 'text-warning' ?> font-semibold"><?= $cleanAtt >= 90 ? '✔ On Track' : '▲ Action Needed' ?></span>
-        </div>
-      </section>
 
       <!-- School Portal Access & HM Credentials Card -->
       <section class="bg-surface border border-border rounded-lg p-5 shadow-sm">
@@ -466,7 +463,7 @@ body{font-family:'Inter',system-ui,sans-serif;}
               <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
               <span>Change / Reset HM Password</span>
             </button>
-            <a href= BASE_URL . '/school/dashboard.php?semis=<?= urlencode($school['semis_code'] ?? '') ?>" target="_blank" class="w-full text-xs font-semibold py-2 px-3 rounded bg-emerald-700 hover:bg-emerald-800 text-white transition text-center flex items-center justify-center gap-1.5 shadow-xs">
+            <a href="<?= BASE_URL ?>/school/dashboard.php?semis=<?= urlencode($school['semis_code'] ?? '') ?>" target="_blank" class="w-full text-xs font-semibold py-2 px-3 rounded bg-emerald-700 hover:bg-emerald-800 text-white transition text-center flex items-center justify-center gap-1.5 shadow-xs">
               <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
               <span>Launch School Portal</span>
             </a>
@@ -481,21 +478,15 @@ body{font-family:'Inter',system-ui,sans-serif;}
             <svg width="14" height="14" fill="none" stroke="#123B63" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             Edit School Information
           </button>
-          <a href="<?= BASE_URL ?>/admin/attendance.php" class="flex items-center gap-2.5 p-2.5 rounded border border-border hover:bg-background text-sm text-textMain transition">
-            <svg width="14" height="14" fill="none" stroke="#0F766E" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/></svg>
-            View Daily Attendance
+          <a href="<?= BASE_URL ?>/admin/at-risk-schools.php" class="flex items-center gap-2.5 p-2.5 rounded border border-border hover:bg-background text-sm text-textMain transition">
+            <svg width="14" height="14" fill="none" stroke="#DC2626" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Infrastructure Risks
           </a>
-          <a href="<?= BASE_URL ?>/admin/students.php" class="flex items-center gap-2.5 p-2.5 rounded border border-border hover:bg-background text-sm text-textMain transition">
-            <svg width="14" height="14" fill="none" stroke="#D97706" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            Student Roster
+          <a href="<?= BASE_URL ?>/admin/complaints.php" class="flex items-center gap-2.5 p-2.5 rounded border border-border hover:bg-background text-sm text-textMain transition">
+            <svg width="14" height="14" fill="none" stroke="#0F766E" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+            Complaints &amp; Grievances
           </a>
         </div>
-      </section>
-
-      <section class="bg-surface border border-border rounded-lg p-5 shadow-sm text-center">
-        <h2 class="text-xs uppercase tracking-wide text-muted mb-2">School Inspection Rating</h2>
-        <div class="text-4xl font-bold text-primary"><?= $cleanAtt >= 90 ? 'A' : ($cleanAtt >= 80 ? 'B+' : 'C') ?></div>
-        <div class="text-xs text-muted mt-1">SELD District Performance Index</div>
       </section>
     </div>
   </div>
@@ -576,11 +567,7 @@ body{font-family:'Inter',system-ui,sans-serif;}
         </div>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div>
-          <label class="block text-xs font-semibold text-textMain mb-1">Attendance Rate (%)</label>
-          <input type="number" name="attendance_pct" min="0" max="100" value="<?= $cleanAtt ?>" class="w-full text-xs border border-border rounded px-3 py-1.5 bg-background focus:outline-none focus:border-primary"/>
-        </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label class="block text-xs font-semibold text-textMain mb-1">Status</label>
           <select name="status" class="w-full text-xs border border-border rounded px-3 py-1.5 bg-background focus:outline-none focus:border-primary">
@@ -794,6 +781,57 @@ body{font-family:'Inter',system-ui,sans-serif;}
             <?php endforeach; ?>
           </select>
           <span class="text-[10px] text-muted">Digital reporting &amp; learning network</span>
+        </div>
+      </div>
+
+      <!-- Additional Infrastructure Fields -->
+      <div class="pt-3 border-t border-slate-200">
+        <div class="text-xs font-bold text-primary mb-3 flex items-center gap-2">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+          Extended Infrastructure Assessment
+          <span class="text-[10px] font-normal text-danger bg-red-50 px-1.5 py-0.5 rounded border border-red-200">Triggers Auto-Risk Flagging</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div>
+            <label class="block text-xs font-semibold text-textMain mb-1">Building Structure Condition <span class="text-danger">*</span></label>
+            <select name="building_structure" class="w-full text-xs border border-border rounded px-3 py-2 bg-background focus:outline-none focus:border-primary font-medium">
+              <?php foreach (['Good Condition', 'Needs Repair', 'Dangerous / Unsafe', 'Condemned / Closed'] as $opt): ?>
+              <option value="<?= e($opt) ?>" <?= ($school['building_structure'] ?? 'Good Condition') === $opt ? 'selected' : '' ?>><?= e($opt) ?></option>
+              <?php endforeach; ?>
+            </select>
+            <span class="text-[10px] text-muted">Structural safety of main classroom block</span>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-textMain mb-1">Drainage / Sewerage System</label>
+            <select name="drainage_sewerage" class="w-full text-xs border border-border rounded px-3 py-2 bg-background focus:outline-none focus:border-primary font-medium">
+              <?php foreach (['Functional Drainage', 'Partial Drainage', 'Broken / None'] as $opt): ?>
+              <option value="<?= e($opt) ?>" <?= ($school['drainage_sewerage'] ?? 'Functional Drainage') === $opt ? 'selected' : '' ?>><?= e($opt) ?></option>
+              <?php endforeach; ?>
+            </select>
+            <span class="text-[10px] text-muted">Sewerage and drainage availability</span>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-textMain mb-1">Flood / Disaster Prone Area?</label>
+            <select name="flood_prone" class="w-full text-xs border border-border rounded px-3 py-2 bg-background focus:outline-none focus:border-primary font-medium">
+              <?php foreach (['No', 'Yes'] as $opt): ?>
+              <option value="<?= e($opt) ?>" <?= ($school['flood_prone'] ?? 'No') === $opt ? 'selected' : '' ?>><?= e($opt) ?></option>
+              <?php endforeach; ?>
+            </select>
+            <span class="text-[10px] text-muted">High-risk zones get escalated automatically</span>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-textMain mb-1">Furniture &amp; Equipment</label>
+            <select name="furniture_condition" class="w-full text-xs border border-border rounded px-3 py-2 bg-background focus:outline-none focus:border-primary font-medium">
+              <?php foreach (['Adequate', 'Shortage', 'None Available'] as $opt): ?>
+              <option value="<?= e($opt) ?>" <?= ($school['furniture_condition'] ?? 'Adequate') === $opt ? 'selected' : '' ?>><?= e($opt) ?></option>
+              <?php endforeach; ?>
+            </select>
+            <span class="text-[10px] text-muted">Desks, chairs, and teaching equipment</span>
+          </div>
+        </div>
+        <div class="mt-3 p-2.5 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800 flex items-start gap-2">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="mt-0.5 flex-shrink-0"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          Saving these fields will <strong>automatically flag this school at-risk</strong> in the At-Risk Schools Registry based on the reported conditions.
         </div>
       </div>
 

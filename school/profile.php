@@ -21,9 +21,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $notification = 'CSRF validation failed. Please try again.';
         $notification_type = 'danger';
     } elseif (isset($_POST['save_school_profile'])) {
+        $newSemis = trim($_POST['semis_code'] ?? $school_semis);
         $name    = trim($_POST['school_name'] ?? '');
         $hm      = trim($_POST['head_master'] ?? '');
-        $cnic    = trim($_POST['cnic'] ?? '');
+        $cnic    = $current_school['cnic'] ?? ''; // HM CNIC is immutable from School Portal (Admin Edit Only)
         $phone   = trim($_POST['phone'] ?? '');
         $addr    = trim($_POST['address'] ?? '');
         $taluka  = trim($_POST['taluka'] ?? $school_taluka);
@@ -39,76 +40,108 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $toil    = trim($_POST['facility_toilets'] ?? 'Functional Blocks');
         $wall    = trim($_POST['facility_boundary_wall'] ?? 'Secured & Complete');
         $net     = trim($_POST['facility_internet'] ?? 'Broadband / 4G');
+        $bldg    = trim($_POST['building_structure'] ?? 'Good Condition');
+        $drain   = trim($_POST['drainage_sewerage'] ?? 'Functional Drainage');
+        $flood   = trim($_POST['flood_prone'] ?? 'No');
+        $furn    = trim($_POST['furniture_condition'] ?? 'Adequate');
 
-        $badge = 'badge-active';
-        if ($status === 'Good') $badge = 'badge-good';
-        elseif ($status === 'Needs Attention') $badge = 'badge-attention';
-        elseif ($status === 'Not Reporting') $badge = 'badge-not-rep';
+        // Validation for SEMIS code
+        if (empty($newSemis) || !preg_match('/^[0-9]+$/', $newSemis)) {
+            $notification = 'Invalid SEMIS Code! SEMIS Code must be numerical digits only (e.g. 403010001).';
+            $notification_type = 'danger';
+        } elseif ($newSemis !== $school_semis && ExcelDB::find('schools', 'semis_code', $newSemis)) {
+            $notification = "SEMIS Code '{$newSemis}' is already assigned to another school in the district.";
+            $notification_type = 'danger';
+        } else {
+            $badge = 'badge-active';
+            if ($status === 'Good') $badge = 'badge-good';
+            elseif ($status === 'Needs Attention') $badge = 'badge-attention';
+            elseif ($status === 'Not Reporting') $badge = 'badge-not-rep';
 
-        $updateData = [
-            'school_name'            => $name,
-            'head_master'            => $hm,
-            'cnic'                   => $cnic,
-            'phone'                  => $phone,
-            'address'                => $addr,
-            'taluka'                 => $taluka,
-            'level'                  => $level,
-            'gender'                 => $gender,
-            'enrollment'             => (string)$enroll,
-            'status'                 => $status,
-            'status_badge'           => $badge,
-            'classrooms'             => (string)$rooms,
-            'teachers'               => (string)$tchrs,
-            'non_teaching'           => (string)$nonTch,
-            'facility_electricity'   => $elec,
-            'facility_water'         => $water,
-            'facility_toilets'       => $toil,
-            'facility_boundary_wall' => $wall,
-            'facility_internet'      => $net,
-        ];
+            $updateData = [
+                'semis_code'             => $newSemis,
+                'school_name'            => $name,
+                'head_master'            => $hm,
+                'cnic'                   => $cnic,
+                'phone'                  => $phone,
+                'address'                => $addr,
+                'taluka'                 => $taluka,
+                'level'                  => $level,
+                'gender'                 => $gender,
+                'enrollment'             => (string)$enroll,
+                'status'                 => $status,
+                'status_badge'           => $badge,
+                'classrooms'             => (string)$rooms,
+                'teachers'               => (string)$tchrs,
+                'non_teaching'           => (string)$nonTch,
+                'facility_electricity'   => $elec,
+                'facility_water'         => $water,
+                'facility_toilets'       => $toil,
+                'facility_boundary_wall' => $wall,
+                'facility_internet'      => $net,
+                'building_structure'     => $bldg,
+                'drainage_sewerage'      => $drain,
+                'flood_prone'            => $flood,
+                'furniture_condition'    => $furn,
+            ];
 
-        // Handle School Logo Upload
-        if (isset($_FILES['school_logo']) && $_FILES['school_logo']['error'] === UPLOAD_ERR_OK) {
-            $file = $_FILES['school_logo'];
-            $allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-            $fileInfo = finfo_open(FILEINFO_MIME_TYPE);
-            $mime = finfo_file($fileInfo, $file['tmp_name']);
-            finfo_close($fileInfo);
+            // Handle School Logo Upload
+            if (isset($_FILES['school_logo']) && $_FILES['school_logo']['error'] === UPLOAD_ERR_OK) {
+                $file = $_FILES['school_logo'];
+                $allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+                $fileInfo = finfo_open(FILEINFO_MIME_TYPE);
+                $mime = finfo_file($fileInfo, $file['tmp_name']);
+                finfo_close($fileInfo);
 
-            if (in_array($mime, $allowedTypes) && $file['size'] <= 3 * 1024 * 1024) {
-                $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
-                if (empty($ext)) $ext = 'png';
-                $cleanSemis = preg_replace('/[^0-9]/', '', $school_semis);
-                $newFilename = 'school_' . $cleanSemis . '_' . time() . '.' . $ext;
-                $targetDir = ROOT_PATH . '/assets/uploads/schools';
-                if (!is_dir($targetDir)) mkdir($targetDir, 0777, true);
-                $destPath = $targetDir . '/' . $newFilename;
+                if (in_array($mime, $allowedTypes) && $file['size'] <= 3 * 1024 * 1024) {
+                    $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+                    if (empty($ext)) $ext = 'png';
+                    $cleanSemis = preg_replace('/[^0-9]/', '', $newSemis);
+                    $newFilename = 'school_' . $cleanSemis . '_' . time() . '.' . $ext;
+                    $targetDir = ROOT_PATH . '/assets/uploads/schools';
+                    if (!is_dir($targetDir)) mkdir($targetDir, 0777, true);
+                    $destPath = $targetDir . '/' . $newFilename;
 
-                if (move_uploaded_file($file['tmp_name'], $destPath)) {
-                    $logoUrl = BASE_URL . '/assets/uploads/schools/' . $newFilename;
-                    $updateData['logo'] = $logoUrl;
-                    $_SESSION['lsu_avatar'] = $logoUrl;
+                    if (move_uploaded_file($file['tmp_name'], $destPath)) {
+                        $logoUrl = BASE_URL . '/assets/uploads/schools/' . $newFilename;
+                        $updateData['logo'] = $logoUrl;
+                        $_SESSION['lsu_avatar'] = $logoUrl;
+                    }
                 }
             }
+
+            // Update schools.csv
+            ExcelDB::update('schools', 'semis_code', $school_semis, $updateData);
+            ExcelDB::autoFlagSchoolRisks($newSemis);
+
+            // Cascade update to users.csv & complaints.csv if SEMIS changed
+            if ($newSemis !== $school_semis) {
+                ExcelDB::update('users', 'school_semis', $school_semis, [
+                    'school_semis' => $newSemis,
+                    'full_name'    => $hm,
+                    'district'     => $taluka,
+                    'avatar'       => $updateData['logo'] ?? ($_SESSION['lsu_avatar'] ?? '')
+                ]);
+                ExcelDB::update('complaints', 'semis_code', $school_semis, [
+                    'semis_code'  => $newSemis,
+                    'school_name' => $name,
+                    'taluka'      => $taluka
+                ]);
+                $_SESSION['lsu_school_semis'] = $newSemis;
+            } else {
+                ExcelDB::update('users', 'school_semis', $school_semis, [
+                    'full_name' => $hm,
+                    'district'  => $taluka,
+                    'avatar'    => $updateData['logo'] ?? ($_SESSION['lsu_avatar'] ?? '')
+                ]);
+            }
+
+            $_SESSION['lsu_username'] = $hm;
+            $_SESSION['lsu_school_name'] = $name;
+
+            header('Location: ' . BASE_URL . '/school/profile.php?msg=updated');
+            exit;
         }
-
-        // Update schools.csv
-        ExcelDB::update('schools', 'semis_code', $school_semis, $updateData);
-
-        // Update users.csv for this school
-        $cleanCnic = ExcelDB::normalizeCnic($cnic);
-        $userUpdate = ['full_name' => $hm, 'cnic' => $cnic, 'district' => $taluka];
-        if (isset($updateData['logo'])) {
-            $userUpdate['avatar'] = $updateData['logo'];
-        }
-        ExcelDB::update('users', 'school_semis', $school_semis, $userUpdate);
-
-        $_SESSION['lsu_username'] = $hm;
-        $_SESSION['lsu_school_name'] = $name;
-        $_SESSION['lsu_cnic'] = $cnic;
-
-        header('Location: ' . BASE_URL . '/school/profile.php?msg=updated');
-        exit;
     }
 }
 
@@ -239,8 +272,9 @@ $current_school = ExcelDB::getSchoolBySemis($school_semis) ?? $current_school;
                 <input type="text" name="school_name" required value="<?= e($current_school['school_name'] ?? '') ?>" class="w-full text-xs border border-border rounded-lg px-3.5 py-2 bg-background focus:outline-none focus:border-govGreen"/>
               </div>
               <div>
-                <label class="block text-xs font-semibold text-textMain mb-1.5">SEMIS Code (Permanent ID)</label>
-                <input type="text" readonly value="<?= e($school_semis) ?>" class="w-full text-xs font-mono border border-border rounded-lg px-3.5 py-2 bg-slate-100 text-slate-600 cursor-not-allowed"/>
+                <label class="block text-xs font-semibold text-textMain mb-1.5">SEMIS Code <span class="text-danger">* (Numerical Only)</span></label>
+                <input type="text" name="semis_code" required pattern="[0-9]+" value="<?= e($school_semis) ?>" placeholder="e.g. 403010001" class="w-full text-xs font-mono font-bold border border-border rounded-lg px-3.5 py-2 bg-background focus:outline-none focus:border-govGreen"/>
+                <span class="text-[10px] text-muted block mt-0.5">Numerical SEMIS code registered in district census.</span>
               </div>
             </div>
 
@@ -324,8 +358,12 @@ $current_school = ExcelDB::getSchoolBySemis($school_semis) ?? $current_school;
                 <input type="text" name="head_master" required value="<?= e($current_school['head_master'] ?? '') ?>" placeholder="e.g. Muhammad Ishaq Memon" class="w-full text-xs border border-border rounded-lg px-3.5 py-2 bg-background focus:outline-none focus:border-govGreen"/>
               </div>
               <div>
-                <label class="block text-xs font-semibold text-textMain mb-1.5">HM CNIC Number <span class="text-danger">* (Login ID)</span></label>
-                <input type="text" name="cnic" required value="<?= e($current_school['cnic'] ?? '') ?>" placeholder="e.g. 41302-1849201-3" class="w-full text-xs font-mono border border-border rounded-lg px-3.5 py-2 bg-background focus:outline-none focus:border-govGreen"/>
+                <label class="block text-xs font-semibold text-textMain mb-1.5 flex items-center justify-between">
+                  <span>HM CNIC Number <span class="text-danger">*</span></span>
+                  <span class="text-[10px] text-slate-600 font-semibold bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">Locked (Admin Edit Only)</span>
+                </label>
+                <input type="text" readonly value="<?= e($current_school['cnic'] ?? '') ?>" class="w-full text-xs font-mono font-semibold border border-border rounded-lg px-3.5 py-2 bg-slate-100 text-slate-700 cursor-not-allowed select-all" title="CNIC is locked and can only be updated by District Admin"/>
+                <span class="text-[10px] text-muted block mt-1">Permanent Login ID &bull; Managed exclusively by District Admin.</span>
               </div>
               <div>
                 <label class="block text-xs font-semibold text-textMain mb-1.5">Contact Mobile Phone</label>
@@ -402,6 +440,52 @@ $current_school = ExcelDB::getSchoolBySemis($school_semis) ?? $current_school;
                     <option value="<?= $opt ?>" <?= ($current_school['facility_internet'] ?? '') === $opt ? 'selected' : '' ?>><?= $opt ?></option>
                   <?php endforeach; ?>
                 </select>
+              </div>
+            </div>
+
+            <!-- Extended Infrastructure Assessment -->
+            <div class="pt-3 border-t border-slate-200 space-y-3">
+              <div class="text-xs font-bold text-govNavy flex items-center gap-2">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                Extended Infrastructure Conditions
+                <span class="text-[10px] font-normal text-danger bg-red-50 px-1.5 py-0.5 rounded border border-red-200">Enables Auto-Risk Flagging</span>
+              </div>
+              <p class="text-[11px] text-muted">Report accurate conditions below. Adverse conditions will automatically flag this school in the District At-Risk Registry for admin attention.</p>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-semibold text-textMain mb-1.5">Building Structure Condition</label>
+                  <select name="building_structure" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:border-govGreen">
+                    <?php foreach (['Good Condition', 'Needs Repair', 'Dangerous / Unsafe', 'Condemned / Closed'] as $opt): ?>
+                      <option value="<?= $opt ?>" <?= ($current_school['building_structure'] ?? 'Good Condition') === $opt ? 'selected' : '' ?>><?= $opt ?></option>
+                    <?php endforeach; ?>
+                  </select>
+                  <span class="text-[10px] text-muted block mt-1">Main classroom structural integrity</span>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-textMain mb-1.5">Drainage / Sewerage System</label>
+                  <select name="drainage_sewerage" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:border-govGreen">
+                    <?php foreach (['Functional Drainage', 'Partial Drainage', 'Broken / None'] as $opt): ?>
+                      <option value="<?= $opt ?>" <?= ($current_school['drainage_sewerage'] ?? 'Functional Drainage') === $opt ? 'selected' : '' ?>><?= $opt ?></option>
+                    <?php endforeach; ?>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-textMain mb-1.5">Is School in Flood-Prone Area?</label>
+                  <select name="flood_prone" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:border-govGreen">
+                    <?php foreach (['No', 'Yes'] as $opt): ?>
+                      <option value="<?= $opt ?>" <?= ($current_school['flood_prone'] ?? 'No') === $opt ? 'selected' : '' ?>><?= $opt ?></option>
+                    <?php endforeach; ?>
+                  </select>
+                  <span class="text-[10px] text-danger block mt-1 font-semibold">'Yes' will escalate to Critical risk automatically.</span>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-textMain mb-1.5">Furniture &amp; Equipment Status</label>
+                  <select name="furniture_condition" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:border-govGreen">
+                    <?php foreach (['Adequate', 'Shortage', 'None Available'] as $opt): ?>
+                      <option value="<?= $opt ?>" <?= ($current_school['furniture_condition'] ?? 'Adequate') === $opt ? 'selected' : '' ?>><?= $opt ?></option>
+                    <?php endforeach; ?>
+                  </select>
+                </div>
               </div>
             </div>
 

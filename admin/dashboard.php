@@ -11,7 +11,6 @@ $page_title  = 'Dashboard — ' . APP_NAME;
 
 // Retrieve live metrics from Excel database
 $schoolsData    = ExcelDB::all('schools');
-$studentsData   = ExcelDB::all('students');
 $atRiskData     = ExcelDB::all('school_risks');
 $available_talukas = ExcelDB::getTalukas();
 
@@ -19,26 +18,18 @@ $total_schools_count  = count($schoolsData);
 $active_schools_count = 0;
 $total_enrollment     = 0;
 
+// Enrollment breakdown by school level
+$enrollment_by_level = [];
 foreach ($schoolsData as $s) {
     $total_enrollment += (int)($s['enrollment'] ?? 0);
     $st = $s['status'] ?? '';
     if ($st === 'Active' || $st === 'Good') {
         $active_schools_count++;
     }
+    $lvl = $s['level'] ?? 'Other';
+    $enrollment_by_level[$lvl] = ($enrollment_by_level[$lvl] ?? 0) + (int)($s['enrollment'] ?? 0);
 }
 $reporting_pct = $total_schools_count > 0 ? round(($active_schools_count / $total_schools_count) * 100) : 100;
-
-$total_students_count = count($studentsData);
-$boys_count  = 0;
-$girls_count = 0;
-foreach ($studentsData as $st) {
-    $g = $st['gender'] ?? '';
-    if (strcasecmp($g, 'Male') === 0 || strcasecmp($g, 'Boy') === 0) {
-        $boys_count++;
-    } elseif (strcasecmp($g, 'Female') === 0 || strcasecmp($g, 'Girl') === 0) {
-        $girls_count++;
-    }
-}
 
 // School Infrastructure Risk stats
 $high_risk_count     = 0;
@@ -258,52 +249,51 @@ tailwind.config = {
 
       <!-- Analytics Row -->
       <section class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6" aria-label="Analytics">
-        <!-- Attendance Trend Chart -->
+        <!-- District Enrollment by School Level Bar Chart (Live Data) -->
         <div class="lg:col-span-2 bg-surface border border-border rounded-lg p-5">
           <div class="flex items-center justify-between mb-4">
             <div>
-              <h2 class="text-sm font-semibold text-textMain">Weekly Attendance Trend</h2>
-              <p class="text-xs text-muted mt-0.5">Mon&ndash;Fri &mdash; This week</p>
+              <h2 class="text-sm font-semibold text-textMain">District Enrollment by School Level</h2>
+              <p class="text-xs text-muted mt-0.5">Total enrolled students per school level — <?= date('Y') ?></p>
             </div>
-            <div class="flex items-center gap-4 text-xs">
-              <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-0.5 bg-primary rounded"></span>Actual</span>
-              <span class="flex items-center gap-1.5"><span class="inline-block w-3 h-0.5 bg-border border-dashed border"></span>Target</span>
-            </div>
+            <a href="<?= BASE_URL ?>/admin/schools.php" class="text-xs text-primary font-medium hover:underline">View Schools</a>
           </div>
-          <svg viewBox="0 0 500 200" class="w-full" aria-label="Attendance trend line chart">
-            <line x1="50" y1="20" x2="490" y2="20" stroke="#E2E8F0" stroke-width="1"/>
-            <line x1="50" y1="57" x2="490" y2="57" stroke="#E2E8F0" stroke-width="1"/>
-            <line x1="50" y1="94" x2="490" y2="94" stroke="#E2E8F0" stroke-width="1"/>
-            <line x1="50" y1="131" x2="490" y2="131" stroke="#E2E8F0" stroke-width="1"/>
-            <line x1="50" y1="168" x2="490" y2="168" stroke="#E2E8F0" stroke-width="1"/>
-            <text x="42" y="24" text-anchor="end" fill="#64748B" font-size="10">100%</text>
-            <text x="42" y="61" text-anchor="end" fill="#64748B" font-size="10">95%</text>
-            <text x="42" y="98" text-anchor="end" fill="#64748B" font-size="10">90%</text>
-            <text x="42" y="135" text-anchor="end" fill="#64748B" font-size="10">85%</text>
-            <text x="42" y="172" text-anchor="end" fill="#64748B" font-size="10">80%</text>
-            <line x1="50" y1="57" x2="490" y2="57" stroke="#0F766E" stroke-width="1.5" stroke-dasharray="5,3" opacity="0.5"/>
-            <path d="M110,120 L198,108 L286,90 L374,100 L462,96 L462,168 L110,168 Z" fill="#123B63" opacity="0.06"/>
-            <polyline points="110,120 198,108 286,90 374,100 462,96" fill="none" stroke="#123B63" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-            <circle cx="110" cy="120" r="4" fill="#123B63" stroke="white" stroke-width="2"/>
-            <circle cx="198" cy="108" r="4" fill="#123B63" stroke="white" stroke-width="2"/>
-            <circle cx="286" cy="90" r="4" fill="#0F766E" stroke="white" stroke-width="2"/>
-            <circle cx="374" cy="100" r="4" fill="#123B63" stroke="white" stroke-width="2"/>
-            <circle cx="462" cy="96" r="4" fill="#123B63" stroke="white" stroke-width="2"/>
-            <text x="110" y="188" text-anchor="middle" fill="#64748B" font-size="10">Monday</text>
-            <text x="198" y="188" text-anchor="middle" fill="#64748B" font-size="10">Tuesday</text>
-            <text x="286" y="188" text-anchor="middle" fill="#64748B" font-size="10">Wednesday</text>
-            <text x="374" y="188" text-anchor="middle" fill="#64748B" font-size="10">Thursday</text>
-            <text x="462" y="188" text-anchor="middle" fill="#64748B" font-size="10">Friday</text>
-            <text x="110" y="113" text-anchor="middle" fill="#123B63" font-size="9" font-weight="600">89%</text>
-            <text x="198" y="101" text-anchor="middle" fill="#123B63" font-size="9" font-weight="600">91%</text>
-            <text x="286" y="83" text-anchor="middle" fill="#0F766E" font-size="9" font-weight="600">93%</text>
-            <text x="374" y="93" text-anchor="middle" fill="#123B63" font-size="9" font-weight="600">91%</text>
-            <text x="462" y="89" text-anchor="middle" fill="#123B63" font-size="9" font-weight="600">92.5%</text>
-          </svg>
-          <div class="mt-3 flex gap-4 text-xs text-muted pt-3 border-t border-border">
-            <div><span class="font-medium text-textMain">Avg: 91.4%</span> this week</div>
-            <div><span class="font-medium text-textMain">Target: 95%</span></div>
-            <div class="text-warning font-medium">▼ 3.6% below target</div>
+          <?php
+          $level_order = ['Primary', 'Middle', 'Secondary', 'Higher Secondary', 'Other'];
+          $level_colors = [
+              'Primary'         => ['bar' => '#123B63', 'bg' => '#EFF6FF'],
+              'Middle'          => ['bar' => '#0F766E', 'bg' => '#F0FDF9'],
+              'Secondary'       => ['bar' => '#D97706', 'bg' => '#FFFBEB'],
+              'Higher Secondary'=> ['bar' => '#7C3AED', 'bg' => '#FAF5FF'],
+              'Other'           => ['bar' => '#64748B', 'bg' => '#F8FAFC'],
+          ];
+          $max_enroll = max(array_values($enrollment_by_level) ?: [1]);
+          ?>
+          <div class="space-y-3">
+            <?php foreach ($level_order as $lvl):
+              if (!isset($enrollment_by_level[$lvl]) || $enrollment_by_level[$lvl] === 0) continue;
+              $cnt = $enrollment_by_level[$lvl];
+              $pct = round(($cnt / max($max_enroll, 1)) * 100);
+              $col = $level_colors[$lvl] ?? $level_colors['Other'];
+              $schools_at_level = count(array_filter($schoolsData, fn($s) => ($s['level'] ?? '') === $lvl));
+            ?>
+            <div>
+              <div class="flex items-center justify-between text-xs mb-1">
+                <span class="font-medium text-textMain flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-sm inline-block" style="background:<?= $col['bar'] ?>"></span>
+                  <?= e($lvl) ?> <span class="text-muted font-normal">(<?= $schools_at_level ?> schools)</span>
+                </span>
+                <span class="font-semibold text-textMain"><?= number_format($cnt) ?> students</span>
+              </div>
+              <div class="w-full rounded-full h-3" style="background:<?= $col['bg'] ?>">
+                <div class="h-3 rounded-full transition-all duration-700" style="width:<?= $pct ?>%;background:<?= $col['bar'] ?>"></div>
+              </div>
+            </div>
+            <?php endforeach; ?>
+          </div>
+          <div class="mt-4 pt-3 border-t border-border flex gap-6 text-xs text-muted">
+            <div><span class="font-semibold text-textMain"><?= number_format($total_enrollment) ?></span> total enrolled students</div>
+            <div><span class="font-semibold text-textMain"><?= $total_schools_count ?></span> schools district-wide</div>
           </div>
         </div>
 
@@ -347,9 +337,9 @@ tailwind.config = {
             <div>
               <div class="flex justify-between text-xs mb-1">
                 <span class="font-medium text-textMain">School Reporting</span>
-                <span class="font-semibold text-success">97% <span class="text-muted font-normal">/ 100% target</span></span>
+                <span class="font-semibold text-success"><?= $reporting_pct ?>% <span class="text-muted font-normal">/ 100% target</span></span>
               </div>
-              <div class="w-full bg-border rounded-full h-2"><div class="progress-bar bg-success h-2 rounded-full" style="width:97%"></div></div>
+              <div class="w-full bg-border rounded-full h-2"><div class="progress-bar bg-success h-2 rounded-full" style="width:<?= $reporting_pct ?>%"></div></div>
             </div>
             <div>
               <div class="flex justify-between text-xs mb-1">
@@ -367,10 +357,10 @@ tailwind.config = {
             </div>
             <div>
               <div class="flex justify-between text-xs mb-1">
-                <span class="font-medium text-textMain">Teacher Attendance</span>
-                <span class="font-semibold text-success">94% <span class="text-muted font-normal">/ 95% target</span></span>
+                <span class="font-medium text-textMain">Infrastructure Risk Resolution</span>
+                <span class="font-semibold text-warning"><?= $total_at_risk_count > 0 ? round(($resolved_count / max($total_at_risk_count + $resolved_count, 1)) * 100) : 100 ?>% <span class="text-muted font-normal">/ 100% target</span></span>
               </div>
-              <div class="w-full bg-border rounded-full h-2"><div class="progress-bar bg-success h-2 rounded-full" style="width:94%"></div></div>
+              <div class="w-full bg-border rounded-full h-2"><div class="progress-bar bg-warning h-2 rounded-full" style="width:<?= $total_at_risk_count > 0 ? round(($resolved_count / max($total_at_risk_count + $resolved_count, 1)) * 100) : 100 ?>%"></div></div>
             </div>
           </div>
         </div>
@@ -385,10 +375,10 @@ tailwind.config = {
             <?php
             $activities = [
               ['icon_color' => '#123B63', 'bg' => 'bg-blue-50', 'title' => 'Monitoring report submitted', 'sub' => 'Government Primary School Ranipur', 'time' => '10 min ago'],
-              ['icon_color' => '#15803D', 'bg' => 'bg-green-50', 'title' => 'Attendance record updated', 'sub' => 'Government Girls Elementary School B', 'time' => '25 min ago'],
+              ['icon_color' => '#15803D', 'bg' => 'bg-green-50', 'title' => 'School profile updated', 'sub' => 'Government Girls Elementary School B, Jhando Mari', 'time' => '25 min ago'],
               ['icon_color' => '#15803D', 'bg' => 'bg-green-50', 'title' => 'Complaint resolved', 'sub' => 'Complaint #GRM-1024 &mdash; Infrastructure concern', 'time' => '1 hr ago'],
               ['icon_color' => '#D97706', 'bg' => 'bg-amber-50', 'title' => 'School visit completed', 'sub' => 'Government High School C, Kot Diji', 'time' => '2 hr ago'],
-              ['icon_color' => '#DC2626', 'bg' => 'bg-red-50', 'title' => 'At-risk student flagged', 'sub' => 'Student ID STU-4421 — Attendance below 60%', 'time' => '3 hr ago'],
+              ['icon_color' => '#DC2626', 'bg' => 'bg-red-50', 'title' => 'Infrastructure risk flagged', 'sub' => 'Dangerous building structure — SEMIS 403010004', 'time' => '3 hr ago'],
               ['icon_color' => '#0284C7', 'bg' => 'bg-blue-50', 'title' => 'New circular uploaded', 'sub' => 'SELD Circular No. 14/2026 — Academic calendar', 'time' => 'Yesterday'],
             ];
             foreach ($activities as $i => $a):
@@ -444,7 +434,6 @@ tailwind.config = {
                 <th class="px-4 py-3 font-semibold">Level</th>
                 <th class="px-4 py-3 font-semibold">Taluka</th>
                 <th class="px-4 py-3 font-semibold text-right">Enrollment</th>
-                <th class="px-4 py-3 font-semibold text-right">Attendance</th>
                 <th class="px-4 py-3 font-semibold">Status</th>
                 <th class="px-4 py-3 font-semibold">Action</th>
               </tr>
@@ -459,11 +448,10 @@ tailwind.config = {
                 <td class="px-4 py-3 text-muted"><?= e($s['level'] ?? '') ?></td>
                 <td class="px-4 py-3 text-muted"><?= e($s['taluka'] ?? '') ?></td>
                 <td class="px-4 py-3 text-right font-mono"><?= number_format((int)($s['enrollment'] ?? 0)) ?></td>
-                <td class="px-4 py-3 text-right font-medium"><?= e($s['attendance_pct'] ?? '0%') ?></td>
                 <td class="px-4 py-3"><span class="status-badge <?= e($s['status_badge'] ?? 'badge-good') ?>"><?= e($s['status'] ?? 'Active') ?></span></td>
                 <td class="px-4 py-3">
                   <div class="flex gap-1.5">
-                    <a href= BASE_URL . '/admin/school-profile.php?semis=<?= urlencode($s['semis_code'] ?? '') ?>" class="btn-secondary px-2.5 py-1 rounded text-xs">Profile</a>
+                    <a href="<?= BASE_URL ?>/admin/school-profile.php?semis=<?= urlencode($s['semis_code'] ?? '') ?>" class="btn-secondary px-2.5 py-1 rounded text-xs">Profile</a>
                   </div>
                 </td>
               </tr>

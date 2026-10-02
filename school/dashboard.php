@@ -12,64 +12,32 @@ require_once __DIR__ . '/auth_guard.php';
 $active_page = 'dashboard';
 $page_title  = 'School Dashboard — ' . e($school_name) . ' (' . e($school_semis) . ')';
 
-// ─── Fetch School-Specific Data from Excel DB ────────────────────────────────
-$allStudents = ExcelDB::all('students');
-$schoolStudents = array_values(array_filter($allStudents, function($stu) use ($school_name, $school_semis) {
-    return (!empty($stu['school_name']) && (stripos($stu['school_name'], $school_name) !== false || stripos($school_name, $stu['school_name']) !== false))
-        || (!empty($stu['school_semis']) && $stu['school_semis'] === $school_semis);
-}));
+// ─── Fetch Fresh School-Specific Data from Excel DB ─────────────────────────
+$current_school = ExcelDB::getSchoolBySemis($school_semis) ?? $current_school;
 
-// If no students explicitly linked by name in default seeds, synthesize or display matching
-$total_enrolled = !empty($schoolStudents) ? count($schoolStudents) : (int)($current_school['enrollment'] ?? 0);
-$boys_count = 0;
-$girls_count = 0;
-$grade_map = [];
+$total_enrolled     = max(0, (int)($current_school['enrollment'] ?? 0));
+$teachers_count     = max(0, (int)($current_school['teachers'] ?? 0));
+$classrooms_count   = max(0, (int)($current_school['classrooms'] ?? 0));
+$non_teaching_count = max(0, (int)($current_school['non_teaching'] ?? 0));
 
-foreach ($schoolStudents as $st) {
-    $g = strtolower($st['gender'] ?? '');
-    if ($g === 'male' || $g === 'boy' || $g === 'boys') $boys_count++;
-    else $girls_count++;
-
-    $gr = $st['grade'] ?? 'Grade 1';
-    if (!isset($grade_map[$gr])) $grade_map[$gr] = 0;
-    $grade_map[$gr]++;
+// Gender split based on actual school enrollment
+if (strcasecmp($school_gender, 'girls') === 0) {
+    $girls_count = $total_enrolled;
+    $boys_count  = 0;
+} elseif (strcasecmp($school_gender, 'boys') === 0) {
+    $boys_count  = $total_enrolled;
+    $girls_count = 0;
+} else {
+    $boys_count  = (int)round($total_enrolled * 0.52);
+    $girls_count = $total_enrolled - $boys_count;
 }
-
-if ($total_enrolled > 0 && empty($schoolStudents)) {
-    // Estimations if school has overall enrollment count
-    if (strtolower($school_gender) === 'girls') {
-        $girls_count = $total_enrolled;
-        $boys_count = 0;
-    } elseif (strtolower($school_gender) === 'boys') {
-        $boys_count = $total_enrolled;
-        $girls_count = 0;
-    } else {
-        $boys_count = (int)round($total_enrolled * 0.54);
-        $girls_count = $total_enrolled - $boys_count;
-    }
-}
-
-// Enrollment-based gender split for KPI display
-$attendance_rate = $current_school['attendance_pct'] ?? 'N/A';
-
-// At-Risk Students for this school
-$allAtRisk = ExcelDB::all('at_risk');
-$schoolAtRisk = array_values(array_filter($allAtRisk, function($r) use ($school_name, $school_semis) {
-    return (!empty($r['school_name']) && (stripos($r['school_name'], $school_name) !== false || stripos($school_name, $r['school_name']) !== false))
-        || (!empty($r['school_semis']) && $r['school_semis'] === $school_semis);
-}));
-
-$teachers_count = (int)($current_school['teachers'] ?? 6);
-$classrooms_count = (int)($current_school['classrooms'] ?? 4);
-$non_teaching_count = (int)($current_school['non_teaching'] ?? 1);
 
 // Facilities status
-$fac_elec = $current_school['facility_electricity'] ?? 'Solar + Grid';
-$fac_water = $current_school['facility_water'] ?? 'Filtered Plant';
+$fac_elec    = $current_school['facility_electricity'] ?? 'Solar + Grid';
+$fac_water   = $current_school['facility_water'] ?? 'Filtered Plant';
 $fac_toilets = $current_school['facility_toilets'] ?? 'Functional Blocks';
-$fac_wall = $current_school['facility_boundary_wall'] ?? 'Secured & Complete';
-$fac_net = $current_school['facility_internet'] ?? 'Broadband / 4G';
-
+$fac_wall    = $current_school['facility_boundary_wall'] ?? 'Secured & Complete';
+$fac_net     = $current_school['facility_internet'] ?? 'Broadband / 4G';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -361,63 +329,75 @@ $fac_net = $current_school['facility_internet'] ?? 'Broadband / 4G';
         <!-- ── 4. Two-Column Layout: Students Roster Summary & HM Information ──── -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-          <!-- Left Column (2 Cols): Enrolled Students Preview -->
+          <!-- Left Column (2 Cols): School Infrastructure & Enrollment Overview -->
           <div class="lg:col-span-2 bg-surface rounded-xl border border-border p-5 shadow-xs">
             <div class="flex items-center justify-between pb-3 border-b border-border mb-4">
               <div>
-                <h2 class="text-sm font-bold text-textMain">Enrolled Students Roster</h2>
-                <p class="text-xs text-muted">Showing students registered under this school</p>
+                <h2 class="text-sm font-bold text-textMain">School Statistics &amp; Infrastructure</h2>
+                <p class="text-xs text-muted">Core enrollment, staffing, and registered facilities for <?= e($school_name) ?></p>
               </div>
               <div class="flex items-center gap-2">
-                <a href="<?= BASE_URL ?>/school/students.php" class="btn-primary text-xs font-semibold px-3 py-1.5 rounded flex items-center gap-1">
-                  <span>Manage All Students</span>
+                <a href="<?= BASE_URL ?>/school/profile.php" class="btn-primary text-xs font-semibold px-3 py-1.5 rounded flex items-center gap-1">
+                  <span>Manage Profile</span>
                   <span>&rarr;</span>
                 </a>
               </div>
             </div>
 
-            <?php if (!empty($schoolStudents)): ?>
-              <div class="overflow-x-auto">
-                <table class="w-full text-xs">
-                  <thead>
-                    <tr class="border-b border-border bg-slate-50 text-muted uppercase text-left tracking-wide">
-                      <th class="px-4 py-2.5 font-semibold">Code</th>
-                      <th class="px-4 py-2.5 font-semibold">Student Name</th>
-                      <th class="px-4 py-2.5 font-semibold">Grade</th>
-                      <th class="px-4 py-2.5 font-semibold">Gender</th>
-                      <th class="px-4 py-2.5 font-semibold text-right">Attendance %</th>
-                      <th class="px-4 py-2.5 font-semibold text-center">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-border text-textMain">
-                    <?php foreach (array_slice($schoolStudents, 0, 6) as $stu): ?>
-                    <tr class="hover:bg-slate-50/70 transition">
-                      <td class="px-4 py-2.5 font-mono text-primary font-semibold"><?= e($stu['student_code'] ?? '') ?></td>
-                      <td class="px-4 py-2.5 font-medium"><?= e($stu['full_name'] ?? '') ?></td>
-                      <td class="px-4 py-2.5 text-muted"><?= e($stu['grade'] ?? '') ?></td>
-                      <td class="px-4 py-2.5 text-muted"><?= e($stu['gender'] ?? '') ?></td>
-                      <td class="px-4 py-2.5 text-right font-mono font-medium"><?= e($stu['attendance_pct'] ?? '90%') ?></td>
-                      <td class="px-4 py-2.5 text-center">
-                        <span class="status-badge <?= e($stu['status_badge'] ?? 'badge-good') ?>">
-                          <?= e($stu['risk_status'] ?? 'Normal') ?>
-                        </span>
-                      </td>
-                    </tr>
-                    <?php endforeach; ?>
-                  </tbody>
-                </table>
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+              <div class="bg-slate-50 border border-border rounded-lg p-3 text-center">
+                <div class="text-[11px] text-muted font-medium">Total Enrollment</div>
+                <div class="text-lg font-bold font-mono text-primary mt-0.5"><?= number_format($total_enrolled) ?></div>
               </div>
-            <?php else: ?>
-              <div class="py-8 text-center bg-slate-50 rounded-lg border border-dashed border-slate-200">
-                <svg class="w-10 h-10 text-slate-300 mx-auto mb-2" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                <div class="text-xs font-semibold text-textMain">No individual student rows configured yet</div>
-                <p class="text-[11px] text-muted mt-0.5">Total Enrollment is <?= number_format($total_enrolled) ?>. You can add student records anytime.</p>
-                <a href="<?= BASE_URL ?>/school/students.php" class="inline-flex items-center gap-1.5 btn-primary text-xs font-semibold px-3 py-1.5 rounded mt-3">
-                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                  <span>Add First Student Record</span>
-                </a>
+              <div class="bg-slate-50 border border-border rounded-lg p-3 text-center">
+                <div class="text-[11px] text-muted font-medium">Classrooms</div>
+                <div class="text-lg font-bold font-mono text-textMain mt-0.5"><?= $classrooms_count ?></div>
               </div>
-            <?php endif; ?>
+              <div class="bg-slate-50 border border-border rounded-lg p-3 text-center">
+                <div class="text-[11px] text-muted font-medium">Teaching Staff</div>
+                <div class="text-lg font-bold font-mono text-emerald-700 mt-0.5"><?= $teachers_count ?></div>
+              </div>
+              <div class="bg-slate-50 border border-border rounded-lg p-3 text-center">
+                <div class="text-[11px] text-muted font-medium">Non-Teaching</div>
+                <div class="text-lg font-bold font-mono text-textMain mt-0.5"><?= $non_teaching_count ?></div>
+              </div>
+            </div>
+
+            <!-- Facility Badges -->
+            <div class="border-t border-border pt-4">
+              <div class="text-xs font-bold text-textMain mb-2.5">Key School Utilities</div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                <div class="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-border">
+                  <span class="text-muted flex items-center gap-2">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    Boundary Wall
+                  </span>
+                  <span class="font-semibold text-textMain"><?= e($fac_wall) ?></span>
+                </div>
+                <div class="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-border">
+                  <span class="text-muted flex items-center gap-2">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                    Electricity
+                  </span>
+                  <span class="font-semibold text-textMain"><?= e($fac_elec) ?></span>
+                </div>
+                <div class="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-border">
+                  <span class="text-muted flex items-center gap-2">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+                    Drinking Water
+                  </span>
+                  <span class="font-semibold text-textMain"><?= e($fac_water) ?></span>
+                </div>
+                <div class="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-border">
+                  <span class="text-muted flex items-center gap-2">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>
+                    Toilets
+                  </span>
+                  <span class="font-semibold text-textMain"><?= e($fac_toilets) ?></span>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Right Column (1 Col): Head Master Profile & SELD Info -->

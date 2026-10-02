@@ -2,9 +2,11 @@
 
 > **Project:** Sindh Education & Literacy Department (SELD) — District RSU Portal (Tando Allahyar District)  
 > **Architecture:** Core PHP (Vanilla PHP 8.x) + Tailwind CSS + Vanilla JavaScript  
-> **Last Updated:** September 2026
+> **Last Updated:** October 2026
 
 This document is mandatory reading for all AI agents, models, and developers contributing to this repository. All future modifications, features, and refactorings must adhere to these established patterns.
+
+> **⚠️ MANDATORY RULE FOR ALL AI AGENTS:** Whenever you make any structural change — adding or removing a page, table/column, feature, or key behavior — you **MUST** immediately update both `AGENTS.md` (Revision History) and `.agents/skills/lsu-portal/SKILL.md` (schema/feature sections). Failure to do so leaves the codebase knowledge stale and forces future agents to search the entire codebase unnecessarily.
 
 ---
 
@@ -27,21 +29,46 @@ LSU-PORTAL/
 ├── logout.php                     # Secure session destruction and redirection
 │
 ├── admin/                         # Admin role-protected pages
-│   ├── dashboard.php              # District KPI overview, trends, taluka breakdown
-│   ├── schools.php                # School directory, search, filters, metrics
-│   ├── school-profile.php         # Single school deep-dive profile
-│   ├── students.php               # Student roster and overview
-│   ├── attendance.php             # Daily student attendance tracking
-│   └── at-risk-students.php       # Dropout risk monitoring and interventions
+│   ├── dashboard.php              # District KPI overview, enrollment by level chart, risk indicators
+│   ├── schools.php                # School directory, search, filters, CSV import, credentials modal
+│   ├── school-profile.php         # Single school deep-dive profile + inline edit modals (auto-flags risks)
+│   ├── at-risk-schools.php        # Infrastructure risk registry (auto-populated from school profiles)
+│   ├── complaints.php             # GRM complaint inbox and reply management
+│   ├── settings.php               # Portal settings, district config, taluka management
+│   ├── students.php               # REDIRECT STUB → schools.php (deprecated)
+│   └── attendance.php             # REDIRECT STUB → dashboard.php (deprecated)
+│
+├── school/                        # School Head Master portal (CNIC + password login)
+│   ├── auth_guard.php             # School role authentication guard
+│   ├── dashboard.php              # School-level KPIs, enrollment, facilities overview
+│   ├── profile.php                # School profile & infrastructure editor (HM editable; triggers auto-risk)
+│   ├── at-risk.php                # School's own infrastructure risk view
+│   ├── complaints.php             # HM GRM complaint submission & reply
+│   ├── settings.php               # HM password change
+│   ├── students.php               # REDIRECT STUB → dashboard.php (deprecated)
+│   └── attendance.php             # REDIRECT STUB → dashboard.php (deprecated)
+│   └── includes/
+│       ├── sidebar.php            # School portal navigation
+│       └── header.php             # School portal top bar
 │
 ├── includes/                      # Reusable PHP components & guards
 │   ├── auth.php                   # Authentication check, session security, CSRF helpers
-│   ├── sidebar.php                # Main navigation sidebar with $active_page indicator
+│   ├── excel_db.php               # ExcelDB class (CSV engine + autoFlagSchoolRisks)
+│   ├── sidebar.php                # Admin navigation sidebar with $active_page indicator
 │   ├── header.php                 # Top app bar (district badge, profile, notifications)
 │   └── footer.php                 # Standard copyright and department footer
 │
 ├── config/
 │   └── config.php                 # App constants, environment settings, DB config placeholders
+│
+├── data/                          # CSV data files (protected by .htaccess: Deny from all)
+│   ├── schools.csv                # School registry + full facility & infrastructure data
+│   ├── school_risks.csv           # Infrastructure risk registry (auto-flagged + manual)
+│   ├── users.csv                  # Admin & school head master credentials
+│   ├── talukas.csv                # District taluka list
+│   ├── complaints.csv             # GRM complaint tickets
+│   ├── complaint_replies.csv      # GRM conversation threads
+│   └── settings.csv               # Dynamic portal configuration
 │
 ├── assets/                        # Static assets (images, logos, custom CSS overrides)
 │   └── css/
@@ -106,12 +133,12 @@ The portal follows the Sindh Government District Education aesthetic:
 ### Navigation & Layout Rules
 - **Sidebar Integration:** Include `sidebar.php` inside the layout wrapper.
 - **Active Navigation State:** Define `$active_page` prior to loading the template:
-  - `'dashboard'` → Overview
+  - `'dashboard'` → Dashboard
   - `'schools'` → Schools Directory
   - `'school-profile'` → School Profile
-  - `'students'` → Student Overview
-  - `'attendance'` → Attendance
-  - `'at-risk'` → At-Risk Students
+  - `'at-risk-schools'` → At-Risk Schools Registry
+  - `'complaints'` → GRM Complaints
+  - `'settings'` → Settings
 - **Responsiveness:** Sidebar is collapsable on mobile with smooth transition and dark overlay backdrop (`#overlay`). Header contains the hamburger toggle button.
 
 ---
@@ -119,9 +146,72 @@ The portal follows the Sindh Government District Education aesthetic:
 ### Excel Database Architecture
 - **Engine:** `includes/excel_db.php` (`ExcelDB` class)
 - **File Storage:** `/data/` protected by Apache `.htaccess` (`Deny from all`)
-- **Tables:** `schools.csv`, `students.csv`, `attendance.csv`, `at_risk.csv`, `users.csv`
+- **Active Tables (6 core):**
+  | Table | Description |
+  |---|---|
+  | `schools.csv` | School registry with full facility, infrastructure, and staffing data |
+  | `school_risks.csv` | Infrastructure risk records (auto-flagged + admin-manual) |
+  | `users.csv` | Admin and HM portal credentials |
+  | `talukas.csv` | District taluka/sub-division registry |
+  | `complaints.csv` | GRM grievance tickets |
+  | `complaint_replies.csv` | Thread replies for each complaint ticket |
+  | `settings.csv` | Dynamic portal configuration (district, academic year, thresholds) |
+- **Deprecated Tables (no longer used, files may exist but are never read/written):** `students.csv`, `attendance.csv`, `at_risk.csv`.
 - **Excel Compatibility:** Written with UTF-8 BOM (`\xEF\xBB\xBF`) and standard CSV delimiter for seamless double-click opening in Microsoft Excel.
 - **Safety:** Atomic writes using `flock(LOCK_EX)`.
+
+### Schools Table Schema (`schools.csv`)
+| Column | Type | Description |
+|---|---|---|
+| `id` | int | Auto-increment row ID |
+| `semis_code` | string | Unique numerical SEMIS Code (editable by HM, immutable by admin override) |
+| `school_name` | string | Official school name |
+| `head_master` | string | HM/HMistress full name |
+| `cnic` | string | HM CNIC — immutable unique identifier, login username for school portal |
+| `phone` | string | Official contact phone |
+| `address` | string | Physical address |
+| `level` | enum | Primary / Middle / Secondary / Higher Secondary |
+| `gender` | enum | Co-education / Boys / Girls |
+| `taluka` | string | Administrative sub-division |
+| `enrollment` | int | Total enrolled students (aggregate only, no per-student records) |
+| `attendance_pct` | string | Stored but not actively tracked after 2026-09-29 |
+| `status` | enum | Active / Good / Needs Attention / Not Reporting |
+| `status_badge` | string | CSS badge class |
+| `classrooms` | int | Functional classroom count |
+| `teachers` | int | Teaching staff count |
+| `non_teaching` | int | Non-teaching staff count |
+| `facility_electricity` | enum | Solar + Grid / Grid Only / Solar Only / Unavailable / None |
+| `facility_water` | enum | Filtered Plant / Handpump / Water Supply Line / Unavailable / None |
+| `facility_toilets` | enum | Functional Blocks / Needs Repair / Unavailable / None |
+| `facility_boundary_wall` | enum | Secured & Complete / Partial / Damaged / Under Construction / Unavailable / None |
+| `facility_internet` | enum | Broadband / 4G / Partial / Mobile Data / Unavailable / None |
+| `building_structure` | enum | **NEW** Good Condition / Needs Repair / Dangerous / Unsafe / Condemned / Closed |
+| `drainage_sewerage` | enum | **NEW** Functional Drainage / Partial Drainage / Broken / None |
+| `flood_prone` | enum | **NEW** No / Yes |
+| `furniture_condition` | enum | **NEW** Adequate / Shortage / None Available |
+
+### Auto-Risk Flagging Engine
+- **Method:** `ExcelDB::autoFlagSchoolRisks(string $semisCode): int`
+- **Trigger:** Called automatically after every facility save from both Admin (`admin/school-profile.php`) and School HM (`school/profile.php`).
+- **Behavior:** Evaluates 10 infrastructure rules against current school data. Inserts new `school_risks` records for newly-detected issues. Does **not** duplicate existing unresolved risks for the same school+category. Admin manually marks risks as 'Resolved'.
+- **Risk Rules:** Dangerous building → Critical; No boundary wall → High; Partial wall → Medium; No water → High; No toilets → High; No electricity → High; No drainage → Medium; Flood prone → Critical; No furniture → Medium; Needs repair building → High.
+
+### School Risks Table Schema (`school_risks.csv`)
+| Column | Description |
+|---|---|
+| `id` | Auto-increment |
+| `semis_code` | Link to school |
+| `school_name` | Denormalized school name |
+| `taluka` | Denormalized taluka |
+| `risk_category` | One of 12 SELD-aligned categories |
+| `severity` | Critical / High / Medium |
+| `details` | Description of the risk |
+| `reported_date` | Date flagged |
+| `last_inspected` | Date last updated |
+| `status` | Pending / In Progress / Escalated / Resolved |
+| `notes` | Admin notes |
+
+**Auto-flag note source:** When auto-flagged, `notes` = `'Auto-flagged from school infrastructure profile data.'`
 
 ---
 
@@ -145,6 +235,9 @@ The portal follows the Sindh Government District Education aesthetic:
 2. **Never break existing links.** All hyperlinks must point to valid `.php` routes within `/LSU-PORTAL/`.
 3. **Keep includes DRY.** If adding a new page, reuse `includes/sidebar.php`, `includes/header.php`, and `includes/footer.php`.
 4. **Log Changes:** Whenever a new feature, table, or page is introduced, document it in this file under **Revision History** below.
+5. **⚠️ MANDATORY — Structural Change Logging:** Any change to page routes, database table schemas (add/remove columns), portal features, or key behaviors MUST be documented immediately in BOTH this file (Revision History) AND `.agents/skills/lsu-portal/SKILL.md`. This ensures future AI agents understand the exact architecture without searching the entire codebase.
+6. **Never restore deprecated features.** `attendance.php`, `students.php`, individual student tracking, and per-student attendance data are permanently deprecated. Do not re-introduce any of these.
+7. **New infrastructure fields go through ExcelDB.** Any new school data field must be added to `$schemas['schools']['headers']` in `excel_db.php` AND the corresponding seed data rows.
 
 ---
 
@@ -156,13 +249,15 @@ The portal follows the Sindh Government District Education aesthetic:
 | 2026-09-19 | Antigravity AI | Integrated Excel Database Engine (`ExcelDB`) on backend using UTF-8 BOM CSV storage in `/data/` with atomic locking. Added Excel DB Hub (`admin/excel-manager.php`), live export/import features, and connected live stats across Dashboard, Schools, Students, Attendance, and At-Risk pages. |
 | 2026-09-20 | Antigravity AI | Standardized School ID to numerical SEMIS Code. Added Head Master Name & CNIC tracking with dynamic realistic data across all schools. Built interactive CSV Import wizard in `admin/schools.php` with column mapping, numerical SEMIS validation, and duplicate entry analysis. Added CSRF-protected School Deletion modal. Transformed `admin/school-profile.php` into a dynamic profile with full in-place administrative editing. |
 | 2026-09-29 | Antigravity AI | Implemented dedicated School Portal for Head Masters/Mistresses accessed via CNIC and default password `1122`. Built full `/school/` portal module (Dashboard, Profile & Facilities, Student Roster, Daily Attendance, At-Risk & Dropout Prevention, Settings & Password). Added password visibility and direct reset/update capabilities for District Admin across School Directory and Profile pages. Synced credentials in `users.csv`. |
-| 2026-09-29 | Antigravity AI | **Removed Daily Student Attendance feature** from both Admin and School portals. Deleted Attendance nav links from `includes/sidebar.php` and `school/includes/sidebar.php`. Replaced "Today's Attendance" KPI card on admin dashboard with "Active Schools". Replaced "Today's Attendance" KPI card on school dashboard with "At-Risk Students". Removed `Mark Attendance` quick-action button from school dashboard. Converted `admin/attendance.php` and `school/attendance.php` into redirect stubs pointing to their respective dashboards. Updated SELD guidelines notice on school dashboard. No data is deleted — `attendance.csv` remains on disk but is no longer read or written by any page. |
-| 2026-09-29 | Antigravity AI | **Production UI & Credential Security Cleanup:** Removed demo credential boxes, autofill JS buttons, and password helper text from `login.php`. Removed "Data Management -> Data Records" from Admin sidebar and converted `admin/excel-manager.php` into a security redirect stub to protect internal data tools. Updated `admin/dashboard.php` Excel DB badge to a static non-clickable indicator. Cleaned and synchronized developer skill (`lsu-portal/SKILL.md`) removing duplicate rules and obsolete credential hints. |
-| 2026-09-29 | Antigravity AI | **Automated CI/CD Deployment via GitHub Actions:** Created `.github/workflows/deploy.yml` using `SamKirkland/FTP-Deploy-Action` to automatically deploy repository changes on `git push` to `master`/`main` to InfinityFree FTP (`ftpupload.net` -> `/htdocs/`). Added local deployment fallback engine (`scratch/deploy_live.php`) and `.htaccess` DirectoryIndex configuration. |
+| 2026-09-29 | Antigravity AI | **Removed Daily Student Attendance feature** from both Admin and School portals. Deleted Attendance nav links from `includes/sidebar.php` and `school/includes/sidebar.php`. Replaced "Today's Attendance" KPI card on admin dashboard with "Active Schools". Converted `admin/attendance.php` and `school/attendance.php` into redirect stubs pointing to their respective dashboards. |
+| 2026-09-29 | Antigravity AI | **Production UI & Credential Security Cleanup:** Removed demo credential boxes, autofill JS buttons, and password helper text from `login.php`. Removed "Data Management → Data Records" from Admin sidebar and converted `admin/excel-manager.php` into a security redirect stub. |
+| 2026-09-29 | Antigravity AI | **Automated CI/CD Deployment via GitHub Actions:** Created `.github/workflows/deploy.yml` using `SamKirkland/FTP-Deploy-Action` to automatically deploy on `git push` to `master`/`main` to InfinityFree FTP (`ftpupload.net`). |
 | 2026-09-30 | Antigravity AI | **Replaced "Students At-Risk" with "Schools At-Risk" Infrastructure Registry:** Removed student dropout monitoring. Created `admin/at-risk-schools.php` with SELD/SEMIS/PSSF-aligned school infrastructure risk categories. Updated Admin and School portals. |
-| 2026-09-30 | Antigravity AI | **Developer Branding Integration:** Added interactive "Developed By: Abdul Rafay Qazi | Contact: 0371-0273699" branding in portal footers, header bar, and login page linking to portfolio (`https://rafayqazi.github.io/ar-portfolio/`). |
-| 2026-09-30 | Antigravity AI | **SELD Grievance & Complaints Redressal System:** Built full-scale complaint lodging and conversation threading system (`complaints.csv`, `complaint_replies.csv`). Schools can lodge grievance tickets with priority & category and participate in active conversation threads (schools cannot delete tickets). District Admins can manage tickets, respond, change status (Pending/Under Review/In Progress/Resolved/Closed), and delete tickets. Added Web Audio API dual "tling" notification chime, real-time polling API (`api/check-complaints.php`), and synchronized animated sidebar/header unread badge counters. |
-
-
-
-
+| 2026-09-30 | Antigravity AI | **Developer Branding Integration:** Added interactive "Developed By: Abdul Rafay Qazi | Contact: 0371-0273699" branding in portal footers, header bar, and login page. |
+| 2026-10-02 | Antigravity AI | **Login Screen Attribution & Disclaimer Update:** Updated login footer notice. Removed "256-Bit SSL Secured" badge. |
+| 2026-10-02 | Antigravity AI | **Bug Fix (School Profile Links):** Fixed malformed `href` attributes across `admin/schools.php`, `admin/dashboard.php`, and `admin/school-profile.php`. |
+| 2026-10-02 | Antigravity AI | **Students Overview & Attendance Deprecation + Credentials Lock Fix:** Removed individual Student Overview & Roster modules from Admin and School sidebars. Removed Attendance column from school directories. Fixed lock icon action button JS bug in `admin/schools.php`. |
+| 2026-10-02 | Antigravity AI | **School Dashboard Metrics Fix & HM CNIC Locking:** Fixed School Dashboard metrics. Locked Head Master CNIC in School Portal as permanent, immutable unique identifier editable strictly by District Admin. |
+| 2026-10-02 | Antigravity AI | **Editable SEMIS Code for Head Masters:** Made SEMIS Code editable by HM in `school/profile.php` with numerical validation, duplicate detection, and cascading sync across `schools.csv`, `users.csv`, `complaints.csv`, and active sessions. |
+| 2026-10-02 | Antigravity AI | **Full Attendance & Student Data Removal:** Removed `$studentsData` from `admin/dashboard.php`. Replaced "Weekly Attendance Trend" chart with live "District Enrollment by School Level" bar chart (real data from schools). Replaced "Teacher Attendance" KPI bar with "Infrastructure Risk Resolution" live KPI. Updated Recent Activity to remove attendance/student mentions. Removed `students` and `attendance` schemas from `ExcelDB::$schemas`. Deleted `data/students.csv`, `data/attendance.csv`, `data/at_risk.csv` permanently. |
+| 2026-10-02 | Antigravity AI | **Auto-Risk Flagging Engine & Extended Infrastructure Fields:** Added 4 new infrastructure columns to `schools` schema: `building_structure`, `drainage_sewerage`, `flood_prone`, `furniture_condition`. Added `ExcelDB::autoFlagSchoolRisks()` method that evaluates 10 SELD-aligned risk rules and auto-inserts `school_risks` records. Called automatically from `admin/school-profile.php` and `school/profile.php` on every facility save. Updated both edit modals (Admin & HM) with new Extended Infrastructure Assessment section. AGENTS.md and SKILL.md updated with full schema documentation and mandatory structural-change logging rule. |

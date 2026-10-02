@@ -101,8 +101,10 @@ When a new page is added, update the appropriate sidebar component (`includes/si
 ```
 
 ### Active Pages Registry
-- **Admin Portal:** `'dashboard'`, `'schools'`, `'school-profile'`, `'at-risk-schools'`, `'students'`, `'settings'`
-- **School Portal:** `'dashboard'`, `'profile'`, `'students'`, `'at-risk'`, `'settings'`
+- **Admin Portal:** `'dashboard'`, `'schools'`, `'school-profile'`, `'at-risk-schools'`, `'complaints'`, `'settings'`
+- **School Portal:** `'dashboard'`, `'profile'`, `'at-risk'`, `'complaints'`, `'settings'`
+
+> **⚠️ MANDATORY:** Whenever you add/remove a page, column, or feature, update BOTH this file AND `AGENTS.md` (Revision History). This is enforced to keep future AI agents in sync with the codebase.
 
 ---
 
@@ -178,7 +180,25 @@ $talukas = ExcelDB::getTalukas(true); // active only
 
 - **Engine:** `includes/excel_db.php` (`ExcelDB` static class)
 - **Storage:** `/data/*.csv` protected by `.htaccess`
-- **Tables:** `schools.csv`, `students.csv`, `school_risks.csv`, `users.csv`, `settings.csv`, `talukas.csv`
+- **Active Tables:** `schools`, `school_risks`, `users`, `settings`, `talukas`, `complaints`, `complaint_replies`
+- **Deprecated (never read/write):** `students`, `attendance`, `at_risk`
+
+### Schools Table — Key Columns
+| Column | Notes |
+|---|---|
+| `semis_code` | Unique numerical string — primary lookup key |
+| `cnic` | HM CNIC — immutable from School Portal, login key |
+| `enrollment` | Aggregate only (no per-student records) |
+| `building_structure` | Good Condition / Needs Repair / Dangerous / Unsafe / Condemned / Closed |
+| `drainage_sewerage` | Functional Drainage / Partial Drainage / Broken / None |
+| `flood_prone` | No / Yes |
+| `furniture_condition` | Adequate / Shortage / None Available |
+
+### Auto-Risk Flagging
+Call `ExcelDB::autoFlagSchoolRisks(string $semisCode): int` after any facility/profile save.
+Evaluates 10 infrastructure rules and inserts new `school_risks` records automatically.
+Does NOT duplicate unresolved risks for the same school+category.
+Admin resolves risks manually via `admin/at-risk-schools.php`.
 
 ### Common Operations
 ```php
@@ -189,6 +209,7 @@ ExcelDB::update('schools', 'id', $id, $data);
 ExcelDB::delete('schools', 'id', $id);
 ExcelDB::getSetting('district');
 ExcelDB::updateSettings(['key' => 'value']);
+ExcelDB::autoFlagSchoolRisks('403010004'); // Call after every facility save
 ```
 
 ---

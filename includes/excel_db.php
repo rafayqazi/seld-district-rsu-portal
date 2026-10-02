@@ -33,52 +33,18 @@ class ExcelDB {
             ]
         ],
         'schools' => [
-            'headers' => ['id', 'semis_code', 'school_name', 'head_master', 'cnic', 'phone', 'address', 'level', 'gender', 'taluka', 'enrollment', 'attendance_pct', 'status', 'status_badge', 'classrooms', 'teachers', 'non_teaching', 'facility_electricity', 'facility_water', 'facility_toilets', 'facility_boundary_wall', 'facility_internet'],
+            'headers' => ['id', 'semis_code', 'school_name', 'head_master', 'cnic', 'phone', 'address', 'level', 'gender', 'taluka', 'enrollment', 'attendance_pct', 'status', 'status_badge', 'classrooms', 'teachers', 'non_teaching', 'facility_electricity', 'facility_water', 'facility_toilets', 'facility_boundary_wall', 'facility_internet', 'building_structure', 'drainage_sewerage', 'flood_prone', 'furniture_condition'],
             'seeds' => [
-                ['1', '403010001', 'Government Primary School Model City, Tando Allahyar', 'Muhammad Ishaq Memon', '41302-1849201-3', '+92 300 1234567', 'Station Road, City Area, Tando Allahyar', 'Primary', 'Co-education', 'Tando Allahyar', '342', '93%', 'Good', 'badge-good', '6', '8', '2', 'Solar + Grid', 'Filtered Plant', 'Functional Blocks', 'Secured & Complete', 'Broadband / 4G'],
-                ['2', '403010002', 'Government Girls Elementary School B, Jhando Mari', 'Nusrat Parveen Laghari', '41302-7654321-2', '+92 301 2345678', 'Main Bazar, Jhando Mari', 'Middle', 'Girls', 'Jhando Mari', '218', '84%', 'Needs Attention', 'badge-attention', '5', '6', '2', 'Grid Only', 'Handpump / Tap', 'Needs Repair', 'Partial / Damaged', 'Unavailable / None'],
-                ['3', '403010003', 'Government High School Main, Chambar', 'Ghulam Sarwar Jarwar', '41302-9876543-1', '+92 302 3456789', 'Station Road, Chambar', 'Secondary', 'Boys', 'Chambar', '567', '96%', 'Active', 'badge-active', '12', '18', '4', 'Solar + Grid', 'Filtered Plant', 'Functional Blocks', 'Secured & Complete', 'Broadband / 4G'],
-                ['4', '403010004', 'Government Boys Primary School D, Nasarpur', 'Abdul Hameed Soomro', '41302-3456789-5', '+92 303 4567890', 'Mohallah Qazi, Nasarpur', 'Primary', 'Boys', 'Nasarpur', '189', '72%', 'Not Reporting', 'badge-not-rep', '4', '4', '1', 'Unavailable / None', 'Handpump / Tap', 'Needs Repair', 'Partial / Damaged', 'Unavailable / None'],
-                ['5', '403010005', 'Government Girls Secondary School E, Tando Allahyar', 'Farzana Kousar', '41302-5432167-4', '+92 304 5678901', 'Mir Colony, Tando Allahyar', 'Secondary', 'Girls', 'Tando Allahyar', '412', '91%', 'Good', 'badge-good', '10', '14', '3', 'Solar + Grid', 'Filtered Plant', 'Functional Blocks', 'Secured & Complete', 'Broadband / 4G'],
-                ['6', '403010006', 'Government Comprehensive Model School F, Tando Allahyar', 'Dr. Rasheed Ahmed Jamali', '41302-6543218-7', '+92 305 6789012', 'Hyderabad Road, Tando Allahyar', 'Higher Secondary', 'Co-education', 'Tando Allahyar', '628', '94%', 'Active', 'badge-active', '16', '24', '5', 'Solar + Grid', 'Filtered Plant', 'Functional Blocks', 'Secured & Complete', 'Broadband / 4G'],
-                ['7', '403010007', 'Government Primary School G, Pyaro Lund', 'Khadim Hussain Lund', '41302-2345678-9', '+92 306 7890123', 'Village Pyaro Lund, Jhando Mari', 'Primary', 'Co-education', 'Jhando Mari', '155', '88%', 'Good', 'badge-good', '3', '4', '1', 'Solar Only', 'Handpump / Tap', 'Functional Blocks', 'Secured & Complete', 'Partial / Mobile Data'],
-                ['8', '403010008', 'Government Boys High School Missan, Chambar', 'Ali Nawaz Rind', '41302-8765432-1', '+92 307 8901234', 'Missan Stop, Chambar', 'Secondary', 'Boys', 'Chambar', '480', '92%', 'Active', 'badge-active', '9', '12', '3', 'Grid Only', 'Water Supply Line', 'Functional Blocks', 'Secured & Complete', 'Partial / Mobile Data'],
-                ['9', '403010009', 'Government Girls High School Ceramic Town, Nasarpur', 'Shazia Bano Nizamani', '41302-4567890-8', '+92 308 9012345', 'Ceramic Center Road, Nasarpur', 'Secondary', 'Girls', 'Nasarpur', '310', '89%', 'Good', 'badge-good', '8', '11', '2', 'Solar + Grid', 'Filtered Plant', 'Functional Blocks', 'Secured & Complete', 'Broadband / 4G'],
-                ['10', '403010010', 'Government Primary School Station Road, Tando Allahyar', 'Mirza Bashir Baig', '41302-1357924-3', '+92 309 0123456', 'Railway Colony, Tando Allahyar', 'Primary', 'Co-education', 'Tando Allahyar', '275', '86%', 'Needs Attention', 'badge-attention', '5', '7', '2', 'Grid Only', 'Handpump / Tap', 'Needs Repair', 'Under Construction', 'Unavailable / None'],
-            ]
-        ],
-        'students' => [
-            'headers' => ['id', 'student_code', 'full_name', 'gender', 'school_name', 'grade', 'attendance_pct', 'risk_status', 'status_badge', 'text_class'],
-            'seeds' => [
-                ['1', 'STU-1001', 'Ali Hassan', 'Male', 'Government Primary School Model City, Tando Allahyar', 'Grade 4', '94%', 'Normal', 'badge-normal', 'text-success'],
-                ['2', 'STU-1002', 'Fatima Noor', 'Female', 'Government Girls Elementary School B, Jhando Mari', 'Grade 6', '76%', 'Monitor', 'badge-monitor', 'text-warning'],
-                ['3', 'STU-1003', 'Muhammad Zain', 'Male', 'Government High School Main, Chambar', 'Grade 9', '88%', 'Normal', 'badge-normal', 'text-success'],
-                ['4', 'STU-1004', 'Sana Bibi', 'Female', 'Government Boys Primary School D, Nasarpur', 'Grade 3', '54%', 'At Risk', 'badge-risk', 'text-danger'],
-                ['5', 'STU-1005', 'Imran Khan', 'Male', 'Government Girls Secondary School E, Tando Allahyar', 'Grade 8', '91%', 'Normal', 'badge-normal', 'text-success'],
-                ['6', 'STU-1006', 'Hina Rehman', 'Female', 'Government Primary School G, Pyaro Lund', 'Grade 5', '69%', 'Monitor', 'badge-monitor', 'text-warning'],
-                ['7', 'STU-1007', 'Asif Memon', 'Male', 'Government Primary School Model City, Tando Allahyar', 'Grade 2', '48%', 'At Risk', 'badge-risk', 'text-danger'],
-                ['8', 'STU-1008', 'Bilal Ahmed', 'Male', 'Government High School Main, Chambar', 'Grade 10', '95%', 'Normal', 'badge-normal', 'text-success'],
-                ['9', 'STU-1009', 'Zainab Solangi', 'Female', 'Government Girls Secondary School E, Tando Allahyar', 'Grade 7', '58%', 'At Risk', 'badge-risk', 'text-danger'],
-                ['10', 'STU-1010', 'Kamran Abbasi', 'Male', 'Government Boys High School Missan, Chambar', 'Grade 8', '74%', 'Monitor', 'badge-monitor', 'text-warning'],
-                ['11', 'STU-1011', 'Ayesha Chandio', 'Female', 'Government Girls High School Ceramic Town, Nasarpur', 'Grade 6', '92%', 'Normal', 'badge-normal', 'text-success'],
-                ['12', 'STU-1012', 'Tariq Baloch', 'Male', 'Government Primary School Station Road, Tando Allahyar', 'Grade 5', '51%', 'At Risk', 'badge-risk', 'text-danger']
-            ]
-        ],
-        'attendance' => [
-            'headers' => ['id', 'student_code', 'full_name', 'grade', 'gender', 'status', 'status_badge', 'monthly_pct', 'date', 'school_name'],
-            'seeds' => [
-                ['1', 'STU-1001', 'Ali Hassan', 'Grade 4', 'Male', 'Present', 'badge-present', '94%', '2026-09-19', 'Government Primary School Model City, Tando Allahyar'],
-                ['2', 'STU-1002', 'Fatima Noor', 'Grade 6', 'Female', 'Absent', 'badge-absent', '76%', '2026-09-19', 'Government Girls Elementary School B, Jhando Mari'],
-                ['3', 'STU-1003', 'Muhammad Zain', 'Grade 9', 'Male', 'Present', 'badge-present', '88%', '2026-09-19', 'Government High School Main, Chambar'],
-                ['4', 'STU-1004', 'Sana Bibi', 'Grade 3', 'Female', 'Absent', 'badge-absent', '54%', '2026-09-19', 'Government Boys Primary School D, Nasarpur'],
-                ['5', 'STU-1005', 'Imran Khan', 'Grade 8', 'Male', 'Present', 'badge-present', '91%', '2026-09-19', 'Government Girls Secondary School E, Tando Allahyar'],
-                ['6', 'STU-1006', 'Hina Rehman', 'Grade 5', 'Female', 'Leave', 'badge-leave', '69%', '2026-09-19', 'Government Primary School G, Pyaro Lund'],
-                ['7', 'STU-1007', 'Asif Memon', 'Grade 2', 'Male', 'Absent', 'badge-absent', '48%', '2026-09-19', 'Government Primary School Model City, Tando Allahyar'],
-                ['8', 'STU-1008', 'Bilal Ahmed', 'Grade 10', 'Male', 'Present', 'badge-present', '95%', '2026-09-19', 'Government High School Main, Chambar'],
-                ['9', 'STU-1009', 'Zainab Solangi', 'Grade 7', 'Female', 'Absent', 'badge-absent', '58%', '2026-09-19', 'Government Girls Secondary School E, Tando Allahyar'],
-                ['10', 'STU-1010', 'Kamran Abbasi', 'Grade 8', 'Male', 'Present', 'badge-present', '74%', '2026-09-19', 'Government Boys High School Missan, Chambar'],
-                ['11', 'STU-1011', 'Ayesha Chandio', 'Grade 6', 'Female', 'Present', 'badge-present', '92%', '2026-09-19', 'Government Girls High School Ceramic Town, Nasarpur'],
-                ['12', 'STU-1012', 'Tariq Baloch', 'Grade 5', 'Male', 'Absent', 'badge-absent', '51%', '2026-09-19', 'Government Primary School Station Road, Tando Allahyar']
+                ['1', '403010001', 'Government Primary School Model City, Tando Allahyar', 'Muhammad Ishaq Memon', '41302-1849201-3', '+92 300 1234567', 'Station Road, City Area, Tando Allahyar', 'Primary', 'Co-education', 'Tando Allahyar', '342', '93%', 'Good', 'badge-good', '6', '8', '2', 'Solar + Grid', 'Filtered Plant', 'Functional Blocks', 'Secured & Complete', 'Broadband / 4G', 'Good Condition', 'Functional Drainage', 'No', 'Adequate'],
+                ['2', '403010002', 'Government Girls Elementary School B, Jhando Mari', 'Nusrat Parveen Laghari', '41302-7654321-2', '+92 301 2345678', 'Main Bazar, Jhando Mari', 'Middle', 'Girls', 'Jhando Mari', '218', '84%', 'Needs Attention', 'badge-attention', '5', '6', '2', 'Grid Only', 'Handpump / Tap', 'Needs Repair', 'Partial / Damaged', 'Unavailable / None', 'Needs Repair', 'Functional Drainage', 'No', 'Adequate'],
+                ['3', '403010003', 'Government High School Main, Chambar', 'Ghulam Sarwar Jarwar', '41302-9876543-1', '+92 302 3456789', 'Station Road, Chambar', 'Secondary', 'Boys', 'Chambar', '567', '96%', 'Active', 'badge-active', '12', '18', '4', 'Solar + Grid', 'Filtered Plant', 'Functional Blocks', 'Secured & Complete', 'Broadband / 4G', 'Good Condition', 'Functional Drainage', 'No', 'Adequate'],
+                ['4', '403010004', 'Government Boys Primary School D, Nasarpur', 'Abdul Hameed Soomro', '41302-3456789-5', '+92 303 4567890', 'Mohallah Qazi, Nasarpur', 'Primary', 'Boys', 'Nasarpur', '189', '72%', 'Not Reporting', 'badge-not-rep', '4', '4', '1', 'Unavailable / None', 'Handpump / Tap', 'Needs Repair', 'Unavailable / None', 'Unavailable / None', 'Dangerous / Unsafe', 'Broken / None', 'No', 'Shortage'],
+                ['5', '403010005', 'Government Girls Secondary School E, Tando Allahyar', 'Farzana Kousar', '41302-5432167-4', '+92 304 5678901', 'Mir Colony, Tando Allahyar', 'Secondary', 'Girls', 'Tando Allahyar', '412', '91%', 'Good', 'badge-good', '10', '14', '3', 'Solar + Grid', 'Filtered Plant', 'Functional Blocks', 'Secured & Complete', 'Broadband / 4G', 'Good Condition', 'Functional Drainage', 'No', 'Adequate'],
+                ['6', '403010006', 'Government Comprehensive Model School F, Tando Allahyar', 'Dr. Rasheed Ahmed Jamali', '41302-6543218-7', '+92 305 6789012', 'Hyderabad Road, Tando Allahyar', 'Higher Secondary', 'Co-education', 'Tando Allahyar', '628', '94%', 'Active', 'badge-active', '16', '24', '5', 'Solar + Grid', 'Filtered Plant', 'Functional Blocks', 'Secured & Complete', 'Broadband / 4G', 'Good Condition', 'Functional Drainage', 'No', 'Adequate'],
+                ['7', '403010007', 'Government Primary School G, Pyaro Lund', 'Khadim Hussain Lund', '41302-2345678-9', '+92 306 7890123', 'Village Pyaro Lund, Jhando Mari', 'Primary', 'Co-education', 'Jhando Mari', '155', '88%', 'Good', 'badge-good', '3', '4', '1', 'Solar Only', 'Handpump / Tap', 'Functional Blocks', 'Secured & Complete', 'Partial / Mobile Data', 'Good Condition', 'Partial Drainage', 'Yes', 'Adequate'],
+                ['8', '403010008', 'Government Boys High School Missan, Chambar', 'Ali Nawaz Rind', '41302-8765432-1', '+92 307 8901234', 'Missan Stop, Chambar', 'Secondary', 'Boys', 'Chambar', '480', '92%', 'Active', 'badge-active', '9', '12', '3', 'Grid Only', 'Water Supply Line', 'Functional Blocks', 'Secured & Complete', 'Partial / Mobile Data', 'Good Condition', 'Functional Drainage', 'No', 'Adequate'],
+                ['9', '403010009', 'Government Girls High School Ceramic Town, Nasarpur', 'Shazia Bano Nizamani', '41302-4567890-8', '+92 308 9012345', 'Ceramic Center Road, Nasarpur', 'Secondary', 'Girls', 'Nasarpur', '310', '89%', 'Good', 'badge-good', '8', '11', '2', 'Solar + Grid', 'Filtered Plant', 'Functional Blocks', 'Secured & Complete', 'Broadband / 4G', 'Good Condition', 'Functional Drainage', 'No', 'Adequate'],
+                ['10', '403010010', 'Government Primary School Station Road, Tando Allahyar', 'Mirza Bashir Baig', '41302-1357924-3', '+92 309 0123456', 'Railway Colony, Tando Allahyar', 'Primary', 'Co-education', 'Tando Allahyar', '275', '86%', 'Needs Attention', 'badge-attention', '5', '7', '2', 'Grid Only', 'Handpump / Tap', 'Needs Repair', 'Under Construction', 'Unavailable / None', 'Needs Repair', 'Partial Drainage', 'No', 'Shortage'],
             ]
         ],
         'school_risks' => [
@@ -962,6 +928,122 @@ class ExcelDB {
 
         self::update('complaints', 'ticket_no', $ticketNo, $updateData);
         return true;
+    }
+
+    /**
+     * Auto-flag a school's infrastructure risks based on its current profile/facilities data.
+     *
+     * Called after any facility/infrastructure save from admin or school portal.
+     * Rules map specific facility values to standard SELD risk categories.
+     * Existing unresolved risk records for the same school+category are NOT duplicated.
+     * Only adds NEW risk entries for newly-detected issues.
+     * Admin is expected to mark items 'Resolved' once fixed.
+     *
+     * @param string $semisCode   SEMIS code of the school to evaluate.
+     * @return int Number of new risk records inserted.
+     */
+    public static function autoFlagSchoolRisks(string $semisCode): int {
+        $school = self::find('schools', 'semis_code', $semisCode);
+        if (!$school) return 0;
+
+        $schoolName = $school['school_name'] ?? 'Unknown School';
+        $taluka     = $school['taluka']      ?? '';
+
+        // ── Risk Detection Rules ────────────────────────────────────────────────
+        // Each entry: [risk_category, severity, details, trigger_fn]
+        $rules = [
+            [
+                'category' => 'Dangerous Building Structure',
+                'severity' => 'Critical',
+                'details'  => 'Building structure reported as Dangerous or Unsafe by Head Master/Admin.',
+                'trigger'  => fn() => in_array($school['building_structure'] ?? '', ['Dangerous / Unsafe', 'Condemned / Closed']),
+            ],
+            [
+                'category' => 'Damaged Classrooms / Roof',
+                'severity' => 'High',
+                'details'  => 'Building structure reported as needing repair — classrooms or roof may be in disrepair.',
+                'trigger'  => fn() => ($school['building_structure'] ?? '') === 'Needs Repair',
+            ],
+            [
+                'category' => 'No Boundary Wall',
+                'severity' => 'High',
+                'details'  => 'School boundary wall is completely absent — students exposed to road/outside hazards.',
+                'trigger'  => fn() => str_contains(strtolower($school['facility_boundary_wall'] ?? ''), 'unavailable') || str_contains(strtolower($school['facility_boundary_wall'] ?? ''), 'none'),
+            ],
+            [
+                'category' => 'Damaged / Incomplete Wall',
+                'severity' => 'Medium',
+                'details'  => 'Boundary wall is damaged, partially built, or under construction.',
+                'trigger'  => fn() => str_contains(strtolower($school['facility_boundary_wall'] ?? ''), 'partial') || str_contains(strtolower($school['facility_boundary_wall'] ?? ''), 'damaged') || str_contains(strtolower($school['facility_boundary_wall'] ?? ''), 'construction'),
+            ],
+            [
+                'category' => 'No Drinking Water',
+                'severity' => 'High',
+                'details'  => 'No clean drinking water facility available at school.',
+                'trigger'  => fn() => str_contains(strtolower($school['facility_water'] ?? ''), 'unavailable') || str_contains(strtolower($school['facility_water'] ?? ''), 'none'),
+            ],
+            [
+                'category' => 'Non-functional Toilets',
+                'severity' => 'High',
+                'details'  => 'Toilets are absent or non-functional — affects student well-being and enrollment.',
+                'trigger'  => fn() => str_contains(strtolower($school['facility_toilets'] ?? ''), 'unavailable') || str_contains(strtolower($school['facility_toilets'] ?? ''), 'none'),
+            ],
+            [
+                'category' => 'No Electricity',
+                'severity' => 'High',
+                'details'  => 'No electricity supply of any kind (no grid, no solar).',
+                'trigger'  => fn() => str_contains(strtolower($school['facility_electricity'] ?? ''), 'unavailable') || str_contains(strtolower($school['facility_electricity'] ?? ''), 'none'),
+            ],
+            [
+                'category' => 'No Proper Drainage / Sewerage',
+                'severity' => 'Medium',
+                'details'  => 'School has broken or no drainage/sewerage system.',
+                'trigger'  => fn() => str_contains(strtolower($school['drainage_sewerage'] ?? ''), 'broken') || str_contains(strtolower($school['drainage_sewerage'] ?? ''), 'none'),
+            ],
+            [
+                'category' => 'Flood / Disaster Prone Area',
+                'severity' => 'Critical',
+                'details'  => 'School is located in a flood-prone or disaster-prone zone as reported by Head Master.',
+                'trigger'  => fn() => strtolower(trim($school['flood_prone'] ?? '')) === 'yes',
+            ],
+            [
+                'category' => 'No Furniture / Equipment',
+                'severity' => 'Medium',
+                'details'  => 'Acute shortage of desks, chairs, and teaching equipment reported.',
+                'trigger'  => fn() => strtolower(trim($school['furniture_condition'] ?? '')) === 'none' || strtolower(trim($school['furniture_condition'] ?? '')) === 'none available',
+            ],
+        ];
+
+        // ── Load existing unresolved risks for this school ─────────────────────
+        $existingRisks = self::all('school_risks');
+        $unresolvedCategories = [];
+        foreach ($existingRisks as $r) {
+            if (($r['semis_code'] ?? '') === $semisCode && strtolower($r['status'] ?? '') !== 'resolved') {
+                $unresolvedCategories[] = $r['risk_category'] ?? '';
+            }
+        }
+
+        // ── Insert new risk records for triggered rules not already tracked ─────
+        $added = 0;
+        foreach ($rules as $rule) {
+            if (($rule['trigger'])() && !in_array($rule['category'], $unresolvedCategories)) {
+                self::insert('school_risks', [
+                    'semis_code'     => $semisCode,
+                    'school_name'    => $schoolName,
+                    'taluka'         => $taluka,
+                    'risk_category'  => $rule['category'],
+                    'severity'       => $rule['severity'],
+                    'details'        => $rule['details'],
+                    'reported_date'  => date('Y-m-d'),
+                    'last_inspected' => date('Y-m-d'),
+                    'status'         => 'Pending',
+                    'notes'          => 'Auto-flagged from school infrastructure profile data.',
+                ]);
+                $added++;
+            }
+        }
+
+        return $added;
     }
 }
 
