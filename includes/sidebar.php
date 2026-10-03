@@ -67,13 +67,6 @@ function sidebar_link_class(string $page, string $active): string {
       </svg>
       School Directory
     </a>
-    <a href="<?= $base ?>school-profile.php" class="<?= sidebar_link_class('school-profile', $active_page) ?>">
-      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
-        <line x1="12" y1="16" x2="12.01" y2="16"/>
-      </svg>
-      School Profile
-    </a>
     <a href="<?= $base ?>at-risk-schools.php" class="<?= sidebar_link_class('at-risk-schools', $active_page) ?>">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
         <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
