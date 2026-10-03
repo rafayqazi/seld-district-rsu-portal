@@ -34,6 +34,8 @@ LSU-PORTAL/
 │   ├── school-profile.php         # Single school deep-dive profile + inline edit modals (auto-flags risks)
 │   ├── at-risk-schools.php        # Infrastructure risk registry (auto-populated from school profiles)
 │   ├── complaints.php             # GRM complaint inbox and reply management
+│   ├── messages.php               # Admin Direct Messaging — initiate conversations with any school
+│   ├── message-thread.php         # Admin message thread view — reply & close/reopen conversation
 │   ├── settings.php               # Portal settings, district config, taluka management
 │   ├── students.php               # REDIRECT STUB → schools.php (deprecated)
 │   └── attendance.php             # REDIRECT STUB → dashboard.php (deprecated)
@@ -44,6 +46,8 @@ LSU-PORTAL/
 │   ├── profile.php                # School profile & infrastructure editor (HM editable; triggers auto-risk)
 │   ├── at-risk.php                # School's own infrastructure risk view
 │   ├── complaints.php             # HM GRM complaint submission & reply
+│   ├── messages.php               # School inbox for admin-sent messages (read & reply only)
+│   ├── message-thread.php         # School message thread view & reply
 │   ├── settings.php               # HM password change
 │   ├── students.php               # REDIRECT STUB → dashboard.php (deprecated)
 │   └── attendance.php             # REDIRECT STUB → dashboard.php (deprecated)
@@ -68,6 +72,8 @@ LSU-PORTAL/
 │   ├── talukas.csv                # District taluka list
 │   ├── complaints.csv             # GRM complaint tickets
 │   ├── complaint_replies.csv      # GRM conversation threads
+│   ├── admin_messages.csv         # Admin-initiated direct message threads (admin-only initiation)
+│   ├── admin_message_replies.csv  # Message replies within each direct thread
 │   └── settings.csv               # Dynamic portal configuration
 │
 ├── assets/                        # Static assets (images, logos, custom CSS overrides)
@@ -274,3 +280,4 @@ The portal follows the Sindh Government District Education aesthetic:
 | 2026-10-03 | Antigravity AI | **Removed Standalone School Profile Sidebar Link:** Removed generic `school-profile.php` link from the Admin sidebar (`includes/sidebar.php`) under the Schools group, ensuring school profiles are accessed directly and contextually with a specific SEMIS code via the School Directory (`admin/schools.php`) or At-Risk list. |
 | 2026-10-03 | Antigravity AI | **Clickable School Directory Rows:** Enhanced `admin/schools.php` so clicking anywhere on a school's table row navigates directly to that school's Profile (`admin/school-profile.php?semis=...`), while preserving discrete click actions for Credentials modal and Delete buttons via `event.stopPropagation()`. |
 
+| 2026-10-04 | Antigravity AI | **Admin Direct Messaging System:** Added a dedicated Admin-to-School Direct Messaging feature. Admin can initiate threaded conversations with any school from dmin/messages.php. Conversations remain Open until Admin explicitly closes them. School Head Masters can read messages and reply from school/messages.php and school/message-thread.php, but cannot initiate new conversations. Added 2 new ExcelDB tables: dmin_messages (thread header: thread_id, semis_code, school_name, taluka, subject, status, created_by, unread_school, unread_admin) and dmin_message_replies (messages: thread_id, sender_role, sender_name, message). Added ExcelDB::generateMessageThreadId(), getRepliesForThread(), ddMessageReply(), and getUnreadMessagesCount() helpers. Both Admin and School sidebars show a blue unread message badge. |

@@ -99,6 +99,14 @@ class ExcelDB {
                 ['8', 'GRM-2026-0104', 'admin', 'District RSU Coordinator', 'HESCO Sub-divisional officer has been officially requested via letter #RSU/EL/2026/89. Work team scheduled for inspection today.', '2026-09-29 12:00:00'],
             ]
         ],
+        'admin_messages' => [
+            'headers' => ['id', 'thread_id', 'semis_code', 'school_name', 'taluka', 'subject', 'status', 'created_by', 'created_at', 'updated_at', 'unread_school', 'unread_admin'],
+            'seeds'   => []
+        ],
+        'admin_message_replies' => [
+            'headers' => ['id', 'thread_id', 'sender_role', 'sender_name', 'message', 'created_at'],
+            'seeds'   => []
+        ],
         'school_staff' => [
             'headers' => ['id', 'semis_code', 'personal_no', 'full_name', 'cnic', 'gender', 'staff_type', 'designation', 'bps_scale', 'qualification_academic', 'qualification_professional', 'contact_phone', 'appointment_date', 'status', 'created_at', 'updated_at'],
             'seeds' => [
@@ -944,6 +952,92 @@ class ExcelDB {
 
         self::update('complaints', 'ticket_no', $ticketNo, $updateData);
         return true;
+    }
+
+    // -----------------------------------------------------------------------
+    // Admin Direct Messaging System
+    // -----------------------------------------------------------------------
+
+    /**
+     * Generate a unique message thread ID like MSG-2026-0001.
+     */
+    public static function generateMessageThreadId(): string {
+        $threads = self::all('admin_messages');
+        $maxNum = 0;
+        foreach ($threads as $t) {
+            if (preg_match('/MSG-\d{4}-(\d+)/', $t['thread_id'] ?? '', $m)) {
+                $n = (int)$m[1];
+                if ($n > $maxNum) $maxNum = $n;
+            }
+        }
+        return 'MSG-' . date('Y') . '-' . str_pad((string)($maxNum + 1), 4, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Get all replies for a message thread, sorted chronologically.
+     */
+    public static function getRepliesForThread(string $threadId): array {
+        $allReplies = self::all('admin_message_replies');
+        $replies = array_filter($allReplies, fn($r) => ($r['thread_id'] ?? '') === $threadId);
+        usort($replies, fn($a, $b) => strcmp($a['created_at'] ?? '', $b['created_at'] ?? ''));
+        return array_values($replies);
+    }
+
+    /**
+     * Add a reply to an admin message thread and update unread flags.
+     */
+    public static function addMessageReply(string $threadId, string $senderRole, string $senderName, string $message): bool {
+        $thread = self::find('admin_messages', 'thread_id', $threadId);
+        if (!$thread) return false;
+
+        $replies = self::all('admin_message_replies');
+        $maxId = 0;
+        foreach ($replies as $r) {
+            if (isset($r['id']) && is_numeric($r['id']) && (int)$r['id'] > $maxId) {
+                $maxId = (int)$r['id'];
+            }
+        }
+
+        $replies[] = [
+            'id'          => (string)($maxId + 1),
+            'thread_id'   => $threadId,
+            'sender_role' => $senderRole,
+            'sender_name' => $senderName,
+            'message'     => $message,
+            'created_at'  => date('Y-m-d H:i:s')
+        ];
+        self::writeTable('admin_message_replies', $replies);
+
+        $updateData = ['updated_at' => date('Y-m-d H:i:s')];
+        if ($senderRole === 'admin') {
+            $updateData['unread_school'] = '1';
+            $updateData['unread_admin']  = '0';
+        } else {
+            $updateData['unread_admin']  = '1';
+            $updateData['unread_school'] = '0';
+        }
+        self::update('admin_messages', 'thread_id', $threadId, $updateData);
+        return true;
+    }
+
+    /**
+     * Get unread message count for a role.
+     * For 'admin': threads where unread_admin = '1'.
+     * For 'school': threads where unread_school = '1' and semis matches.
+     */
+    public static function getUnreadMessagesCount(string $role = 'admin', string $semisCode = ''): int {
+        $threads = self::all('admin_messages');
+        $count = 0;
+        foreach ($threads as $t) {
+            if ($role === 'admin') {
+                if (($t['unread_admin'] ?? '0') === '1') $count++;
+            } elseif ($role === 'school' && !empty($semisCode)) {
+                if (($t['semis_code'] ?? '') === $semisCode && ($t['unread_school'] ?? '0') === '1') {
+                    $count++;
+                }
+            }
+        }
+        return $count;
     }
 
     /**

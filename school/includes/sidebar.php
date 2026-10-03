@@ -113,6 +113,22 @@ function school_sidebar_link(string $page, string $active): string {
       </span>
     </a>
 
+    <!-- 6. Direct Messages from RSU -->
+    <?php $school_unread_messages = ExcelDB::getUnreadMessagesCount('school', $school_semis); ?>
+    <a href="<?= $base ?>messages.php" class="<?= school_sidebar_link('messages', $active_page) ?> justify-between">
+      <div class="flex items-center gap-3">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+          <line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="12" y2="13"/>
+        </svg>
+        <span>Messages from RSU</span>
+      </div>
+      <span class="<?= ($school_unread_messages > 0 ? '' : 'hidden') ?> px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500 text-white animate-pulse">
+        <?= $school_unread_messages ?>
+      </span>
+    </a>
+
+
     <div class="px-2 pt-4 pb-1 text-[10px] tracking-wider font-bold uppercase text-white/40">Account &amp; Security</div>
 
     <!-- 6. Settings & Password -->

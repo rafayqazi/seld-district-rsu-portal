@@ -101,8 +101,8 @@ When a new page is added, update the appropriate sidebar component (`includes/si
 ```
 
 ### Active Pages Registry
-- **Admin Portal:** `'dashboard'`, `'schools'`, `'school-profile'`, `'at-risk-schools'`, `'staff'`, `'complaints'`, `'settings'`
-- **School Portal:** `'dashboard'`, `'profile'`, `'staff'`, `'at-risk'`, `'complaints'`, `'settings'`
+- **Admin Portal:** `'dashboard'`, `'schools'`, `'school-profile'`, `'at-risk-schools'`, `'staff'`, `'complaints'`, `'messages'`, `'settings'`
+- **School Portal:** `'dashboard'`, `'profile'`, `'staff'`, `'at-risk'`, `'complaints'`, `'messages'`, `'settings'`
 
 > **⚠️ MANDATORY:** Whenever you add/remove a page, column, or feature, update BOTH this file AND `AGENTS.md` (Revision History). This is enforced to keep future AI agents in sync with the codebase.
 
@@ -180,7 +180,7 @@ $talukas = ExcelDB::getTalukas(true); // active only
 
 - **Engine:** `includes/excel_db.php` (`ExcelDB` static class)
 - **Storage:** `/data/*.csv` protected by `.htaccess`
-- **Active Tables:** `schools`, `school_staff`, `school_risks`, `users`, `settings`, `talukas`, `complaints`, `complaint_replies`
+- **Active Tables:** `schools`, `school_staff`, `school_risks`, `users`, `settings`, `talukas`, `complaints`, `complaint_replies`, `admin_messages`, `admin_message_replies`
 - **Deprecated (never read/write):** `students`, `attendance`, `at_risk`
 
 ### School Staff Table — Key Columns (`school_staff.csv`)
