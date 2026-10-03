@@ -98,6 +98,22 @@ class ExcelDB {
                 ['7', 'GRM-2026-0104', 'school', 'Mirza Bashir Baig (HM)', 'Electric pole transformer tripped causing a burnout of classroom main switch. Classes are running in dark and ceiling fans are inoperative.', '2026-09-29 08:30:00'],
                 ['8', 'GRM-2026-0104', 'admin', 'District RSU Coordinator', 'HESCO Sub-divisional officer has been officially requested via letter #RSU/EL/2026/89. Work team scheduled for inspection today.', '2026-09-29 12:00:00'],
             ]
+        ],
+        'school_staff' => [
+            'headers' => ['id', 'semis_code', 'personal_no', 'full_name', 'cnic', 'gender', 'staff_type', 'designation', 'bps_scale', 'qualification_academic', 'qualification_professional', 'contact_phone', 'appointment_date', 'status', 'created_at', 'updated_at'],
+            'seeds' => [
+                ['1', '403010001', '10482910', 'Muhammad Ishaq Memon', '41302-1849201-3', 'Male', 'Teaching', 'Head Master', 'BPS-17', 'MA (English)', 'M.Ed / B.Ed (Hons)', '+92 300 1234567', '2012-03-15', 'Active', '2026-09-19 22:00:00', '2026-09-19 22:00:00'],
+                ['2', '403010001', '10482911', 'Ghulam Qadir Soomro', '41302-2345671-1', 'Male', 'Teaching', 'PST (Primary School Teacher)', 'BPS-14', 'BA (General)', 'B.Ed (1.5 Years)', '+92 300 2345678', '2016-08-20', 'Active', '2026-09-19 22:00:00', '2026-09-19 22:00:00'],
+                ['3', '403010001', '10482912', 'Zubaida Begum Kazi', '41302-3456782-2', 'Female', 'Teaching', 'ECT (Early Childhood Teacher)', 'BPS-14', 'BS (Education)', 'B.Ed (Hons 4-Years)', '+92 300 3456789', '2020-01-10', 'Active', '2026-09-19 22:00:00', '2026-09-19 22:00:00'],
+                ['4', '403010001', '10482913', 'Abdul Majeed Kumbhar', '41302-4567893-3', 'Male', 'Teaching', 'JEST (Junior Elementary)', 'BPS-14', 'B.Sc (Math / Physics)', 'B.Ed (2.5 Years)', '+92 300 4567890', '2022-04-12', 'Active', '2026-09-19 22:00:00', '2026-09-19 22:00:00'],
+                ['5', '403010001', '10482914', 'Imran Ali Khaskheli', '41302-5678904-4', 'Male', 'Non-Teaching', 'Junior Clerk', 'BPS-11', 'Intermediate (Commerce)', 'IT Diploma / None', '+92 300 5678901', '2018-06-01', 'Active', '2026-09-19 22:00:00', '2026-09-19 22:00:00'],
+                ['6', '403010001', '10482915', 'Khamiso Khan Brohi', '41302-6789015-5', 'Male', 'Non-Teaching', 'Naib Qasid / Peon', 'BPS-02', 'Matriculation', 'None', '+92 300 6789012', '2015-11-25', 'Active', '2026-09-19 22:00:00', '2026-09-19 22:00:00'],
+                ['7', '403010002', '10482920', 'Nusrat Parveen Laghari', '41302-7654321-2', 'Female', 'Teaching', 'Head Mistress', 'BPS-17', 'MA (Sindhi)', 'M.Ed / B.Ed', '+92 301 2345678', '2014-02-18', 'Active', '2026-09-19 22:00:00', '2026-09-19 22:00:00'],
+                ['8', '403010002', '10482921', 'Shabana Naz Memon', '41302-8765432-3', 'Female', 'Teaching', 'JEST (Science / Math)', 'BPS-14', 'M.Sc (Botany)', 'B.Ed (1.5 Years)', '+92 301 3456789', '2021-09-01', 'Active', '2026-09-19 22:00:00', '2026-09-19 22:00:00'],
+                ['9', '403010003', '10482930', 'Ghulam Sarwar Jarwar', '41302-9876543-1', 'Male', 'Teaching', 'Principal / SS', 'BPS-18', 'M.Sc (Chemistry)', 'M.Ed', '+92 302 3456789', '2008-10-10', 'Active', '2026-09-19 22:00:00', '2026-09-19 22:00:00'],
+                ['10', '403010003', '10482931', 'Rashid Minhas Solangi', '41302-1234568-7', 'Male', 'Teaching', 'HST (High School Teacher)', 'BPS-16', 'MA (English Lit)', 'B.Ed (Hons)', '+92 302 4567890', '2017-03-05', 'Active', '2026-09-19 22:00:00', '2026-09-19 22:00:00'],
+                ['11', '403010003', '10482932', 'Muhammad Hanif Rind', '41302-2345679-8', 'Male', 'Non-Teaching', 'Lab Assistant', 'BPS-07', 'F.Sc (Pre-Medical)', 'None', '+92 302 5678901', '2019-07-20', 'Active', '2026-09-19 22:00:00', '2026-09-19 22:00:00'],
+            ]
         ]
     ];
 
@@ -1044,6 +1060,266 @@ class ExcelDB {
         }
 
         return $added;
+    }
+
+    /**
+     * Get all staff members registered for a specific school SEMIS code.
+     */
+    public static function getStaffBySemis(string $semisCode): array {
+        self::init();
+        $semisCode = trim($semisCode);
+        if (empty($semisCode)) {
+            return [];
+        }
+        $allStaff = self::all('school_staff');
+        $schoolStaff = [];
+        foreach ($allStaff as $s) {
+            if (($s['semis_code'] ?? '') === $semisCode) {
+                $schoolStaff[] = $s;
+            }
+        }
+        return $schoolStaff;
+    }
+
+    /**
+     * Recalculate teaching & non-teaching counts from school_staff.csv
+     * and update schools.csv automatically.
+     */
+    public static function syncSchoolStaffCounts(string $semisCode): bool {
+        self::init();
+        $semisCode = trim($semisCode);
+        if (empty($semisCode)) {
+            return false;
+        }
+
+        $staff = self::getStaffBySemis($semisCode);
+        $teachingCount = 0;
+        $nonTeachingCount = 0;
+
+        foreach ($staff as $m) {
+            $type = strtolower(trim($m['staff_type'] ?? ''));
+            if ($type === 'teaching' || str_contains($type, 'teach')) {
+                $teachingCount++;
+            } else {
+                $nonTeachingCount++;
+            }
+        }
+
+        return self::update('schools', 'semis_code', $semisCode, [
+            'teachers'     => (string)$teachingCount,
+            'non_teaching' => (string)$nonTeachingCount,
+        ]);
+    }
+
+    /**
+     * Calculates data completion percentage & missing fields for a school profile.
+     * Evaluates identity, leadership, enrollment breakdown, facilities, infrastructure & staff registration.
+     */
+    public static function calculateSchoolProfileCompletion(string $semisCode): array {
+        self::init();
+        $school = self::find('schools', 'semis_code', $semisCode);
+        if (!$school) {
+            return [
+                'percentage'       => 0,
+                'total_fields'     => 0,
+                'completed_fields' => 0,
+                'missing_fields'   => [],
+                'status_label'     => 'Unknown School',
+            ];
+        }
+
+        $staff = self::getStaffBySemis($semisCode);
+        $staffCount = count($staff);
+        $declaredTeachers = (int)($school['teachers'] ?? 0);
+
+        $checklist = [
+            // Basic Identity & Location
+            [
+                'key'         => 'school_name',
+                'label'       => 'Official School Name',
+                'category'    => 'Institutional Identity',
+                'importance'  => 'Critical',
+                'description' => 'Official full name as registered in SELD directory',
+                'valid'       => !empty(trim($school['school_name'] ?? '')),
+            ],
+            [
+                'key'         => 'taluka',
+                'label'       => 'Taluka Sub-division',
+                'category'    => 'Institutional Identity',
+                'importance'  => 'Critical',
+                'description' => 'Taluka jurisdiction assignment',
+                'valid'       => !empty(trim($school['taluka'] ?? '')),
+            ],
+            [
+                'key'         => 'address',
+                'label'       => 'Physical Location / Address',
+                'category'    => 'Institutional Identity',
+                'importance'  => 'High',
+                'description' => 'Complete street/village postal location',
+                'valid'       => !empty(trim($school['address'] ?? '')),
+            ],
+            [
+                'key'         => 'phone',
+                'label'       => 'Official Contact Phone',
+                'category'    => 'Institutional Identity',
+                'importance'  => 'High',
+                'description' => 'Working mobile/landline number for school communication',
+                'valid'       => !empty(trim($school['phone'] ?? '')),
+            ],
+
+            // Leadership
+            [
+                'key'         => 'head_master',
+                'label'       => 'Head Master / Mistress Name',
+                'category'    => 'Leadership',
+                'importance'  => 'Critical',
+                'description' => 'Full name of appointed institutional head',
+                'valid'       => !empty(trim($school['head_master'] ?? '')),
+            ],
+            [
+                'key'         => 'cnic',
+                'label'       => 'Head Master CNIC Number',
+                'category'    => 'Leadership',
+                'importance'  => 'Critical',
+                'description' => '13-digit valid CNIC (tied to portal login ID)',
+                'valid'       => strlen(self::normalizeCnic($school['cnic'] ?? '')) === 13,
+            ],
+
+            // Enrollment Breakdown
+            [
+                'key'         => 'enrollment_breakdown',
+                'label'       => 'Gender-wise Enrollment Breakdown',
+                'category'    => 'Student Demographics',
+                'importance'  => 'High',
+                'description' => 'Distinct Boys & Girls student counts submitted',
+                'valid'       => (isset($school['enrollment_boys']) && isset($school['enrollment_girls']) && ((int)$school['enrollment_boys'] > 0 || (int)$school['enrollment_girls'] > 0 || (int)($school['enrollment'] ?? 0) > 0)),
+            ],
+
+            // Core Utilities & Physical Assets
+            [
+                'key'         => 'facility_boundary_wall',
+                'label'       => 'Boundary Wall Condition',
+                'category'    => 'Core Facilities',
+                'importance'  => 'High',
+                'description' => 'Perimeter wall status verified',
+                'valid'       => !empty(trim($school['facility_boundary_wall'] ?? '')) && !in_array(strtolower(trim($school['facility_boundary_wall'])), ['none', 'unavailable']),
+            ],
+            [
+                'key'         => 'facility_electricity',
+                'label'       => 'Electricity / Power Provision',
+                'category'    => 'Core Facilities',
+                'importance'  => 'High',
+                'description' => 'Grid or Solar power availability recorded',
+                'valid'       => !empty(trim($school['facility_electricity'] ?? '')) && !in_array(strtolower(trim($school['facility_electricity'])), ['none', 'unavailable']),
+            ],
+            [
+                'key'         => 'facility_water',
+                'label'       => 'Clean Drinking Water Source',
+                'category'    => 'Core Facilities',
+                'importance'  => 'High',
+                'description' => 'Functional drinking water source recorded',
+                'valid'       => !empty(trim($school['facility_water'] ?? '')) && !in_array(strtolower(trim($school['facility_water'])), ['none', 'unavailable']),
+            ],
+            [
+                'key'         => 'facility_toilets',
+                'label'       => 'Sanitation / Toilet Blocks',
+                'category'    => 'Core Facilities',
+                'importance'  => 'High',
+                'description' => 'Functional student sanitation blocks',
+                'valid'       => !empty(trim($school['facility_toilets'] ?? '')) && !in_array(strtolower(trim($school['facility_toilets'])), ['none', 'unavailable']),
+            ],
+            [
+                'key'         => 'facility_internet',
+                'label'       => 'Digital Connectivity / Internet',
+                'category'    => 'Core Facilities',
+                'importance'  => 'Medium',
+                'description' => 'Broadband/4G/Mobile network status',
+                'valid'       => !empty(trim($school['facility_internet'] ?? '')) && !in_array(strtolower(trim($school['facility_internet'])), ['none', 'unavailable']),
+            ],
+
+            // Extended Infrastructure Assessment
+            [
+                'key'         => 'building_structure',
+                'label'       => 'Building Structure Safety Assessment',
+                'category'    => 'Safety & Risk Assessment',
+                'importance'  => 'Critical',
+                'description' => 'Classroom structural integrity recorded',
+                'valid'       => !empty(trim($school['building_structure'] ?? '')) && strtolower(trim($school['building_structure'])) !== 'unknown',
+            ],
+            [
+                'key'         => 'drainage_sewerage',
+                'label'       => 'Drainage & Sewerage System',
+                'category'    => 'Safety & Risk Assessment',
+                'importance'  => 'Medium',
+                'description' => 'Rainwater & wastewater disposal status',
+                'valid'       => !empty(trim($school['drainage_sewerage'] ?? '')),
+            ],
+            [
+                'key'         => 'flood_prone',
+                'label'       => 'Flood / Disaster Vulnerability Status',
+                'category'    => 'Safety & Risk Assessment',
+                'importance'  => 'High',
+                'description' => 'Low-lying flood vulnerability declared',
+                'valid'       => !empty(trim($school['flood_prone'] ?? '')),
+            ],
+            [
+                'key'         => 'furniture_condition',
+                'label'       => 'Student Furniture & Desks Adequacy',
+                'category'    => 'Safety & Risk Assessment',
+                'importance'  => 'Medium',
+                'description' => 'Desks & benches sufficiency status',
+                'valid'       => !empty(trim($school['furniture_condition'] ?? '')),
+            ],
+
+            // Staff Registration
+            [
+                'key'         => 'staff_roster',
+                'label'       => 'Individual Staff Members Registered',
+                'category'    => 'Staff HR Data',
+                'importance'  => 'Critical',
+                'description' => 'Teaching & non-teaching staff entries with CNIC and Personal No in Staff Directory',
+                'valid'       => $staffCount > 0,
+            ],
+        ];
+
+        $total = count($checklist);
+        $completed = 0;
+        $missing = [];
+
+        foreach ($checklist as $item) {
+            if ($item['valid']) {
+                $completed++;
+            } else {
+                $missing[] = $item;
+            }
+        }
+
+        $percentage = round(($completed / $total) * 100);
+
+        $statusLabel = 'Complete';
+        $statusColor = 'success';
+        if ($percentage < 60) {
+            $statusLabel = 'Critical Deficit';
+            $statusColor = 'danger';
+        } elseif ($percentage < 85) {
+            $statusLabel = 'Incomplete';
+            $statusColor = 'warning';
+        } elseif ($percentage < 100) {
+            $statusLabel = 'Near Complete';
+            $statusColor = 'primary';
+        }
+
+        return [
+            'percentage'       => $percentage,
+            'total_fields'     => $total,
+            'completed_fields' => $completed,
+            'missing_count'    => count($missing),
+            'missing_fields'   => $missing,
+            'status_label'     => $statusLabel,
+            'status_color'     => $statusColor,
+            'staff_count'      => $staffCount,
+            'declared_teachers'=> $declaredTeachers,
+        ];
     }
 }
 

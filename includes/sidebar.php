@@ -84,7 +84,7 @@ function sidebar_link_class(string $page, string $active): string {
 
     <!-- Teachers & Staff -->
     <div class="px-2 pt-3 pb-1 sidebar-group-title text-white/40">Teachers &amp; Staff</div>
-    <a href="#" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded text-white/80 text-sm hover:text-white opacity-60 cursor-not-allowed">
+    <a href="<?= $base ?>staff.php" class="<?= sidebar_link_class('staff', $active_page) ?>">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
         <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
         <circle cx="12" cy="7" r="4"/>

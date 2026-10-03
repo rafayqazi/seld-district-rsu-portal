@@ -101,8 +101,8 @@ When a new page is added, update the appropriate sidebar component (`includes/si
 ```
 
 ### Active Pages Registry
-- **Admin Portal:** `'dashboard'`, `'schools'`, `'school-profile'`, `'at-risk-schools'`, `'complaints'`, `'settings'`
-- **School Portal:** `'dashboard'`, `'profile'`, `'at-risk'`, `'complaints'`, `'settings'`
+- **Admin Portal:** `'dashboard'`, `'schools'`, `'school-profile'`, `'at-risk-schools'`, `'staff'`, `'complaints'`, `'settings'`
+- **School Portal:** `'dashboard'`, `'profile'`, `'staff'`, `'at-risk'`, `'complaints'`, `'settings'`
 
 > **⚠️ MANDATORY:** Whenever you add/remove a page, column, or feature, update BOTH this file AND `AGENTS.md` (Revision History). This is enforced to keep future AI agents in sync with the codebase.
 
@@ -180,8 +180,26 @@ $talukas = ExcelDB::getTalukas(true); // active only
 
 - **Engine:** `includes/excel_db.php` (`ExcelDB` static class)
 - **Storage:** `/data/*.csv` protected by `.htaccess`
-- **Active Tables:** `schools`, `school_risks`, `users`, `settings`, `talukas`, `complaints`, `complaint_replies`
+- **Active Tables:** `schools`, `school_staff`, `school_risks`, `users`, `settings`, `talukas`, `complaints`, `complaint_replies`
 - **Deprecated (never read/write):** `students`, `attendance`, `at_risk`
+
+### School Staff Table — Key Columns (`school_staff.csv`)
+| Column | Description |
+|---|---|
+| `id` | Unique auto-increment record ID |
+| `semis_code` | Linked school SEMIS code |
+| `personal_no` | 8-digit official SELD Employee ID (e.g. 10482910) |
+| `full_name` | Full official employee name |
+| `cnic` | 13-digit verified CNIC (e.g. 41302-XXXXXXX-X) |
+| `gender` | Male / Female |
+| `staff_type` | Teaching / Non-Teaching |
+| `designation` | Official cadre (PST, JEST, ECT, HST, SS, HM, Junior Clerk, Lab Assistant, Peon, etc.) |
+| `bps_scale` | Pay scale (BPS-01 through BPS-19) |
+| `qualification_academic` | Matriculation through PhD |
+| `qualification_professional` | B.Ed, M.Ed, PTC, CT, IT Diploma, None |
+| `contact_phone` | Mobile phone number |
+| `appointment_date` | Date of government appointment |
+| `status` | Active / On Leave / Transferred / Deputation |
 
 ### Schools Table — Key Columns
 | Column | Notes |

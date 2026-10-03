@@ -288,6 +288,10 @@ foreach ($schoolComplaints as $cmp) {
 }
 // Recent 3 tickets for preview
 $cmp_recent = array_slice($schoolComplaints, 0, 3);
+
+// ─── Profile Data Completion & Missing Information Audit ─────────────────────
+$completion = ExcelDB::calculateSchoolProfileCompletion($semis);
+$schoolStaff = ExcelDB::getStaffBySemis($semis);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -296,9 +300,9 @@ $cmp_recent = array_slice($schoolComplaints, 0, 3);
 <title><?= e($school['school_name'] ?? 'School Profile') ?> — <?= APP_NAME ?></title>
 <meta name="description" content="Detailed school profile for District RSU monitoring portal"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
 <script src="https://cdn.tailwindcss.com"></script>
-<script>tailwind.config={theme:{extend:{colors:{primary:'#123B63',primaryDark:'#0B2946',secondary:'#0F766E',surface:'#FFFFFF',background:'#F5F7FA',textMain:'#172033',muted:'#64748B',border:'#E2E8F0',success:'#15803D',warning:'#D97706',danger:'#DC2626'},fontFamily:{sans:['Inter','system-ui','sans-serif']}}}}</script>
+<script>tailwind.config={theme:{extend:{colors:{primary:'#123B63',primaryDark:'#0B2946',secondary:'#0F766E',surface:'#FFFFFF',background:'#F5F7FA',textMain:'#172033',muted:'#64748B',border:'#E2E8F0',success:'#15803D',warning:'#D97706',danger:'#DC2626'},fontFamily:{sans:['Inter','system-ui','sans-serif'],mono:['JetBrains Mono','monospace']}}}}</script>
 <style>
 body{font-family:'Inter',system-ui,sans-serif;}
 .sidebar-link{transition:background .15s;}.sidebar-link:hover{background:rgba(255,255,255,.08);}.sidebar-link.active{background:rgba(255,255,255,.14);border-left:3px solid #0F766E;}
@@ -311,6 +315,13 @@ body{font-family:'Inter',system-ui,sans-serif;}
 .facility-available{background:#DCFCE7;color:#15803D;}.facility-partial{background:#FEF3C7;color:#92400E;}.facility-unavailable{background:#FEE2E2;color:#991B1B;}
 .table-row:hover{background:#F8FAFC;}
 #sidebar{transition:transform .25s cubic-bezier(.4,0,.2,1);}#overlay{transition:opacity .25s;}
+
+@media print {
+  body * { visibility: hidden !important; }
+  #deficit-notice-printable, #deficit-notice-printable * { visibility: visible !important; }
+  #deficit-notice-printable { position: fixed; left: 0; top: 0; width: 100%; height: 100%; margin: 0; padding: 24px; background: #fff !important; z-index: 999999; }
+  .no-print { display: none !important; }
+}
 </style>
 </head>
 <body class="bg-background text-textMain min-h-screen flex flex-col">
@@ -429,15 +440,23 @@ body{font-family:'Inter',system-ui,sans-serif;}
         <section class="bg-surface border border-border rounded-lg shadow-sm">
           <div class="px-5 py-3.5 border-b border-border flex items-center justify-between">
             <h2 class="text-sm font-semibold text-textMain">Teaching &amp; Staff</h2>
-            <button onclick="openEditStaffModal()" class="text-xs text-primary hover:text-primaryDark flex items-center gap-1 font-medium transition group">
-              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="group-hover:scale-110 transition-transform"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-              <span>Edit Staff</span>
-            </button>
+            <div class="flex items-center gap-2">
+              <a href="<?= BASE_URL ?>/admin/staff.php?semis=<?= urlencode($semis) ?>" class="text-[11px] text-primary font-bold hover:underline">
+                Roster (<?= count($schoolStaff) ?>) &rarr;
+              </a>
+              <button onclick="openEditStaffModal()" class="text-xs text-primary hover:text-primaryDark flex items-center gap-1 font-medium transition group">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="group-hover:scale-110 transition-transform"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                <span>Edit</span>
+              </button>
+            </div>
           </div>
           <div class="p-5 space-y-3">
             <div class="flex justify-between items-center"><span class="text-sm text-muted">Teaching Staff</span><span class="text-xl font-bold text-primary"><?= e(!empty($school['teachers']) ? $school['teachers'] : '8') ?></span></div>
             <div class="flex justify-between items-center"><span class="text-sm text-muted">Non-teaching Staff</span><span class="text-xl font-bold text-muted"><?= e(!empty($school['non_teaching']) ? $school['non_teaching'] : '2') ?></span></div>
             <div class="pt-3 border-t border-border flex justify-between items-center"><span class="text-sm font-semibold text-textMain">Student-Teacher Ratio</span><span class="text-lg font-bold text-textMain">1:<?= !empty($school['teachers']) && (int)$school['teachers'] > 0 ? round($totalEnrollment / (int)$school['teachers']) : '28' ?></span></div>
+            <a href="<?= BASE_URL ?>/admin/staff.php?semis=<?= urlencode($semis) ?>" class="block text-center text-xs font-semibold py-1.5 px-2.5 rounded bg-slate-50 border border-border hover:bg-slate-100 text-primary transition mt-1">
+              View All <?= count($schoolStaff) ?> Registered Staff in HR Directory &rarr;
+            </a>
           </div>
         </section>
       </div>
@@ -520,6 +539,80 @@ body{font-family:'Inter',system-ui,sans-serif;}
 
     <!-- Right Column -->
     <div class="space-y-5">
+
+      <!-- ── Profile Data Completion & Missing Information Progress Card ──── -->
+      <section class="bg-surface border border-border rounded-xl shadow-sm overflow-hidden">
+        <div class="px-5 py-4 border-b border-border bg-gradient-to-r from-slate-50 to-surface flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            </div>
+            <div>
+              <h2 class="text-sm font-bold text-textMain">Profile Data Audit</h2>
+              <p class="text-[10px] text-muted">SELD Compliance Score</p>
+            </div>
+          </div>
+          <span class="text-xs font-mono font-bold px-2.5 py-1 rounded-full <?= $completion['percentage'] === 100 ? 'bg-emerald-100 text-emerald-800' : ($completion['percentage'] >= 75 ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800') ?>">
+            <?= $completion['percentage'] ?>% Complete
+          </span>
+        </div>
+
+        <div class="p-5 space-y-4 text-xs">
+          <!-- Visual Progress Bar -->
+          <div>
+            <div class="flex justify-between items-center mb-1.5 text-[11px]">
+              <span class="font-semibold text-textMain">Record Verification</span>
+              <span class="font-mono text-muted"><?= $completion['completed_fields'] ?> of <?= $completion['total_fields'] ?> Fields</span>
+            </div>
+            <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+              <div class="h-full rounded-full transition-all duration-500 <?= $completion['percentage'] === 100 ? 'bg-emerald-600' : ($completion['percentage'] >= 75 ? 'bg-amber-500' : 'bg-red-500') ?>" style="width: <?= $completion['percentage'] ?>%;"></div>
+            </div>
+          </div>
+
+          <!-- Missing Fields Status Section -->
+          <?php if ($completion['missing_count'] > 0): ?>
+            <div class="p-3.5 bg-amber-50/60 border border-amber-200/80 rounded-lg space-y-2">
+              <div class="flex items-center justify-between text-amber-900 font-bold text-xs">
+                <span class="flex items-center gap-1.5">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  <?= $completion['missing_count'] ?> Incomplete Data Points
+                </span>
+                <span class="text-[10px] font-normal text-amber-700 font-mono">Action Required</span>
+              </div>
+              <ul class="space-y-1.5 mt-2">
+                <?php foreach (array_slice($completion['missing_fields'], 0, 4) as $mf): ?>
+                  <li class="flex items-start gap-1.5 text-[11px] text-amber-950">
+                    <span class="text-danger mt-0.5">&bull;</span>
+                    <span class="font-medium"><?= e($mf['label']) ?></span>
+                    <span class="text-[9px] px-1 py-0.2 rounded bg-amber-200/70 text-amber-900 font-semibold ml-auto"><?= e($mf['category']) ?></span>
+                  </li>
+                <?php endforeach; ?>
+                <?php if ($completion['missing_count'] > 4): ?>
+                  <li class="text-[10px] text-amber-700 italic pt-0.5">+ <?= $completion['missing_count'] - 4 ?> more missing fields...</li>
+                <?php endif; ?>
+              </ul>
+            </div>
+
+            <!-- PDF Deficit Notice Button -->
+            <button onclick="openDeficitNoticeModal()" class="w-full text-xs font-semibold py-2.5 px-3 rounded-lg bg-red-600 hover:bg-red-700 text-white transition flex items-center justify-center gap-2 shadow-xs">
+              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              <span>Generate Official Deficit Notice (PDF)</span>
+            </button>
+          <?php else: ?>
+            <div class="p-3.5 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-900 flex items-center gap-2.5">
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="text-emerald-700 flex-shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <div>
+                <div class="font-bold text-xs">All Profile Data Complete &amp; Verified</div>
+                <div class="text-[10px] text-emerald-700">Identity, facilities, staff roster &amp; demographics fully recorded.</div>
+              </div>
+            </div>
+            <button onclick="openDeficitNoticeModal()" class="w-full text-xs font-semibold py-2 px-3 rounded-lg border border-border bg-slate-50 hover:bg-slate-100 text-slate-700 transition flex items-center justify-center gap-1.5">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              <span>View Official Institutional Profile Report</span>
+            </button>
+          <?php endif; ?>
+        </div>
+      </section>
 
       <!-- School Portal Access & HM Credentials Card -->
       <section class="bg-surface border border-border rounded-lg p-5 shadow-sm">
@@ -1212,11 +1305,158 @@ body{font-family:'Inter',system-ui,sans-serif;}
   </div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     OFFICIAL SELD DEFICIT NOTICE / PDF COMPLIANCE REPORT MODAL
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div id="deficit-notice-modal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-3 sm:p-6 backdrop-blur-xs">
+  <div class="bg-surface border border-border rounded-2xl max-w-3xl w-full p-6 shadow-2xl relative animate-in fade-in zoom-in duration-150 max-h-[95vh] overflow-y-auto">
+    <!-- Modal Toolbar (Hidden in Print) -->
+    <div class="flex items-center justify-between pb-3.5 border-b border-border mb-4 no-print sticky top-0 bg-surface z-10">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg bg-red-100 text-red-800 flex items-center justify-center font-bold">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </div>
+        <div>
+          <h3 class="text-sm font-bold text-textMain">Official Data Deficit Notice &amp; Compliance Report</h3>
+          <p class="text-xs text-muted">Print-ready SELD official notice for Head Master compliance</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="window.print()" class="btn-primary px-4 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          <span>Print / Save PDF</span>
+        </button>
+        <button onclick="closeDeficitNoticeModal()" class="text-muted hover:text-textMain text-xl leading-none px-2 py-1 rounded hover:bg-slate-100">&times;</button>
+      </div>
+    </div>
+
+    <!-- ── Print-Ready Official Letterhead Document ── -->
+    <div id="deficit-notice-printable" class="bg-white text-slate-900 p-6 sm:p-8 rounded-xl border border-slate-200 space-y-6 font-sans">
+      <!-- Official Header -->
+      <div class="text-center pb-4 border-b-2 border-slate-800">
+        <div class="text-xs tracking-widest uppercase font-bold text-slate-700">GOVERNMENT OF SINDH</div>
+        <div class="text-base sm:text-lg font-extrabold text-slate-900 uppercase tracking-tight mt-0.5">SCHOOL EDUCATION &amp; LITERACY DEPARTMENT</div>
+        <div class="text-xs font-semibold text-slate-700">DISTRICT REFORM SUPPORT UNIT (RSU) &bull; TANDO ALLAHYAR</div>
+        <div class="text-[11px] text-slate-500 mt-1">LSU/RSU Education Portal &bull; Institutional Quality &amp; Compliance Wing</div>
+      </div>
+
+      <!-- Reference & Date -->
+      <div class="flex justify-between items-center text-xs font-mono pt-1">
+        <div>
+          <strong>Ref No:</strong> SELD/RSU-TAY/DEF-AUDIT/<?= date('Y') ?>/<?= e($semis) ?>
+        </div>
+        <div>
+          <strong>Date:</strong> <?= date('d F Y') ?>
+        </div>
+      </div>
+
+      <!-- Addressee -->
+      <div class="text-xs space-y-1 bg-slate-50 p-3.5 rounded-lg border border-slate-200">
+        <div><strong>To:</strong> The Head Master / Head Mistress,</div>
+        <div class="text-sm font-bold text-slate-900"><?= e($school['school_name'] ?? '') ?></div>
+        <div class="flex items-center gap-4 text-slate-600 font-mono text-[11px]">
+          <span>SEMIS Code: <strong><?= e($semis) ?></strong></span>
+          <span>&bull;</span>
+          <span>Taluka: <strong><?= e($school['taluka'] ?? '') ?></strong></span>
+          <span>&bull;</span>
+          <span>Head: <strong><?= e($school['head_master'] ?? 'HM') ?></strong></span>
+        </div>
+      </div>
+
+      <!-- Subject -->
+      <div class="text-xs border-b border-slate-300 pb-2">
+        <span class="font-bold uppercase tracking-wide text-slate-900">SUBJECT: </span>
+        <strong class="text-slate-900">
+          <?= $completion['percentage'] < 100 ? 'URGENT DIRECTIVE: SUBMISSION OF MISSING INSTITUTIONAL & STAFF PROFILE INFORMATION' : 'INSTITUTIONAL RECORD VERIFICATION CERTIFICATE' ?>
+        </strong>
+      </div>
+
+      <!-- Letter Body -->
+      <div class="text-xs leading-relaxed space-y-3 text-slate-800 text-justify">
+        <p>
+          In accordance with the mandatory digital monitoring and reporting directives of the School Education &amp; Literacy Department (SELD), Government of Sindh, an official institutional data audit was performed for your school on the <strong>District RSU Portal</strong>.
+        </p>
+        <p>
+          The official audit results indicate an overall profile completeness rate of <strong class="text-slate-900 text-sm"><?= $completion['percentage'] ?>%</strong> (<?= $completion['completed_fields'] ?> of <?= $completion['total_fields'] ?> audit criteria verified).
+          <?php if ($completion['missing_count'] > 0): ?>
+            The following <strong class="text-red-700"><?= $completion['missing_count'] ?> critical information items</strong> remain missing or incomplete in the portal database:
+          <?php else: ?>
+            All mandatory identity, facility, infrastructure assessment, and staff roster data points have been successfully filed and verified.
+          <?php endif; ?>
+        </p>
+      </div>
+
+      <!-- Missing Fields Checklist Table -->
+      <?php if ($completion['missing_count'] > 0): ?>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-[11px] border border-slate-300">
+            <thead>
+              <tr class="bg-slate-100 text-slate-800 font-bold uppercase tracking-wider border-b border-slate-300">
+                <th class="py-2 px-2.5 border-r border-slate-300 text-center w-8">#</th>
+                <th class="py-2 px-3 border-r border-slate-300">Audit Category</th>
+                <th class="py-2 px-3 border-r border-slate-300">Missing / Deficit Information</th>
+                <th class="py-2 px-2.5 border-r border-slate-300 text-center w-20">Priority</th>
+                <th class="py-2 px-3">Directive for Head Master</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200">
+              <?php foreach ($completion['missing_fields'] as $idx => $item): ?>
+                <tr>
+                  <td class="py-2 px-2.5 border-r border-slate-300 text-center font-mono font-bold"><?= $idx + 1 ?></td>
+                  <td class="py-2 px-3 border-r border-slate-300 font-semibold text-slate-800"><?= e($item['category']) ?></td>
+                  <td class="py-2 px-3 border-r border-slate-300">
+                    <div class="font-bold text-slate-900"><?= e($item['label']) ?></div>
+                    <div class="text-[10px] text-slate-600"><?= e($item['description']) ?></div>
+                  </td>
+                  <td class="py-2 px-2.5 border-r border-slate-300 text-center font-bold">
+                    <span class="px-1.5 py-0.5 rounded text-[10px] <?= $item['importance'] === 'Critical' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800' ?>">
+                      <?= e($item['importance']) ?>
+                    </span>
+                  </td>
+                  <td class="py-2 px-3 text-slate-700">
+                    Log in to School Portal &bull; update &amp; save required information immediately.
+                  </td>
+                </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Compliance Directive -->
+        <div class="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-950 font-medium leading-relaxed">
+          <strong>COMPLIANCE INSTRUCTION:</strong> You are hereby instructed to log in to the School Head Portal using your official CNIC number and update the above missing information within <strong>seven (07) calendar days</strong> from the receipt of this notice. Non-compliance will result in notice escalation to TEVO / DEO office.
+        </div>
+      <?php endif; ?>
+
+      <!-- Signature Blocks -->
+      <div class="pt-8 grid grid-cols-2 gap-8 text-center text-xs">
+        <div class="border-t border-slate-400 pt-2">
+          <div class="font-bold text-slate-900">District RSU Coordinator</div>
+          <div class="text-[11px] text-slate-600">Reform Support Unit (RSU), Tando Allahyar</div>
+          <div class="text-[10px] text-slate-500 font-mono mt-0.5">SELD &bull; Government of Sindh</div>
+        </div>
+        <div class="border-t border-slate-400 pt-2">
+          <div class="font-bold text-slate-900">District Education Officer (DEO)</div>
+          <div class="text-[11px] text-slate-600">School Education &amp; Literacy Department</div>
+          <div class="text-[10px] text-slate-500 font-mono mt-0.5">District Tando Allahyar</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 function openSidebar(){document.getElementById('sidebar').classList.remove('-translate-x-full');const o=document.getElementById('overlay');o.classList.remove('hidden');setTimeout(()=>o.classList.remove('opacity-0'),10);}
 function closeSidebar(){document.getElementById('sidebar').classList.add('-translate-x-full');const o=document.getElementById('overlay');o.classList.add('opacity-0');setTimeout(()=>o.classList.add('hidden'),250);}
 function toggleNotif(){document.getElementById('notif-dropdown').classList.toggle('hidden');}
 document.addEventListener('click',function(e){const b=document.getElementById('notif-btn');const d=document.getElementById('notif-dropdown');if(b&&d&&!b.contains(e.target)&&!d.contains(e.target))d.classList.add('hidden');});
+
+function openDeficitNoticeModal() {
+  document.getElementById('deficit-notice-modal').classList.remove('hidden');
+}
+function closeDeficitNoticeModal() {
+  document.getElementById('deficit-notice-modal').classList.add('hidden');
+}
 
 function openEditSchoolModal() {
   document.getElementById('edit-school-modal').classList.remove('hidden');
