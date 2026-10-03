@@ -442,7 +442,7 @@ body{font-family:'Inter',system-ui,sans-serif;}
           <?php 
             $cred = ExcelDB::getHeadMasterCredentials($s['semis_code'] ?? '');
           ?>
-          <tr class="table-row">
+          <tr class="table-row cursor-pointer hover:bg-slate-100/70 transition-colors" onclick="handleRowClick(event, '<?= BASE_URL ?>/admin/school-profile.php?semis=<?= urlencode($s['semis_code'] ?? '') ?>')" title="Click to open <?= e($s['school_name'] ?? '') ?> Profile">
             <td class="px-5 py-3 font-mono font-semibold text-primary"><?= e($s['semis_code'] ?? '') ?></td>
             <td class="px-4 py-3">
               <div class="font-medium text-textMain"><?= e($s['school_name'] ?? '') ?></div>
@@ -474,7 +474,7 @@ body{font-family:'Inter',system-ui,sans-serif;}
               <div class="text-[10px] text-muted font-mono"><?= number_format($b_cnt) ?>B / <?= number_format($g_cnt) ?>G</div>
             </td>
             <td class="px-4 py-3"><span class="status-badge <?= e($s['status_badge'] ?? 'badge-active') ?>"><?= e($s['status'] ?? 'Active') ?></span></td>
-            <td class="px-4 py-3 text-center">
+            <td class="px-4 py-3 text-center" onclick="event.stopPropagation()">
               <div class="flex items-center justify-center gap-1.5">
                 <a href="<?= BASE_URL ?>/admin/school-profile.php?semis=<?= urlencode($s['semis_code'] ?? '') ?>" class="btn-primary px-2 py-1 rounded text-xs" title="View Full Profile">Profile</a>
                 <button type="button" 
@@ -483,12 +483,12 @@ body{font-family:'Inter',system-ui,sans-serif;}
                         data-hm="<?= e($s['head_master'] ?? '') ?>"
                         data-cnic="<?= e($cred['cnic'] ?? $s['cnic'] ?? '') ?>"
                         data-pass="<?= e($cred['password_plain'] ?? '1122') ?>"
-                        onclick="openCredentialsModalFromBtn(this)" 
+                        onclick="event.stopPropagation(); openCredentialsModalFromBtn(this)" 
                         class="p-1 rounded text-emerald-700 hover:text-emerald-900 hover:bg-emerald-50 transition border border-emerald-200" 
                         title="View HM Portal Login & Password">
                   <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                 </button>
-                <button onclick="confirmDeleteSchool('<?= e($s['semis_code'] ?? '') ?>', '<?= e(addslashes($s['school_name'] ?? '')) ?>')" class="p-1 rounded text-muted hover:text-danger hover:bg-red-50 transition" title="Delete School">
+                <button onclick="event.stopPropagation(); confirmDeleteSchool('<?= e($s['semis_code'] ?? '') ?>', '<?= e(addslashes($s['school_name'] ?? '')) ?>')" class="p-1 rounded text-muted hover:text-danger hover:bg-red-50 transition" title="Delete School">
                   <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                 </button>
               </div>
@@ -1266,6 +1266,13 @@ function toggleCredPass(elemId, btn) {
     el.innerText = '••••••••';
     btn.innerText = 'Show';
   }
+}
+
+function handleRowClick(event, url) {
+  if (event.target.closest('button, a, input, select, textarea')) {
+    return;
+  }
+  window.location.href = url;
 }
 </script>
 </body>
