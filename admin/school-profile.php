@@ -80,6 +80,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         exit;
     } elseif (isset($_POST['update_school_profile'])) {
         $targetSemis = trim($_POST['target_semis'] ?? $semis);
+        $newSemis    = trim($_POST['semis_code'] ?? $targetSemis);
         $name    = trim($_POST['school_name'] ?? '');
         $hm      = trim($_POST['head_master'] ?? '');
         $cnic    = trim($_POST['cnic'] ?? '');
@@ -110,44 +111,104 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         $flood   = trim($_POST['flood_prone'] ?? 'No');
         $furn    = trim($_POST['furniture_condition'] ?? 'Adequate');
 
-        $badge = 'badge-active';
-        if ($status === 'Good') $badge = 'badge-good';
-        elseif ($status === 'Needs Attention') $badge = 'badge-attention';
-        elseif ($status === 'Not Reporting') $badge = 'badge-not-rep';
+        // Validate SEMIS Code if changed by Admin
+        if ($newSemis !== $targetSemis) {
+            if (empty($newSemis) || !ctype_digit($newSemis)) {
+                $notification = 'Invalid SEMIS Code. SEMIS Code must contain numerical digits only.';
+                $notification_type = 'danger';
+            } else {
+                $existing = ExcelDB::find('schools', 'semis_code', $newSemis);
+                if ($existing && ($existing['semis_code'] ?? '') !== $targetSemis) {
+                    $notification = 'SEMIS Code ' . htmlspecialchars($newSemis) . ' is already registered for another school (' . htmlspecialchars($existing['school_name'] ?? '') . ').';
+                    $notification_type = 'danger';
+                }
+            }
+        }
 
-        $updateData = [
-            'school_name'            => $name,
-            'head_master'            => $hm,
-            'cnic'                   => $cnic,
-            'phone'                  => $phone,
-            'address'                => $addr,
-            'taluka'                 => $taluka,
-            'level'                  => $level,
-            'gender'                 => $gender,
-            'enrollment'             => (string)$enroll,
-            'enrollment_boys'        => (string)$boys,
-            'enrollment_girls'       => (string)$girls,
-            'attendance_pct'         => $att,
-            'status'                 => $status,
-            'status_badge'           => $badge,
-            'classrooms'             => (string)$rooms,
-            'teachers'               => (string)$tchrs,
-            'non_teaching'           => (string)$nonTch,
-            'facility_electricity'   => $elec,
-            'facility_water'         => $water,
-            'facility_toilets'       => $toil,
-            'facility_boundary_wall' => $wall,
-            'facility_internet'      => $net,
-            'building_structure'     => $bldg,
-            'drainage_sewerage'      => $drain,
-            'flood_prone'            => $flood,
-            'furniture_condition'    => $furn,
-        ];
+        if (empty($notification)) {
+            $badge = 'badge-active';
+            if ($status === 'Good') $badge = 'badge-good';
+            elseif ($status === 'Needs Attention') $badge = 'badge-attention';
+            elseif ($status === 'Not Reporting') $badge = 'badge-not-rep';
 
-        ExcelDB::update('schools', 'semis_code', $targetSemis, $updateData);
-        ExcelDB::autoFlagSchoolRisks($targetSemis);
-        header('Location: ' . BASE_URL . '/admin/school-profile.php?semis=' . urlencode($targetSemis) . '&msg=updated');
-        exit;
+            $updateData = [
+                'semis_code'             => $newSemis,
+                'school_name'            => $name,
+                'head_master'            => $hm,
+                'cnic'                   => $cnic,
+                'phone'                  => $phone,
+                'address'                => $addr,
+                'taluka'                 => $taluka,
+                'level'                  => $level,
+                'gender'                 => $gender,
+                'enrollment'             => (string)$enroll,
+                'enrollment_boys'        => (string)$boys,
+                'enrollment_girls'       => (string)$girls,
+                'attendance_pct'         => $att,
+                'status'                 => $status,
+                'status_badge'           => $badge,
+                'classrooms'             => (string)$rooms,
+                'teachers'               => (string)$tchrs,
+                'non_teaching'           => (string)$nonTch,
+                'facility_electricity'   => $elec,
+                'facility_water'         => $water,
+                'facility_toilets'       => $toil,
+                'facility_boundary_wall' => $wall,
+                'facility_internet'      => $net,
+                'building_structure'     => $bldg,
+                'drainage_sewerage'      => $drain,
+                'flood_prone'            => $flood,
+                'furniture_condition'    => $furn,
+            ];
+
+            ExcelDB::update('schools', 'semis_code', $targetSemis, $updateData);
+
+            // If SEMIS Code changed, cascade to related tables
+            if ($newSemis !== $targetSemis) {
+                // 1. Update users.csv
+                $allUsers = ExcelDB::all('users');
+                $usersUpdated = false;
+                foreach ($allUsers as $idx => $u) {
+                    if (($u['school_semis'] ?? '') === $targetSemis) {
+                        $allUsers[$idx]['school_semis'] = $newSemis;
+                        $usersUpdated = true;
+                    }
+                }
+                if ($usersUpdated) {
+                    ExcelDB::writeTable('users', $allUsers);
+                }
+
+                // 2. Update school_risks.csv
+                $allRisks = ExcelDB::all('school_risks');
+                $risksUpdated = false;
+                foreach ($allRisks as $idx => $r) {
+                    if (($r['semis_code'] ?? '') === $targetSemis) {
+                        $allRisks[$idx]['semis_code'] = $newSemis;
+                        $risksUpdated = true;
+                    }
+                }
+                if ($risksUpdated) {
+                    ExcelDB::writeTable('school_risks', $allRisks);
+                }
+
+                // 3. Update complaints.csv
+                $allComplaints = ExcelDB::all('complaints');
+                $complaintsUpdated = false;
+                foreach ($allComplaints as $idx => $c) {
+                    if (($c['semis_code'] ?? '') === $targetSemis) {
+                        $allComplaints[$idx]['semis_code'] = $newSemis;
+                        $complaintsUpdated = true;
+                    }
+                }
+                if ($complaintsUpdated) {
+                    ExcelDB::writeTable('complaints', $allComplaints);
+                }
+            }
+
+            ExcelDB::autoFlagSchoolRisks($newSemis);
+            header('Location: ' . BASE_URL . '/admin/school-profile.php?semis=' . urlencode($newSemis) . '&msg=updated');
+            exit;
+        }
     } elseif (isset($_POST['update_hm_password'])) {
         $targetSemis = trim($_POST['target_semis'] ?? $semis);
         $newPass     = trim($_POST['new_password'] ?? '');
@@ -199,6 +260,34 @@ $totalEnrollment = $boysEst + $girlsEst;
 
 $cleanAtt = (int)preg_replace('/[^0-9]/', '', $school['attendance_pct'] ?? '90');
 if ($cleanAtt <= 0) $cleanAtt = 90;
+
+// ─── School-specific Complaints Summary ──────────────────────────────────────
+$allComplaints = ExcelDB::all('complaints');
+$schoolComplaints = array_values(array_filter($allComplaints, function($c) use ($semis, $school) {
+    return ($c['semis_code'] ?? '') === $semis
+        || ($c['school_name'] ?? '') === ($school['school_name'] ?? '');
+}));
+
+// Sort by updated_at desc
+usort($schoolComplaints, function($a, $b) {
+    return strcmp($b['updated_at'] ?? $b['created_at'] ?? '', $a['updated_at'] ?? $a['created_at'] ?? '');
+});
+
+$cmp_total    = count($schoolComplaints);
+$cmp_active   = 0; // Pending + Under Review + In Progress
+$cmp_resolved = 0;
+$cmp_closed   = 0;
+$cmp_urgent   = 0;
+
+foreach ($schoolComplaints as $cmp) {
+    $st = strtolower($cmp['status'] ?? '');
+    if (in_array($st, ['pending', 'under review', 'in progress'])) $cmp_active++;
+    elseif ($st === 'resolved') $cmp_resolved++;
+    elseif ($st === 'closed')   $cmp_closed++;
+    if (strtolower($cmp['priority'] ?? '') === 'urgent') $cmp_urgent++;
+}
+// Recent 3 tickets for preview
+$cmp_recent = array_slice($schoolComplaints, 0, 3);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -502,6 +591,134 @@ body{font-family:'Inter',system-ui,sans-serif;}
           </a>
         </div>
       </section>
+
+      <!-- ── School Grievances & Complaints Summary ──────────────────────── -->
+      <section class="bg-surface border border-border rounded-lg shadow-sm overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-border flex items-center justify-between bg-gradient-to-r from-slate-50 to-surface">
+          <div class="flex items-center gap-2.5">
+            <div class="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+              </svg>
+            </div>
+            <div>
+              <h2 class="text-sm font-bold text-textMain leading-tight">Grievance & Complaints</h2>
+              <p class="text-[10px] text-muted">GRM Ticket Registry for this School</p>
+            </div>
+          </div>
+          <?php if ($cmp_total > 0): ?>
+            <span class="text-[11px] font-bold text-white bg-primary px-2 py-0.5 rounded-full">
+              <?= $cmp_total ?> Total
+            </span>
+          <?php else: ?>
+            <span class="text-[11px] text-muted bg-slate-100 px-2 py-0.5 rounded-full">No Tickets</span>
+          <?php endif; ?>
+        </div>
+
+        <!-- Stat Cards -->
+        <div class="grid grid-cols-2 gap-0 border-b border-border">
+          <!-- Active -->
+          <a href="<?= BASE_URL ?>/admin/complaints.php?search=<?= urlencode($semis) ?>&status=Pending"
+             class="group flex flex-col items-center justify-center p-4 border-r border-border hover:bg-red-50 transition-colors cursor-pointer">
+            <div class="text-3xl font-black <?= $cmp_active > 0 ? 'text-red-600' : 'text-slate-300' ?> group-hover:scale-105 transition-transform">
+              <?= $cmp_active ?>
+            </div>
+            <div class="text-[11px] font-semibold mt-1 <?= $cmp_active > 0 ? 'text-red-500' : 'text-muted' ?>">Active</div>
+            <?php if ($cmp_active > 0): ?>
+              <span class="text-[9px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full mt-1 font-bold animate-pulse">Needs Action</span>
+            <?php else: ?>
+              <span class="text-[9px] text-slate-300 mt-1">All clear</span>
+            <?php endif; ?>
+          </a>
+
+          <!-- Resolved -->
+          <a href="<?= BASE_URL ?>/admin/complaints.php?search=<?= urlencode($semis) ?>&status=Resolved"
+             class="group flex flex-col items-center justify-center p-4 hover:bg-emerald-50 transition-colors cursor-pointer">
+            <div class="text-3xl font-black <?= $cmp_resolved > 0 ? 'text-emerald-600' : 'text-slate-300' ?> group-hover:scale-105 transition-transform">
+              <?= $cmp_resolved ?>
+            </div>
+            <div class="text-[11px] font-semibold mt-1 <?= $cmp_resolved > 0 ? 'text-emerald-600' : 'text-muted' ?>">Resolved</div>
+            <span class="text-[9px] text-emerald-400 mt-1">Redressed</span>
+          </a>
+
+          <!-- Closed -->
+          <a href="<?= BASE_URL ?>/admin/complaints.php?search=<?= urlencode($semis) ?>&status=Closed"
+             class="group flex flex-col items-center justify-center p-4 border-r border-t border-border hover:bg-slate-50 transition-colors cursor-pointer">
+            <div class="text-3xl font-black <?= $cmp_closed > 0 ? 'text-slate-600' : 'text-slate-300' ?> group-hover:scale-105 transition-transform">
+              <?= $cmp_closed ?>
+            </div>
+            <div class="text-[11px] font-semibold mt-1 text-muted">Closed</div>
+            <span class="text-[9px] text-slate-400 mt-1">Archived</span>
+          </a>
+
+          <!-- Urgent -->
+          <a href="<?= BASE_URL ?>/admin/complaints.php?search=<?= urlencode($semis) ?>&priority=Urgent"
+             class="group flex flex-col items-center justify-center p-4 border-t border-border hover:bg-purple-50 transition-colors cursor-pointer">
+            <div class="text-3xl font-black <?= $cmp_urgent > 0 ? 'text-purple-700' : 'text-slate-300' ?> group-hover:scale-105 transition-transform">
+              <?= $cmp_urgent ?>
+            </div>
+            <div class="text-[11px] font-semibold mt-1 <?= $cmp_urgent > 0 ? 'text-purple-700' : 'text-muted' ?>">Urgent</div>
+            <?php if ($cmp_urgent > 0): ?>
+              <span class="text-[9px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full mt-1 font-bold">Priority!</span>
+            <?php else: ?>
+              <span class="text-[9px] text-slate-300 mt-1">None</span>
+            <?php endif; ?>
+          </a>
+        </div>
+
+        <!-- Recent Tickets Mini List -->
+        <?php if (!empty($cmp_recent)): ?>
+          <div class="p-3 space-y-2">
+            <div class="text-[10px] font-bold text-muted uppercase tracking-wider px-1">Recent Tickets</div>
+            <?php foreach ($cmp_recent as $tk):
+              $tkSt = strtolower($tk['status'] ?? '');
+              $tkBadge = match($tkSt) {
+                'pending'      => 'bg-red-100 text-red-700',
+                'under review','in progress' => 'bg-amber-100 text-amber-700',
+                'resolved'     => 'bg-emerald-100 text-emerald-700',
+                'closed'       => 'bg-slate-200 text-slate-600',
+                default        => 'bg-slate-100 text-slate-600'
+              };
+              $tkPr = strtolower($tk['priority'] ?? '');
+              $tkPrBadge = $tkPr === 'urgent' ? 'text-red-600 font-bold' : ($tkPr === 'high' ? 'text-amber-600 font-semibold' : 'text-slate-400');
+            ?>
+              <a href="<?= BASE_URL ?>/admin/complaint-details.php?ticket=<?= urlencode($tk['ticket_no'] ?? '') ?>"
+                 class="flex items-center gap-2.5 p-2.5 rounded-lg border border-border hover:border-primary hover:bg-primary/5 transition group">
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <span class="font-mono text-[10px] font-bold text-primary group-hover:underline"><?= e($tk['ticket_no'] ?? '') ?></span>
+                    <span class="text-[9px] px-1.5 py-0.5 rounded-full font-semibold <?= $tkBadge ?>"><?= e($tk['status'] ?? '') ?></span>
+                    <?php if ($tkPr === 'urgent' || $tkPr === 'high'): ?>
+                      <span class="text-[9px] <?= $tkPrBadge ?>">● <?= ucfirst($tkPr) ?></span>
+                    <?php endif; ?>
+                  </div>
+                  <div class="text-[10px] text-muted truncate mt-0.5"><?= e($tk['subject'] ?? 'No subject') ?></div>
+                </div>
+                <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="text-muted group-hover:text-primary flex-shrink-0 transition-colors">
+                  <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+              </a>
+            <?php endforeach; ?>
+
+            <a href="<?= BASE_URL ?>/admin/complaints.php?search=<?= urlencode($semis) ?>"
+               class="flex items-center justify-center gap-1.5 text-[11px] font-semibold text-primary hover:text-primaryDark py-2 mt-1 border border-dashed border-primary/30 hover:border-primary rounded-lg transition">
+              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+              View All <?= $cmp_total ?> Tickets for this School
+            </a>
+          </div>
+        <?php else: ?>
+          <div class="p-5 text-center">
+            <div class="w-10 h-10 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-2">
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+              </svg>
+            </div>
+            <p class="text-[11px] text-muted">No complaints filed by this school yet.</p>
+            <a href="<?= BASE_URL ?>/admin/complaints.php" class="text-[11px] text-primary hover:underline font-semibold mt-1 inline-block">Go to Complaints</a>
+          </div>
+        <?php endif; ?>
+      </section>
+
     </div>
   </div>
 </main>
@@ -512,29 +729,35 @@ body{font-family:'Inter',system-ui,sans-serif;}
 
 <!-- Edit School Modal -->
 <div id="edit-school-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
-  <div class="bg-surface border border-border rounded-lg max-w-xl w-full p-6 shadow-xl relative animate-in fade-in zoom-in duration-150 max-h-[90vh] overflow-y-auto">
-    <div class="flex items-center justify-between pb-3 border-b border-border mb-4">
-      <div>
-        <h3 class="text-sm font-bold text-textMain">Edit School Information</h3>
-        <p class="text-xs text-muted">Update administrative records, headmaster, and infrastructure</p>
+  <div class="bg-surface border border-border rounded-xl max-w-2xl w-full p-6 shadow-2xl relative animate-in fade-in zoom-in duration-150 max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between pb-3.5 border-b border-border mb-4 sticky top-0 bg-surface z-10">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </div>
+        <div>
+          <h3 class="text-sm font-bold text-textMain">Edit School Information</h3>
+          <p class="text-xs text-muted">Update administrative records, headmaster, enrollment & infrastructure</p>
+        </div>
       </div>
-      <button onclick="closeEditSchoolModal()" class="text-muted hover:text-textMain text-lg leading-none">&times;</button>
+      <button onclick="closeEditSchoolModal()" class="text-muted hover:text-textMain text-xl leading-none px-1.5 py-0.5 rounded hover:bg-slate-100">&times;</button>
     </div>
 
-    <form method="POST" class="space-y-3.5">
+    <form method="POST" class="space-y-4">
       <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>"/>
       <input type="hidden" name="update_school_profile" value="1"/>
       <input type="hidden" name="target_semis" value="<?= e($school['semis_code'] ?? '') ?>"/>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <!-- Basic Identity: SEMIS & Taluka -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
         <div>
-          <label class="block text-xs font-semibold text-textMain mb-1">SEMIS Code</label>
-          <input type="text" value="<?= e($school['semis_code'] ?? '') ?>" disabled class="w-full text-xs font-mono border border-border rounded px-3 py-1.5 bg-slate-100 text-muted cursor-not-allowed"/>
-          <span class="text-[10px] text-muted">SEMIS Code is fixed</span>
+          <label class="block text-xs font-semibold text-textMain mb-1">SEMIS Code <span class="text-danger">*</span></label>
+          <input type="text" name="semis_code" required pattern="[0-9]+" value="<?= e($school['semis_code'] ?? '') ?>" class="w-full text-xs font-mono font-bold border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:border-primary"/>
+          <span class="text-[10px] text-muted">Authorized District Admin can modify SEMIS Code</span>
         </div>
         <div>
           <label class="block text-xs font-semibold text-textMain mb-1">Taluka <span class="text-danger">*</span></label>
-          <select name="taluka" class="w-full text-xs border border-border rounded px-3 py-1.5 bg-background focus:outline-none focus:border-primary">
+          <select name="taluka" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:border-primary">
             <?php foreach ($available_talukas as $t): ?>
             <option value="<?= e($t) ?>" <?= ($school['taluka'] ?? '') === $t ? 'selected' : '' ?>><?= e($t) ?></option>
             <?php endforeach; ?>
@@ -542,99 +765,117 @@ body{font-family:'Inter',system-ui,sans-serif;}
         </div>
       </div>
 
+      <!-- School Name -->
       <div>
         <label class="block text-xs font-semibold text-textMain mb-1">School Full Name <span class="text-danger">*</span></label>
-        <input type="text" name="school_name" required value="<?= e($school['school_name'] ?? '') ?>" class="w-full text-xs border border-border rounded px-3 py-1.5 bg-background focus:outline-none focus:border-primary"/>
+        <input type="text" name="school_name" required value="<?= e($school['school_name'] ?? '') ?>" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:border-primary"/>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <!-- Head Master Leadership -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
         <div>
           <label class="block text-xs font-semibold text-textMain mb-1">Head Master Name</label>
-          <input type="text" name="head_master" value="<?= e($school['head_master'] ?? '') ?>" placeholder="e.g. Ghulam Mustafa Kumbhar" class="w-full text-xs border border-border rounded px-3 py-1.5 bg-background focus:outline-none focus:border-primary"/>
+          <input type="text" name="head_master" value="<?= e($school['head_master'] ?? '') ?>" placeholder="e.g. Ghulam Mustafa Kumbhar" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:border-primary"/>
         </div>
         <div>
           <label class="block text-xs font-semibold text-textMain mb-1">Head Master CNIC</label>
-          <input type="text" name="cnic" value="<?= e($school['cnic'] ?? '') ?>" placeholder="e.g. 41302-1234567-1" class="w-full text-xs font-mono border border-border rounded px-3 py-1.5 bg-background focus:outline-none focus:border-primary"/>
+          <input type="text" name="cnic" value="<?= e($school['cnic'] ?? '') ?>" placeholder="e.g. 41302-1234567-1" class="w-full text-xs font-mono border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:border-primary"/>
         </div>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <!-- Classification: Level & Gender -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
         <div>
-          <label class="block text-xs font-semibold text-textMain mb-1">Level</label>
-          <select name="level" class="w-full text-xs border border-border rounded px-3 py-1.5 bg-background focus:outline-none focus:border-primary">
+          <label class="block text-xs font-semibold text-textMain mb-1">School Level</label>
+          <select name="level" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:border-primary">
             <?php foreach (['Primary', 'Middle', 'Secondary', 'Higher Secondary'] as $lvl): ?>
             <option <?= ($school['level'] ?? '') === $lvl ? 'selected' : '' ?>><?= $lvl ?></option>
             <?php endforeach; ?>
           </select>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
-          <div>
-            <label class="block text-xs font-semibold text-textMain mb-1">Gender</label>
-            <select name="gender" class="w-full text-xs border border-border rounded px-3 py-1.5 bg-background focus:outline-none focus:border-primary">
-              <?php foreach (['Co-education', 'Boys', 'Girls'] as $g): ?>
-              <option <?= ($school['gender'] ?? '') === $g ? 'selected' : '' ?>><?= $g ?></option>
-              <?php endforeach; ?>
-            </select>
-          </div>
+        <div>
+          <label class="block text-xs font-semibold text-textMain mb-1">Gender Classification</label>
+          <select name="gender" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:border-primary">
+            <?php foreach (['Co-education', 'Boys', 'Girls'] as $g): ?>
+            <option <?= ($school['gender'] ?? '') === $g ? 'selected' : '' ?>><?= $g ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+      </div>
+
+      <!-- Enrollment Breakdown (Boys / Girls / Total) -->
+      <div class="p-3 bg-slate-50 border border-border rounded-lg space-y-2">
+        <div class="text-xs font-bold text-primary flex items-center justify-between">
+          <span>Student Enrollment Breakdown</span>
+          <span class="text-[10px] text-muted font-normal">Auto-calculates total</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label class="block text-xs font-semibold text-textMain mb-1 flex items-center justify-between">
               <span>Boys</span>
-              <span class="text-[10px] text-blue-700 font-bold">Boys</span>
+              <span class="text-[10px] text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded font-bold">Boys</span>
             </label>
-            <input type="number" id="admin_enrollment_boys" name="enrollment_boys" min="0" value="<?= (int)($school['enrollment_boys'] ?? $boysEst) ?>" class="w-full text-xs border border-border rounded px-3 py-1.5 bg-background focus:outline-none focus:border-primary font-mono" oninput="adminCalcEnrollment()"/>
+            <input type="number" id="admin_enrollment_boys" name="enrollment_boys" min="0" value="<?= (int)($school['enrollment_boys'] ?? $boysEst) ?>" class="w-full text-xs border border-border rounded-lg px-3 py-1.5 bg-background focus:outline-none focus:border-primary font-mono" oninput="adminCalcEnrollment()"/>
           </div>
           <div>
             <label class="block text-xs font-semibold text-textMain mb-1 flex items-center justify-between">
               <span>Girls</span>
-              <span class="text-[10px] text-pink-700 font-bold">Girls</span>
+              <span class="text-[10px] text-pink-700 bg-pink-50 px-1.5 py-0.5 rounded font-bold">Girls</span>
             </label>
-            <input type="number" id="admin_enrollment_girls" name="enrollment_girls" min="0" value="<?= (int)($school['enrollment_girls'] ?? $girlsEst) ?>" class="w-full text-xs border border-border rounded px-3 py-1.5 bg-background focus:outline-none focus:border-primary font-mono" oninput="adminCalcEnrollment()"/>
+            <input type="number" id="admin_enrollment_girls" name="enrollment_girls" min="0" value="<?= (int)($school['enrollment_girls'] ?? $girlsEst) ?>" class="w-full text-xs border border-border rounded-lg px-3 py-1.5 bg-background focus:outline-none focus:border-primary font-mono" oninput="adminCalcEnrollment()"/>
           </div>
           <div>
             <label class="block text-xs font-semibold text-textMain mb-1 flex items-center justify-between">
-              <span>Total</span>
-              <span class="text-[10px] text-emerald-700 font-bold">Auto</span>
+              <span>Total Enrolled</span>
+              <span class="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-bold">Auto</span>
             </label>
-            <input type="number" id="admin_total_enrollment" name="enrollment" min="0" readonly value="<?= (int)($school['enrollment'] ?? $totalEnrollment) ?>" class="w-full text-xs font-bold text-emerald-800 border border-emerald-300 rounded px-3 py-1.5 bg-emerald-50/50 cursor-not-allowed font-mono"/>
+            <input type="number" id="admin_total_enrollment" name="enrollment" min="0" readonly value="<?= (int)($school['enrollment'] ?? $totalEnrollment) ?>" class="w-full text-xs font-bold text-emerald-800 border border-emerald-300 rounded-lg px-3 py-1.5 bg-emerald-50/50 cursor-not-allowed font-mono"/>
           </div>
         </div>
+      </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <!-- Status & Contact -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
         <div>
-          <label class="block text-xs font-semibold text-textMain mb-1">Status</label>
-          <select name="status" class="w-full text-xs border border-border rounded px-3 py-1.5 bg-background focus:outline-none focus:border-primary">
+          <label class="block text-xs font-semibold text-textMain mb-1">Operational Status</label>
+          <select name="status" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:border-primary">
             <?php foreach (['Active', 'Good', 'Needs Attention', 'Not Reporting'] as $st): ?>
             <option <?= ($school['status'] ?? '') === $st ? 'selected' : '' ?>><?= $st ?></option>
             <?php endforeach; ?>
           </select>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-textMain mb-1">Official Phone</label>
-          <input type="text" name="phone" value="<?= e($school['phone'] ?? '') ?>" placeholder="+92 300 0000000" class="w-full text-xs border border-border rounded px-3 py-1.5 bg-background focus:outline-none focus:border-primary"/>
+          <label class="block text-xs font-semibold text-textMain mb-1">Official Contact Phone</label>
+          <input type="text" name="phone" value="<?= e($school['phone'] ?? '') ?>" placeholder="+92 300 0000000" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:border-primary"/>
         </div>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <!-- Staff Allocation & Rooms -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
         <div>
           <label class="block text-xs font-semibold text-textMain mb-1">Classrooms</label>
-          <input type="number" name="classrooms" min="0" value="<?= (int)($school['classrooms'] ?? 6) ?>" class="w-full text-xs border border-border rounded px-3 py-1.5 bg-background focus:outline-none focus:border-primary"/>
+          <input type="number" name="classrooms" min="0" value="<?= (int)($school['classrooms'] ?? 6) ?>" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:border-primary font-mono"/>
         </div>
         <div>
           <label class="block text-xs font-semibold text-textMain mb-1">Teaching Staff</label>
-          <input type="number" name="teachers" min="0" value="<?= (int)($school['teachers'] ?? 8) ?>" class="w-full text-xs border border-border rounded px-3 py-1.5 bg-background focus:outline-none focus:border-primary"/>
+          <input type="number" name="teachers" min="0" value="<?= (int)($school['teachers'] ?? 8) ?>" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:border-primary font-mono"/>
         </div>
         <div>
           <label class="block text-xs font-semibold text-textMain mb-1">Non-teaching Staff</label>
-          <input type="number" name="non_teaching" min="0" value="<?= (int)($school['non_teaching'] ?? 2) ?>" class="w-full text-xs border border-border rounded px-3 py-1.5 bg-background focus:outline-none focus:border-primary"/>
+          <input type="number" name="non_teaching" min="0" value="<?= (int)($school['non_teaching'] ?? 2) ?>" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:border-primary font-mono"/>
         </div>
       </div>
 
-      <div class="p-3 bg-slate-50 border border-border rounded space-y-3">
-        <div class="text-xs font-bold text-primary">School Facilities &amp; Utilities</div>
+      <!-- Basic Facilities & Utilities -->
+      <div class="p-3.5 bg-slate-50 border border-border rounded-lg space-y-3">
+        <div class="text-xs font-bold text-primary flex items-center gap-1.5">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+          School Facilities &amp; Basic Utilities
+        </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label class="block text-[11px] font-semibold text-textMain mb-1">Boundary Wall</label>
-            <select name="facility_boundary_wall" class="w-full text-xs border border-border rounded px-2.5 py-1.5 bg-surface focus:outline-none focus:border-primary">
+            <select name="facility_boundary_wall" class="w-full text-xs border border-border rounded-lg px-2.5 py-1.5 bg-surface focus:outline-none focus:border-primary">
               <?php foreach (['Secured & Complete', 'Partial / Damaged', 'Under Construction', 'Unavailable / None'] as $opt): ?>
               <option value="<?= e($opt) ?>" <?= ($school['facility_boundary_wall'] ?? 'Secured & Complete') === $opt ? 'selected' : '' ?>><?= e($opt) ?></option>
               <?php endforeach; ?>
@@ -642,7 +883,7 @@ body{font-family:'Inter',system-ui,sans-serif;}
           </div>
           <div>
             <label class="block text-[11px] font-semibold text-textMain mb-1">Electricity Supply</label>
-            <select name="facility_electricity" class="w-full text-xs border border-border rounded px-2.5 py-1.5 bg-surface focus:outline-none focus:border-primary">
+            <select name="facility_electricity" class="w-full text-xs border border-border rounded-lg px-2.5 py-1.5 bg-surface focus:outline-none focus:border-primary">
               <?php foreach (['Solar + Grid', 'Grid Only', 'Solar Only', 'Unavailable / None'] as $opt): ?>
               <option value="<?= e($opt) ?>" <?= ($school['facility_electricity'] ?? 'Solar + Grid') === $opt ? 'selected' : '' ?>><?= e($opt) ?></option>
               <?php endforeach; ?>
@@ -650,7 +891,7 @@ body{font-family:'Inter',system-ui,sans-serif;}
           </div>
           <div>
             <label class="block text-[11px] font-semibold text-textMain mb-1">Drinking Water</label>
-            <select name="facility_water" class="w-full text-xs border border-border rounded px-2.5 py-1.5 bg-surface focus:outline-none focus:border-primary">
+            <select name="facility_water" class="w-full text-xs border border-border rounded-lg px-2.5 py-1.5 bg-surface focus:outline-none focus:border-primary">
               <?php foreach (['Filtered Plant', 'Handpump / Tap', 'Water Supply Line', 'Unavailable / None'] as $opt): ?>
               <option value="<?= e($opt) ?>" <?= ($school['facility_water'] ?? 'Filtered Plant') === $opt ? 'selected' : '' ?>><?= e($opt) ?></option>
               <?php endforeach; ?>
@@ -658,7 +899,7 @@ body{font-family:'Inter',system-ui,sans-serif;}
           </div>
           <div>
             <label class="block text-[11px] font-semibold text-textMain mb-1">Toilets</label>
-            <select name="facility_toilets" class="w-full text-xs border border-border rounded px-2.5 py-1.5 bg-surface focus:outline-none focus:border-primary">
+            <select name="facility_toilets" class="w-full text-xs border border-border rounded-lg px-2.5 py-1.5 bg-surface focus:outline-none focus:border-primary">
               <?php foreach (['Functional Blocks', 'Needs Repair', 'Unavailable / None'] as $opt): ?>
               <option value="<?= e($opt) ?>" <?= ($school['facility_toilets'] ?? 'Functional Blocks') === $opt ? 'selected' : '' ?>><?= e($opt) ?></option>
               <?php endforeach; ?>
@@ -666,7 +907,7 @@ body{font-family:'Inter',system-ui,sans-serif;}
           </div>
           <div class="sm:col-span-2">
             <label class="block text-[11px] font-semibold text-textMain mb-1">Internet Connectivity</label>
-            <select name="facility_internet" class="w-full text-xs border border-border rounded px-2.5 py-1.5 bg-surface focus:outline-none focus:border-primary">
+            <select name="facility_internet" class="w-full text-xs border border-border rounded-lg px-2.5 py-1.5 bg-surface focus:outline-none focus:border-primary">
               <?php foreach (['Broadband / 4G', 'Partial / Mobile Data', 'Unavailable / None'] as $opt): ?>
               <option value="<?= e($opt) ?>" <?= ($school['facility_internet'] ?? 'Broadband / 4G') === $opt ? 'selected' : '' ?>><?= e($opt) ?></option>
               <?php endforeach; ?>
@@ -675,14 +916,64 @@ body{font-family:'Inter',system-ui,sans-serif;}
         </div>
       </div>
 
-      <div>
-        <label class="block text-xs font-semibold text-textMain mb-1">School Address</label>
-        <input type="text" name="address" value="<?= e($school['address'] ?? '') ?>" class="w-full text-xs border border-border rounded px-3 py-1.5 bg-background focus:outline-none focus:border-primary"/>
+      <!-- Extended Infrastructure Assessment -->
+      <div class="p-3.5 bg-amber-50/50 border border-amber-200/60 rounded-lg space-y-3">
+        <div class="text-xs font-bold text-amber-900 flex items-center justify-between">
+          <span class="flex items-center gap-1.5">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Extended Infrastructure &amp; Risk Assessment
+          </span>
+          <span class="text-[10px] text-amber-700 font-normal">Auto-flags to At-Risk Registry</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-semibold text-textMain mb-1">Building Structure Condition</label>
+            <select name="building_structure" class="w-full text-xs border border-border rounded-lg px-2.5 py-1.5 bg-surface focus:outline-none focus:border-primary">
+              <?php foreach (['Good Condition', 'Needs Repair', 'Dangerous / Unsafe', 'Condemned / Closed'] as $opt): ?>
+              <option value="<?= e($opt) ?>" <?= ($school['building_structure'] ?? 'Good Condition') === $opt ? 'selected' : '' ?>><?= e($opt) ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-textMain mb-1">Drainage &amp; Sewerage</label>
+            <select name="drainage_sewerage" class="w-full text-xs border border-border rounded-lg px-2.5 py-1.5 bg-surface focus:outline-none focus:border-primary">
+              <?php foreach (['Functional Drainage', 'Partial Drainage', 'Broken / Blocked', 'Unavailable / None'] as $opt): ?>
+              <option value="<?= e($opt) ?>" <?= ($school['drainage_sewerage'] ?? 'Functional Drainage') === $opt ? 'selected' : '' ?>><?= e($opt) ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-textMain mb-1">Flood / Rain Prone Area?</label>
+            <select name="flood_prone" class="w-full text-xs border border-border rounded-lg px-2.5 py-1.5 bg-surface focus:outline-none focus:border-primary">
+              <?php foreach (['No', 'Yes'] as $opt): ?>
+              <option value="<?= e($opt) ?>" <?= ($school['flood_prone'] ?? 'No') === $opt ? 'selected' : '' ?>><?= e($opt) ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-textMain mb-1">Student Furniture Condition</label>
+            <select name="furniture_condition" class="w-full text-xs border border-border rounded-lg px-2.5 py-1.5 bg-surface focus:outline-none focus:border-primary">
+              <?php foreach (['Adequate', 'Shortage', 'None Available'] as $opt): ?>
+              <option value="<?= e($opt) ?>" <?= ($school['furniture_condition'] ?? 'Adequate') === $opt ? 'selected' : '' ?>><?= e($opt) ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+        </div>
       </div>
 
-      <div class="pt-3 border-t border-border flex justify-end gap-2">
-        <button type="button" onclick="closeEditSchoolModal()" class="btn-secondary px-3 py-1.5 rounded text-xs">Cancel</button>
-        <button type="submit" class="btn-primary px-4 py-1.5 rounded text-xs font-medium">Save Changes</button>
+      <!-- Address -->
+      <div>
+        <label class="block text-xs font-semibold text-textMain mb-1">School Physical Address</label>
+        <input type="text" name="address" value="<?= e($school['address'] ?? '') ?>" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:border-primary"/>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="pt-3.5 border-t border-border flex justify-end gap-2.5 sticky bottom-0 bg-surface pb-1">
+        <button type="button" onclick="closeEditSchoolModal()" class="btn-secondary px-4 py-2 rounded-lg text-xs font-medium">Cancel</button>
+        <button type="submit" class="btn-primary px-5 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 shadow-sm">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Save Changes
+        </button>
       </div>
     </form>
   </div>

@@ -123,6 +123,9 @@ $priorityBadgeClass = match($priority) {
 </head>
 <body class="bg-background text-textMain min-h-screen flex flex-col font-sans">
   
+  <!-- Mobile Sidebar Backdrop Overlay -->
+  <div id="overlay" class="fixed inset-0 bg-black/40 z-30 hidden opacity-0 transition-opacity duration-200" onclick="closeSidebar()"></div>
+
   <div class="flex flex-1 min-h-screen">
     <!-- School Sidebar -->
     <?php require_once __DIR__ . '/includes/sidebar.php'; ?>
@@ -181,6 +184,52 @@ $priorityBadgeClass = match($priority) {
               <span><?= $flash_error ?></span>
             </div>
             <button onclick="this.parentElement.remove()" class="text-red-600 hover:text-red-800">&times;</button>
+          </div>
+        <?php endif; ?>
+
+        <!-- District RSU Closure / Resolution Notification for This Ticket -->
+        <?php
+        $ticketUnread = ($complaint['unread_school'] ?? '0') === '1';
+        $ticketStatus = strtolower($complaint['status'] ?? '');
+        if ($ticketUnread && in_array($ticketStatus, ['closed', 'resolved'])):
+            $isClosed   = $ticketStatus === 'closed';
+            $notifColor = $isClosed ? 'slate' : 'emerald';
+            $notifIcon  = $isClosed
+                ? '<path d="M18 6L6 18M6 6l12 12"/>'
+                : '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>';
+        ?>
+          <div id="ticketClosureNotif" class="p-5 rounded-xl border-2 flex items-start gap-4 shadow-md
+            <?= $isClosed ? 'bg-slate-50 border-slate-400' : 'bg-emerald-50 border-emerald-500' ?>"
+            style="<?= $isClosed ? '' : 'background:linear-gradient(135deg,#f0fdf4,#ecfdf5);' ?>">
+            <div class="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm
+              <?= $isClosed ? 'bg-slate-600' : 'bg-emerald-600' ?> text-white">
+              <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <?= $notifIcon ?>
+              </svg>
+            </div>
+            <div class="flex-1">
+              <div class="font-bold text-sm <?= $isClosed ? 'text-slate-800' : 'text-emerald-900' ?> flex items-center gap-2">
+                <?= $isClosed ? '🔒 Ticket Closed by District RSU' : '✅ Ticket Resolved by District RSU' ?>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full
+                  <?= $isClosed ? 'bg-slate-700 text-white' : 'bg-emerald-600 text-white' ?> animate-pulse">
+                  <?= strtoupper($complaint['status']) ?>
+                </span>
+              </div>
+              <p class="text-xs mt-1 leading-relaxed <?= $isClosed ? 'text-slate-700' : 'text-emerald-800' ?>">
+                <?php if ($isClosed): ?>
+                  District RSU has officially <strong>closed</strong> this grievance ticket. No further messages can be submitted.
+                  If your issue remains unresolved, please lodge a new complaint ticket.
+                <?php else: ?>
+                  District RSU has marked this grievance as <strong>Resolved</strong>. The reported issue has been addressed.
+                  You may still send a follow-up message if needed.
+                <?php endif; ?>
+              </p>
+              <p class="text-[11px] mt-1.5 <?= $isClosed ? 'text-slate-500' : 'text-emerald-700' ?>">
+                Last updated: <?= date('F d, Y \a\t h:i A', strtotime($complaint['updated_at'] ?? $complaint['created_at'] ?? 'now')) ?>
+              </p>
+            </div>
+            <button onclick="document.getElementById('ticketClosureNotif').remove()"
+                    class="<?= $isClosed ? 'text-slate-400 hover:text-slate-700' : 'text-emerald-500 hover:text-emerald-900' ?> text-xl leading-none flex-shrink-0">&times;</button>
           </div>
         <?php endif; ?>
 
@@ -350,6 +399,26 @@ $priorityBadgeClass = match($priority) {
 
   <script>
     window.LSU_BASE_URL = '<?= BASE_URL ?>';
+
+    function openSidebar() {
+      const s = document.getElementById('sidebar');
+      const o = document.getElementById('overlay');
+      if (s) s.classList.remove('-translate-x-full');
+      if (o) {
+        o.classList.remove('hidden');
+        setTimeout(() => o.classList.remove('opacity-0'), 10);
+      }
+    }
+
+    function closeSidebar() {
+      const s = document.getElementById('sidebar');
+      const o = document.getElementById('overlay');
+      if (s) s.classList.add('-translate-x-full');
+      if (o) {
+        o.classList.add('opacity-0');
+        setTimeout(() => o.classList.add('hidden'), 200);
+      }
+    }
   </script>
   <script src="<?= BASE_URL ?>/assets/js/notifications.js"></script>
 </body>

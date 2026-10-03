@@ -1,7 +1,7 @@
 ﻿id,username,password_hash,password_plain,full_name,role,role_title,district,school_semis,cnic,status,avatar
 1,admin,$2y$12$HNLhVquFLCVCMiZivNkOP.Feq35F5sR4CCIqGKG7PSKGk9XGjaCqm,admin,"District RSU Coordinator",admin,"District Coordinator / Administrator","Tando Allahyar District",,,active,
 2,deo_tay,$2y$12$HNLhVquFLCVCMiZivNkOP.Feq35F5sR4CCIqGKG7PSKGk9XGjaCqm,admin,"District Education Officer Tando Allahyar",admin,"District Education Officer (DEO)","Tando Allahyar District",,,active,
-3,41302-1849201-3,$2y$10$MCy0hAIz7pFLdUcHomKg9.qESI0dsZapZatSu/umUAoOoD6c298Wy,1122,"Muhammad Ishaq Memon (Senior HM)",school,"Head Master","Tando Allahyar District",403010001,41302-1849201-3,active,
+3,41302-1849201-3,$2y$10$MCy0hAIz7pFLdUcHomKg9.qESI0dsZapZatSu/umUAoOoD6c298Wy,1122,"Muhammad Ishaq Memon",school,"Head Master","Tando Allahyar",403010001,41302-1849201-3,active,
 4,41302-9876543-1,$2y$10$Q7YmYgH70gE38lOqCgZlEuQW3q2NvyFeqm5q2e0fHkljUfR5n14hG,1122,"Ghulam Sarwar Jarwar",school,Principal,"Tando Allahyar District",403010003,41302-9876543-1,active,
 5,41302-7654321-2,$2y$10$Bd6sUQ/ijAl93P.07UzTEepPGKGGcHw3/lMZMBmukg6lwAGlfvPXW,1122,"Nusrat Parveen Laghari",school,"Head Master / Principal","Jhando Mari",403010002,41302-7654321-2,active,
 6,41302-3456789-5,$2y$10$Bd6sUQ/ijAl93P.07UzTEepPGKGGcHw3/lMZMBmukg6lwAGlfvPXW,1122,"Abdul Hameed Soomro",school,"Head Master / Principal",Nasarpur,403010004,41302-3456789-5,active,

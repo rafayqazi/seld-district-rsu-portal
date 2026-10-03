@@ -21,7 +21,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $notification = 'CSRF validation failed. Please try again.';
         $notification_type = 'danger';
     } elseif (isset($_POST['save_school_profile'])) {
-        $newSemis = trim($_POST['semis_code'] ?? $school_semis);
+        // SEMIS code is IMMUTABLE for HM — always use the session value regardless of POST data
+        $newSemis = $school_semis;
         $name    = trim($_POST['school_name'] ?? '');
         $hm      = trim($_POST['head_master'] ?? '');
         $cnic    = $current_school['cnic'] ?? ''; // HM CNIC is immutable from School Portal (Admin Edit Only)
@@ -50,14 +51,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $flood   = trim($_POST['flood_prone'] ?? 'No');
         $furn    = trim($_POST['furniture_condition'] ?? 'Adequate');
 
-        // Validation for SEMIS code
-        if (empty($newSemis) || !preg_match('/^[0-9]+$/', $newSemis)) {
-            $notification = 'Invalid SEMIS Code! SEMIS Code must be numerical digits only (e.g. 403010001).';
-            $notification_type = 'danger';
-        } elseif ($newSemis !== $school_semis && ExcelDB::find('schools', 'semis_code', $newSemis)) {
-            $notification = "SEMIS Code '{$newSemis}' is already assigned to another school in the district.";
-            $notification_type = 'danger';
-        } else {
+        // No SEMIS validation needed — it's locked, proceed directly
+        {
             $badge = 'badge-active';
             if ($status === 'Good') $badge = 'badge-good';
             elseif ($status === 'Needs Attention') $badge = 'badge-attention';
@@ -121,27 +116,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ExcelDB::update('schools', 'semis_code', $school_semis, $updateData);
             ExcelDB::autoFlagSchoolRisks($newSemis);
 
-            // Cascade update to users.csv & complaints.csv if SEMIS changed
-            if ($newSemis !== $school_semis) {
-                ExcelDB::update('users', 'school_semis', $school_semis, [
-                    'school_semis' => $newSemis,
-                    'full_name'    => $hm,
-                    'district'     => $taluka,
-                    'avatar'       => $updateData['logo'] ?? ($_SESSION['lsu_avatar'] ?? '')
-                ]);
-                ExcelDB::update('complaints', 'semis_code', $school_semis, [
-                    'semis_code'  => $newSemis,
-                    'school_name' => $name,
-                    'taluka'      => $taluka
-                ]);
-                $_SESSION['lsu_school_semis'] = $newSemis;
-            } else {
-                ExcelDB::update('users', 'school_semis', $school_semis, [
-                    'full_name' => $hm,
-                    'district'  => $taluka,
-                    'avatar'    => $updateData['logo'] ?? ($_SESSION['lsu_avatar'] ?? '')
-                ]);
-            }
+            // Update users.csv (SEMIS never changes from school portal)
+            ExcelDB::update('users', 'school_semis', $school_semis, [
+                'full_name' => $hm,
+                'district'  => $taluka,
+                'avatar'    => $updateData['logo'] ?? ($_SESSION['lsu_avatar'] ?? '')
+            ]);
 
             $_SESSION['lsu_username'] = $hm;
             $_SESSION['lsu_school_name'] = $name;
@@ -279,9 +259,14 @@ $current_school = ExcelDB::getSchoolBySemis($school_semis) ?? $current_school;
                 <input type="text" name="school_name" required value="<?= e($current_school['school_name'] ?? '') ?>" class="w-full text-xs border border-border rounded-lg px-3.5 py-2 bg-background focus:outline-none focus:border-govGreen"/>
               </div>
               <div>
-                <label class="block text-xs font-semibold text-textMain mb-1.5">SEMIS Code <span class="text-danger">* (Numerical Only)</span></label>
-                <input type="text" name="semis_code" required pattern="[0-9]+" value="<?= e($school_semis) ?>" placeholder="e.g. 403010001" class="w-full text-xs font-mono font-bold border border-border rounded-lg px-3.5 py-2 bg-background focus:outline-none focus:border-govGreen"/>
-                <span class="text-[10px] text-muted block mt-0.5">Numerical SEMIS code registered in district census.</span>
+                <label class="block text-xs font-semibold text-textMain mb-1.5">SEMIS Code</label>
+                <div class="w-full text-xs font-mono font-bold border border-border rounded-lg px-3.5 py-2 bg-slate-100 text-slate-500 cursor-not-allowed flex items-center gap-2">
+                  <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="flex-shrink-0"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  <?= e($school_semis) ?>
+                </div>
+                <span class="text-[10px] text-amber-600 block mt-0.5 flex items-center gap-1">
+                  🔒 SEMIS Code can only be changed by District Admin.
+                </span>
               </div>
             </div>
 

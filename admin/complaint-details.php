@@ -54,10 +54,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $success = ExcelDB::addReply($ticketNo, 'admin', $adminName . ' (District RSU)', $message);
 
             if (!empty($newStatus) && in_array($newStatus, ['Pending', 'Under Review', 'In Progress', 'Resolved', 'Closed'], true)) {
-                ExcelDB::update('complaints', 'ticket_no', $ticketNo, [
-                    'status' => $newStatus,
+                $statusUpdate = [
+                    'status'     => $newStatus,
                     'updated_at' => date('Y-m-d H:i:s')
-                ]);
+                ];
+                // Notify school when ticket is closed or resolved
+                if (in_array($newStatus, ['Closed', 'Resolved'], true)) {
+                    $statusUpdate['unread_school'] = '1';
+                }
+                ExcelDB::update('complaints', 'ticket_no', $ticketNo, $statusUpdate);
                 $complaint['status'] = $newStatus;
             }
 
@@ -72,10 +77,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'update_status') {
         $newStatus = trim($_POST['new_status'] ?? '');
         if (in_array($newStatus, ['Pending', 'Under Review', 'In Progress', 'Resolved', 'Closed'], true)) {
-            ExcelDB::update('complaints', 'ticket_no', $ticketNo, [
+            $statusUpdate = [
                 'status'     => $newStatus,
                 'updated_at' => date('Y-m-d H:i:s')
-            ]);
+            ];
+            // Notify school when ticket is closed or resolved
+            if (in_array($newStatus, ['Closed', 'Resolved'], true)) {
+                $statusUpdate['unread_school'] = '1';
+            }
+            ExcelDB::update('complaints', 'ticket_no', $ticketNo, $statusUpdate);
             $complaint['status'] = $newStatus;
             $flash_success = "Ticket status updated to <strong>" . e($newStatus) . "</strong>.";
         }
@@ -146,6 +156,9 @@ $priorityBadgeClass = match($priority) {
 </head>
 <body class="bg-background text-textMain min-h-screen flex flex-col font-sans">
   
+  <!-- Mobile Sidebar Backdrop Overlay -->
+  <div id="overlay" class="fixed inset-0 bg-black/40 z-30 hidden opacity-0 transition-opacity duration-200" onclick="closeSidebar()"></div>
+
   <div class="flex flex-1 min-h-screen">
     <!-- Sidebar -->
     <?php require_once dirname(__DIR__) . '/includes/sidebar.php'; ?>
@@ -452,6 +465,27 @@ $priorityBadgeClass = match($priority) {
 
   <script>
     window.LSU_BASE_URL = '<?= BASE_URL ?>';
+
+    function openSidebar() {
+      const s = document.getElementById('sidebar');
+      const o = document.getElementById('overlay');
+      if (s) s.classList.remove('-translate-x-full');
+      if (o) {
+        o.classList.remove('hidden');
+        setTimeout(() => o.classList.remove('opacity-0'), 10);
+      }
+    }
+
+    function closeSidebar() {
+      const s = document.getElementById('sidebar');
+      const o = document.getElementById('overlay');
+      if (s) s.classList.add('-translate-x-full');
+      if (o) {
+        o.classList.add('opacity-0');
+        setTimeout(() => o.classList.add('hidden'), 200);
+      }
+    }
+
     function confirmDeleteTicket() {
       document.getElementById('deleteModal').classList.remove('hidden');
     }

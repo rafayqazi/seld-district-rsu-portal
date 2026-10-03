@@ -186,8 +186,8 @@ $talukas = ExcelDB::getTalukas(true); // active only
 ### Schools Table — Key Columns
 | Column | Notes |
 |---|---|
-| `semis_code` | Unique numerical string — primary lookup key |
-| `cnic` | HM CNIC — immutable from School Portal, login key |
+| `semis_code` | Unique numerical string — primary lookup key (immutable by HM in School Portal, editable only by District Admin in Admin Portal) |
+| `cnic` | HM CNIC — immutable unique identifier, login username for school portal (editable only by District Admin) |
 | `enrollment` | Total student enrollment (auto-sum: `enrollment_boys + enrollment_girls`) |
 | `enrollment_boys` | Boys enrolled count |
 | `enrollment_girls` | Girls enrolled count |

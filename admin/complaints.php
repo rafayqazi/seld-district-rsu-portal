@@ -44,10 +44,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $allowedStatuses = ['Pending', 'Under Review', 'In Progress', 'Resolved', 'Closed'];
         
         if (!empty($ticketNo) && in_array($newStatus, $allowedStatuses, true)) {
-            ExcelDB::update('complaints', 'ticket_no', $ticketNo, [
+            $statusUpdate = [
                 'status'     => $newStatus,
                 'updated_at' => date('Y-m-d H:i:s')
-            ]);
+            ];
+            // Notify school when ticket is closed or resolved
+            if (in_array($newStatus, ['Closed', 'Resolved'], true)) {
+                $statusUpdate['unread_school'] = '1';
+            }
+            ExcelDB::update('complaints', 'ticket_no', $ticketNo, $statusUpdate);
             $flash_success = "Status for Ticket <strong>" . e($ticketNo) . "</strong> updated to <strong>" . e($newStatus) . "</strong>.";
         }
     }
@@ -187,6 +192,9 @@ $talukas = ['Tando Allahyar', 'Jhando Mari', 'Chambar', 'Nasarpur'];
 </head>
 <body class="bg-background text-textMain min-h-screen flex flex-col font-sans">
   
+  <!-- Mobile Sidebar Backdrop Overlay -->
+  <div id="overlay" class="fixed inset-0 bg-black/40 z-30 hidden opacity-0 transition-opacity duration-200" onclick="closeSidebar()"></div>
+
   <div class="flex flex-1 min-h-screen">
     <!-- Sidebar -->
     <?php require_once dirname(__DIR__) . '/includes/sidebar.php'; ?>
@@ -573,6 +581,26 @@ $talukas = ['Tando Allahyar', 'Jhando Mari', 'Chambar', 'Nasarpur'];
 
   <script>
     window.LSU_BASE_URL = '<?= BASE_URL ?>';
+
+    function openSidebar() {
+      const s = document.getElementById('sidebar');
+      const o = document.getElementById('overlay');
+      if (s) s.classList.remove('-translate-x-full');
+      if (o) {
+        o.classList.remove('hidden');
+        setTimeout(() => o.classList.remove('opacity-0'), 10);
+      }
+    }
+
+    function closeSidebar() {
+      const s = document.getElementById('sidebar');
+      const o = document.getElementById('overlay');
+      if (s) s.classList.add('-translate-x-full');
+      if (o) {
+        o.classList.add('opacity-0');
+        setTimeout(() => o.classList.add('hidden'), 200);
+      }
+    }
 
     function openStatusModal(ticketNo, currentStatus) {
       document.getElementById('statusTicketNo').textContent = ticketNo;

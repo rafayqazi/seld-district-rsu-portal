@@ -140,6 +140,9 @@ $categories = [
 </head>
 <body class="bg-background text-textMain min-h-screen flex flex-col font-sans">
   
+  <!-- Mobile Sidebar Backdrop Overlay -->
+  <div id="overlay" class="fixed inset-0 bg-black/40 z-30 hidden opacity-0 transition-opacity duration-200" onclick="closeSidebar()"></div>
+
   <div class="flex flex-1 min-h-screen">
     <!-- School Sidebar -->
     <?php require_once __DIR__ . '/includes/sidebar.php'; ?>
@@ -169,6 +172,52 @@ $categories = [
               <span><?= $flash_error ?></span>
             </div>
             <button onclick="this.parentElement.remove()" class="text-red-600 hover:text-red-800">&times;</button>
+          </div>
+        <?php endif; ?>
+
+        <!-- District RSU Closure / Resolution Notification Banner -->
+        <?php
+        $closedNotifs = array_filter($schoolComplaints, function($c) {
+            $st = strtolower($c['status'] ?? '');
+            return ($c['unread_school'] ?? '0') === '1' && in_array($st, ['closed', 'resolved']);
+        });
+        if (!empty($closedNotifs)):
+        ?>
+          <div id="closureNotifBanner" class="p-4 rounded-xl border flex items-start justify-between gap-4 shadow-sm"
+               style="background:linear-gradient(135deg,#f0fdf4 0%,#ecfdf5 100%);border-color:#10b981;">
+            <div class="flex items-start gap-3">
+              <div class="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center flex-shrink-0 shadow-sm">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+                </svg>
+              </div>
+              <div>
+                <div class="font-bold text-emerald-900 text-sm flex items-center gap-2">
+                  District RSU Update — Complaint Status Changed
+                  <span class="text-[10px] bg-emerald-600 text-white px-2 py-0.5 rounded-full font-bold animate-pulse">
+                    <?= count($closedNotifs) ?> Ticket<?= count($closedNotifs) > 1 ? 's' : '' ?>
+                  </span>
+                </div>
+                <p class="text-xs text-emerald-800 mt-1 leading-relaxed">
+                  District RSU has updated the status of the following ticket<?= count($closedNotifs) > 1 ? 's' : '' ?>:
+                </p>
+                <ul class="mt-2 space-y-1">
+                  <?php foreach ($closedNotifs as $cn): ?>
+                    <li class="flex items-center gap-2 text-xs">
+                      <a href="<?= BASE_URL ?>/school/complaint-details.php?ticket=<?= urlencode($cn['ticket_no']) ?>"
+                         class="font-mono font-bold text-emerald-800 hover:underline"><?= e($cn['ticket_no']) ?></a>
+                      <span class="text-emerald-700">&mdash; <?= e($cn['subject'] ?? '') ?></span>
+                      <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border
+                        <?= strtolower($cn['status']) === 'closed' ? 'bg-slate-200 text-slate-800 border-slate-300' : 'bg-emerald-100 text-emerald-800 border-emerald-200' ?>">
+                        <?= e($cn['status']) ?>
+                      </span>
+                    </li>
+                  <?php endforeach; ?>
+                </ul>
+              </div>
+            </div>
+            <button onclick="document.getElementById('closureNotifBanner').remove()"
+                    class="text-emerald-600 hover:text-emerald-900 text-lg leading-none flex-shrink-0">&times;</button>
           </div>
         <?php endif; ?>
 
@@ -433,6 +482,27 @@ $categories = [
 
   <script>
     window.LSU_BASE_URL = '<?= BASE_URL ?>';
+
+    function openSidebar() {
+      const s = document.getElementById('sidebar');
+      const o = document.getElementById('overlay');
+      if (s) s.classList.remove('-translate-x-full');
+      if (o) {
+        o.classList.remove('hidden');
+        setTimeout(() => o.classList.remove('opacity-0'), 10);
+      }
+    }
+
+    function closeSidebar() {
+      const s = document.getElementById('sidebar');
+      const o = document.getElementById('overlay');
+      if (s) s.classList.add('-translate-x-full');
+      if (o) {
+        o.classList.add('opacity-0');
+        setTimeout(() => o.classList.add('hidden'), 200);
+      }
+    }
+
     function openLodgeModal() {
       document.getElementById('lodgeModal').classList.remove('hidden');
     }
