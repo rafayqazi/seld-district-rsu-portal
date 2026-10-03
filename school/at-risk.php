@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * school/at-risk.php — School Facility Risk Monitor
  *
@@ -295,7 +295,7 @@ body{font-family:'Inter',system-ui,sans-serif;}
   </div>
 </main>
 
-<?php require_once __DIR__ . '/includes/footer.php'; ?>
+<?php require_once dirname(__DIR__) . '/includes/footer.php'; ?>
 </div>
 </div>
 
