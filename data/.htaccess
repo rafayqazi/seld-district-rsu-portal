@@ -1,2 +1,0 @@
-# Deny direct browser access to raw database files
-Deny from all
