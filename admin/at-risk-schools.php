@@ -264,7 +264,7 @@ body{font-family:'Inter',system-ui,sans-serif;}
 
   <!-- ─── KPI Summary Cards ───────────────────────────────────────────── -->
   <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-    <div class="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
+    <div id="kpi-card-critical" onclick="filterByKpi('severity', 'critical')" class="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3 cursor-pointer transition-all duration-150 hover:shadow-md hover:-translate-y-0.5 select-none" title="Click to filter by Critical risk">
       <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
         <svg width="18" height="18" fill="none" stroke="#991B1B" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
       </div>
@@ -274,7 +274,7 @@ body{font-family:'Inter',system-ui,sans-serif;}
         <div class="text-[10px] text-muted">Immediate action</div>
       </div>
     </div>
-    <div class="bg-orange-50 border border-orange-200 rounded-lg p-4 flex items-center gap-3">
+    <div id="kpi-card-high" onclick="filterByKpi('severity', 'high')" class="bg-orange-50 border border-orange-200 rounded-lg p-4 flex items-center gap-3 cursor-pointer transition-all duration-150 hover:shadow-md hover:-translate-y-0.5 select-none" title="Click to filter by High risk">
       <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
         <svg width="18" height="18" fill="none" stroke="#C2410C" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
       </div>
@@ -284,7 +284,7 @@ body{font-family:'Inter',system-ui,sans-serif;}
         <div class="text-[10px] text-muted">Priority repair</div>
       </div>
     </div>
-    <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-center gap-3">
+    <div id="kpi-card-medium" onclick="filterByKpi('severity', 'medium')" class="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-center gap-3 cursor-pointer transition-all duration-150 hover:shadow-md hover:-translate-y-0.5 select-none" title="Click to filter by Medium risk">
       <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
         <svg width="18" height="18" fill="none" stroke="#D97706" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
       </div>
@@ -294,7 +294,7 @@ body{font-family:'Inter',system-ui,sans-serif;}
         <div class="text-[10px] text-muted">Scheduled repair</div>
       </div>
     </div>
-    <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-4 flex items-center gap-3">
+    <div id="kpi-card-resolved" onclick="filterByKpi('status', 'resolved')" class="bg-emerald-50 border border-emerald-200 rounded-lg p-4 flex items-center gap-3 cursor-pointer transition-all duration-150 hover:shadow-md hover:-translate-y-0.5 select-none" title="Click to filter by Resolved records">
       <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
         <svg width="18" height="18" fill="none" stroke="#15803D" stroke-width="2" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
       </div>
@@ -311,14 +311,14 @@ body{font-family:'Inter',system-ui,sans-serif;}
   <div class="bg-surface border border-border rounded-lg p-4 mb-5">
     <div class="text-xs font-semibold text-textMain mb-3 flex items-center gap-2">
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-      Risk Category Breakdown
+      Risk Category Breakdown <span class="text-muted font-normal text-[11px]">(Click any category to filter table)</span>
     </div>
     <div class="flex flex-wrap gap-2">
       <?php foreach ($categories_map as $cat => $cnt): ?>
-      <span class="category-pill flex items-center gap-1.5">
+      <button type="button" onclick="filterByCategory('<?= e(addslashes(strtolower($cat))) ?>')" class="category-pill flex items-center gap-1.5 cursor-pointer hover:bg-blue-100 hover:border-blue-400 transition-colors" title="Click to filter by <?= e($cat) ?>">
         <?= e($cat) ?>
         <span class="bg-primary/10 text-primary font-bold text-[10px] px-1.5 rounded-full"><?= $cnt ?></span>
-      </span>
+      </button>
       <?php endforeach; ?>
     </div>
   </div>
@@ -571,25 +571,102 @@ function toggleNotif(){document.getElementById('notif-dropdown').classList.toggl
 document.addEventListener('click',function(e){const b=document.getElementById('notif-btn');const d=document.getElementById('notif-dropdown');if(b&&d&&!b.contains(e.target)&&!d.contains(e.target))d.classList.add('hidden');});
 
 function filterRisks(){
-  const s=document.getElementById('risk-search').value.toLowerCase();
-  const sev=document.getElementById('risk-severity-filter').value.toLowerCase();
-  const cat=document.getElementById('risk-category-filter').value.toLowerCase();
-  const tal=document.getElementById('risk-taluka-filter').value.toLowerCase();
-  const sta=document.getElementById('risk-status-filter').value.toLowerCase();
-  let visible=0;
-  document.querySelectorAll('#risk-tbody tr[data-severity]').forEach(r=>{
-    const tx=r.textContent.toLowerCase();
-    const show=tx.includes(s)
-      &&(sev===''||r.getAttribute('data-severity')===sev)
-      &&(cat===''||r.getAttribute('data-category').includes(cat))
-      &&(tal===''||r.getAttribute('data-taluka').includes(tal))
-      &&(sta===''||r.getAttribute('data-status').includes(sta));
-    r.style.display=show?'':'none';
-    if(show)visible++;
+  const s   = (document.getElementById('risk-search')?.value || '').toLowerCase().trim();
+  const sev = (document.getElementById('risk-severity-filter')?.value || '').toLowerCase().trim();
+  const cat = (document.getElementById('risk-category-filter')?.value || '').toLowerCase().trim();
+  const tal = (document.getElementById('risk-taluka-filter')?.value || '').toLowerCase().trim();
+  const sta = (document.getElementById('risk-status-filter')?.value || '').toLowerCase().trim();
+
+  let visible = 0;
+  document.querySelectorAll('#risk-tbody tr[data-severity]').forEach(r => {
+    const tx = r.textContent.toLowerCase();
+    const rSev = (r.getAttribute('data-severity') || '').toLowerCase();
+    const rCat = (r.getAttribute('data-category') || '').toLowerCase();
+    const rTal = (r.getAttribute('data-taluka') || '').toLowerCase();
+    const rSta = (r.getAttribute('data-status') || '').toLowerCase();
+
+    const show = (s === '' || tx.includes(s))
+      && (sev === '' || rSev === sev)
+      && (cat === '' || rCat.includes(cat))
+      && (tal === '' || rTal.includes(tal))
+      && (sta === '' || rSta.includes(sta));
+
+    r.style.display = show ? '' : 'none';
+    if (show) visible++;
   });
-  const vc=document.getElementById('visible-count');
-  if(vc)vc.textContent=visible>0?visible+' shown':'';
+
+  const vc = document.getElementById('visible-count');
+  if (vc) vc.textContent = visible > 0 ? `${visible} shown` : '0 shown';
+
+  // ── Active KPI Card Highlights ──
+  const cardCrit = document.getElementById('kpi-card-critical');
+  const cardHigh = document.getElementById('kpi-card-high');
+  const cardMed  = document.getElementById('kpi-card-medium');
+  const cardRes  = document.getElementById('kpi-card-resolved');
+
+  const isCritActive = (sev === 'critical' && sta === '');
+  const isHighActive = (sev === 'high' && sta === '');
+  const isMedActive  = (sev === 'medium' && sta === '');
+  const isResActive  = (sta === 'resolved');
+
+  if (cardCrit) {
+    cardCrit.classList.toggle('ring-2', isCritActive);
+    cardCrit.classList.toggle('ring-red-600', isCritActive);
+    cardCrit.classList.toggle('shadow-md', isCritActive);
+    cardCrit.classList.toggle('bg-red-100', isCritActive);
+  }
+  if (cardHigh) {
+    cardHigh.classList.toggle('ring-2', isHighActive);
+    cardHigh.classList.toggle('ring-orange-600', isHighActive);
+    cardHigh.classList.toggle('shadow-md', isHighActive);
+    cardHigh.classList.toggle('bg-orange-100', isHighActive);
+  }
+  if (cardMed) {
+    cardMed.classList.toggle('ring-2', isMedActive);
+    cardMed.classList.toggle('ring-amber-500', isMedActive);
+    cardMed.classList.toggle('shadow-md', isMedActive);
+    cardMed.classList.toggle('bg-amber-100', isMedActive);
+  }
+  if (cardRes) {
+    cardRes.classList.toggle('ring-2', isResActive);
+    cardRes.classList.toggle('ring-emerald-600', isResActive);
+    cardRes.classList.toggle('shadow-md', isResActive);
+    cardRes.classList.toggle('bg-emerald-100', isResActive);
+  }
 }
+
+function filterByKpi(type, val) {
+  const sevEl = document.getElementById('risk-severity-filter');
+  const staEl = document.getElementById('risk-status-filter');
+
+  if (type === 'severity') {
+    if (sevEl.value === val && staEl.value === '') {
+      sevEl.value = ''; // toggle off
+    } else {
+      sevEl.value = val;
+      staEl.value = ''; // clear status
+    }
+  } else if (type === 'status') {
+    if (staEl.value === val && sevEl.value === '') {
+      staEl.value = ''; // toggle off
+    } else {
+      staEl.value = val;
+      sevEl.value = ''; // clear severity filter to show all resolved
+    }
+  }
+  filterRisks();
+}
+
+function filterByCategory(cat) {
+  const catEl = document.getElementById('risk-category-filter');
+  if (catEl.value === cat) {
+    catEl.value = '';
+  } else {
+    catEl.value = cat;
+  }
+  filterRisks();
+}
+
 function resetRisks(){
   ['risk-search','risk-severity-filter','risk-category-filter','risk-taluka-filter','risk-status-filter']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});

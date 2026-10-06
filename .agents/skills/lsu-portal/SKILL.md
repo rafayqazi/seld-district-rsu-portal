@@ -230,7 +230,20 @@ ExcelDB::delete('schools', 'id', $id);
 ExcelDB::getSetting('district');
 ExcelDB::updateSettings(['key' => 'value']);
 ExcelDB::autoFlagSchoolRisks('403010004'); // Call after every facility save
+ExcelDB::calculateSchoolProfileCompletion('403010001'); // Returns percentage, missing_fields, etc.
 ```
+
+### Profile Progress Filter & Bulk Printing (`admin/schools.php`)
+- **Filter Dropdown:** `sch-progress` options: `Complete (100%)` and `Below 100%`.
+- **Dynamic Bulk Actions:**
+  - `100%` selection enables **Print Appreciation Certificates** (1 page per school, official SELD Sanad-e-Tahseen format with HM Name, CNIC, SEMIS, Taluka, and dual signatures).
+  - `Below 100%` selection enables **Print Show Cause Notices** (1 page per school, SELD letterhead, deficit audit checklist table, 7-day compliance directive, and dual signatures).
+- **Print Optimization:** Formatted with CSS `@page { size: A4 portrait; }`, `page-break-after: always`, and print container isolation.
+
+### Interactive KPI Filter Cards (`admin/at-risk-schools.php`)
+- **KPI Summary Cards:** Critical, High Risk, Medium, Resolved cards are interactive buttons with hover animations and active ring highlights.
+- **Click Behavior:** Clicking any card filters the registry table by that severity/status; clicking the active card again resets to All.
+- **Category Pills:** Risk Category Breakdown badges are clickable buttons to instantly filter by that specific category.
 
 ---
 
@@ -288,4 +301,61 @@ ExcelDB::autoFlagSchoolRisks('403010004'); // Call after every facility save
   - `FTP_PASSWORD`: InfinityFree FTP password
 - **Exclusions:** `.git`, `.github`, `.agents`, `scratch`, `task.md`
 - **Local Fallback:** Run `C:\xampp\php\php.exe scratch/deploy_live.php` for direct one-command local deploy.
+
+---
+
+## 12. Direct Messaging System Architecture
+
+### Pages
+| Page | Role | Description |
+|---|---|---|
+| `admin/messages.php` | Admin | Inbox, metrics, filter, initiate new conversations |
+| `admin/message-thread.php?thread=MSG-XXXX` | Admin | Real-time chat thread view & reply |
+| `school/messages.php` | School HM | Read-only inbox of admin-initiated threads |
+| `school/message-thread.php?thread=MSG-XXXX` | School HM | Real-time reply in admin thread |
+
+### CSV Tables
+- **`admin_messages`**: Thread records (`thread_id`, `semis_code`, `school_name`, `taluka`, `subject`, `status`, `created_by`, `created_at`, `updated_at`, `unread_school`, `unread_admin`)
+- **`admin_message_replies`**: Individual messages (`id`, `thread_id`, `sender_role`, `sender_name`, `message`, `created_at`)
+
+### Key Rules
+- **Only Admin can initiate** a new message thread — schools can only reply.
+- Thread status: `Open` (replies allowed) | `Closed` (no replies until reopened by admin).
+- `unread_admin = '1'` when school replies. `unread_school = '1'` when admin sends/replies.
+- Marked as read when thread-view page loads (before rendering).
+
+### Searchable School Picker (admin/messages.php modal)
+- The "Select School" field is a **custom JS picker** with a search input + scrollable list.
+- Each option renders as a `div.school-opt` with `data-semis`, `data-name`, `data-search` attributes.
+- `filterSchools(query)` hides non-matching `.school-opt` rows.
+- `selectSchool(semis, name)` fills the hidden `<input name="semis_code">` and shows a selection pill.
+- **Auto-open from URL:** Pass `?compose=1&semis=XXXXXX` to auto-open the modal with school pre-selected.
+
+### Direct Message from School Profile
+- `admin/school-profile.php` header has a green **"Direct Message"** button (`#btnDirectMessage`).
+- It links to `admin/messages.php?compose=1&semis=<SEMIS>`.
+- On page load the JS in `messages.php` reads URL params and calls `openNewMessageModal(semis, name)`.
+
+### Real-Time Chat (api/thread-messages.php)
+- **GET** `?thread=MSG-XXXX&after_id=N` → returns new messages since ID N as JSON.
+- **POST** with `action=post_reply` → appends message, marks unread for other party, returns bubble data.
+- Both thread pages poll every **2.5 seconds** via `setInterval(pollNewMessages, 2500)`.
+- New incoming messages append chat bubbles via `appendMessageBubble(msg)` and trigger `playNotificationChime()`.
+
+### Audio Chime Architecture (assets/js/notifications.js)
+- Uses **Web Audio API** to synthesize a two-tone "tling" bell — no audio files needed.
+- `initAudioContext()` pre-creates and unlocks `AudioContext` on `click`, `pointerdown`, `keydown`, `touchstart`.
+- `playNotificationChime()` always calls `audioContext.resume().then(playWhenReady)` before oscillating.
+- This is critical: browsers suspend AudioContext if created without a user gesture. Admin portals are especially affected since page load precedes interaction.
+- `check-complaints.php` polling runs every **8 seconds** and triggers chime + toast when unread count increases.
+
+### ExcelDB Helpers
+```php
+ExcelDB::getUnreadMessagesCount('admin');                  // count admin unread message threads
+ExcelDB::getUnreadMessagesCount('school', $semisCode);     // count school unread threads
+ExcelDB::getRepliesForThread($threadId);                   // get all replies for a thread
+ExcelDB::addMessageReply($threadId, $role, $name, $msg);   // append a reply + mark unread
+ExcelDB::deleteMessageThread($threadId);                   // delete thread + all replies
+ExcelDB::generateMessageThreadId();                        // generate MSG-XXXXXXXX ID
+```
 

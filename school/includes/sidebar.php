@@ -90,15 +90,6 @@ function school_sidebar_link(string $page, string $active): string {
       <span>School Staff Details</span>
     </a>
 
-    <!-- 4. School Facility Risks -->
-    <a href="<?= $base ?>at-risk.php" class="<?= school_sidebar_link('at-risk', $active_page) ?>">
-      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-        <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-        <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-      </svg>
-      <span>School Facility Risks</span>
-    </a>
-
     <!-- 5. Grievances & Complaints -->
     <?php $school_unread_complaints = ExcelDB::getUnreadComplaintsCount('school', $school_semis); ?>
     <a href="<?= $base ?>complaints.php" class="<?= school_sidebar_link('complaints', $active_page) ?> justify-between">
@@ -123,7 +114,7 @@ function school_sidebar_link(string $page, string $active): string {
         </svg>
         <span>Messages from RSU</span>
       </div>
-      <span class="<?= ($school_unread_messages > 0 ? '' : 'hidden') ?> px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500 text-white animate-pulse">
+      <span class="messages-badge-count <?= ($school_unread_messages > 0 ? '' : 'hidden') ?> px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500 text-white animate-pulse">
         <?= $school_unread_messages ?>
       </span>
     </a>

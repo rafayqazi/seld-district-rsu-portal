@@ -43,6 +43,19 @@ $fac_water   = $current_school['facility_water'] ?? 'Filtered Plant';
 $fac_toilets = $current_school['facility_toilets'] ?? 'Functional Blocks';
 $fac_wall    = $current_school['facility_boundary_wall'] ?? 'Secured & Complete';
 $fac_net     = $current_school['facility_internet'] ?? 'Broadband / 4G';
+
+// Classroom Assets & Equipment
+$boards_func     = max(0, (int)($current_school['boards_functional'] ?? 0));
+$boards_non_func = max(0, (int)($current_school['boards_non_functional'] ?? 0));
+$boards_tot      = isset($current_school['boards_total']) && $current_school['boards_total'] !== '' ? max(0, (int)$current_school['boards_total']) : ($boards_func + $boards_non_func);
+
+$benches_func     = max(0, (int)($current_school['benches_functional'] ?? 0));
+$benches_non_func = max(0, (int)($current_school['benches_non_functional'] ?? 0));
+$benches_tot      = isset($current_school['benches_total']) && $current_school['benches_total'] !== '' ? max(0, (int)$current_school['benches_total']) : ($benches_func + $benches_non_func);
+
+$fans_func     = max(0, (int)($current_school['fans_functional'] ?? 0));
+$fans_non_func = max(0, (int)($current_school['fans_non_functional'] ?? 0));
+$fans_tot      = isset($current_school['fans_total']) && $current_school['fans_total'] !== '' ? max(0, (int)$current_school['fans_total']) : ($fans_func + $fans_non_func);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -178,6 +191,14 @@ $fac_net     = $current_school['facility_internet'] ?? 'Broadband / 4G';
 
             <!-- Quick Action Buttons -->
             <div class="flex flex-wrap items-center gap-2 pt-2 md:pt-0">
+              <a href="<?= BASE_URL ?>/school/messages.php" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg flex items-center gap-1.5 shadow-xs transition">
+                <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="12" y2="13"/></svg>
+                <span>Direct Messages</span>
+                <?php $unread_msg_count = ExcelDB::getUnreadMessagesCount('school', $school_semis); ?>
+                <?php if ($unread_msg_count > 0): ?>
+                  <span class="messages-badge-count bg-white text-blue-700 text-[10px] font-bold px-1.5 py-0.2 rounded-full animate-pulse"><?= $unread_msg_count ?></span>
+                <?php endif; ?>
+              </a>
               <a href="<?= BASE_URL ?>/school/complaints.php" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold px-3.5 py-2 rounded-lg flex items-center gap-1.5 shadow-xs transition">
                 <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
                 <span>Lodge Grievance</span>
@@ -193,6 +214,42 @@ $fac_net     = $current_school['facility_internet'] ?? 'Broadband / 4G';
             </div>
           </div>
         </div>
+
+        <!-- ── Unread Messages Alert Banner ─────────────────────────────────── -->
+        <?php
+          $dashUnreadMessages = array_filter(ExcelDB::all('admin_messages'), function($m) use ($school_semis) {
+              return trim($m['semis_code'] ?? '') === trim($school_semis) && ($m['unread_school'] ?? '0') === '1';
+          });
+        ?>
+        <?php if (!empty($dashUnreadMessages)): ?>
+          <div class="p-4 rounded-xl bg-blue-50 border-2 border-blue-200 text-blue-900 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex items-start gap-3">
+              <div class="w-9 h-9 rounded-lg bg-blue-600 text-white flex items-center justify-center flex-shrink-0 shadow-xs mt-0.5">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+                  <line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="12" y2="13"/>
+                </svg>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h2 class="font-bold text-sm text-blue-900">New Direct Message<?= count($dashUnreadMessages) > 1 ? 's' : '' ?> from District RSU</h2>
+                  <span class="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
+                </div>
+                <p class="text-xs text-blue-800 mt-0.5 leading-relaxed">
+                  <?php $firstMsg = reset($dashUnreadMessages); ?>
+                  <strong><?= e($firstMsg['subject']) ?></strong> (Thread #<?= e($firstMsg['thread_id']) ?>) &mdash; Sent by <?= e($firstMsg['created_by']) ?>.
+                  <?= count($dashUnreadMessages) > 1 ? ' (' . (count($dashUnreadMessages) - 1) . ' more unread)' : '' ?>
+                </p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 sm:self-center flex-shrink-0">
+              <a href="<?= BASE_URL ?>/school/messages.php" class="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-xs transition flex items-center gap-1.5">
+                <span>View &amp; Reply</span>
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              </a>
+            </div>
+          </div>
+        <?php endif; ?>
 
         <!-- ── 2. Real-Time School KPI Cards ─────────────────────────────────── -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -262,8 +319,8 @@ $fac_net     = $current_school['facility_internet'] ?? 'Broadband / 4G';
             </div>
             <div class="text-2xl font-bold text-textMain font-mono"><?= $classrooms_count ?> <span class="text-xs font-normal text-muted">Rooms</span></div>
             <div class="flex items-center justify-between text-[11px] text-muted mt-2 pt-2 border-t border-border">
-              <span>School Facility Risks</span>
-              <a href="<?= BASE_URL ?>/school/at-risk.php" class="text-primary hover:underline font-semibold">View &rarr;</a>
+              <span>Functional Classrooms</span>
+              <a href="<?= BASE_URL ?>/school/profile.php" class="text-primary hover:underline font-semibold">Update →</a>
             </div>
           </div>
 
@@ -326,6 +383,97 @@ $fac_net     = $current_school['facility_internet'] ?? 'Broadband / 4G';
                 <span>Internet / IT</span>
               </div>
               <div class="text-xs font-bold text-textMain"><?= e($fac_net) ?></div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ── 3.5 Classroom Equipment & Assets Inventory ────────────────────── -->
+        <div class="bg-surface rounded-xl border border-border p-5 shadow-xs">
+          <div class="flex items-center justify-between pb-3 border-b border-border mb-4">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+              </div>
+              <div>
+                <h2 class="text-sm font-bold text-textMain">Classroom Equipment &amp; Assets</h2>
+                <p class="text-xs text-muted">Functional vs. Non-Functional equipment audit for <?= e($school_name) ?></p>
+              </div>
+            </div>
+            <a href="<?= BASE_URL ?>/school/profile.php" class="text-xs text-emerald-700 hover:text-emerald-900 font-semibold flex items-center gap-1">
+              Update Inventory &rarr;
+            </a>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            
+            <!-- Writing Boards -->
+            <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/70 space-y-2.5">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <div class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                  </div>
+                  <span class="text-xs font-bold text-textMain">Writing Boards</span>
+                </div>
+                <span class="text-sm font-bold font-mono text-govNavy"><?= $boards_tot ?> <span class="text-[10px] font-normal text-muted">Total</span></span>
+              </div>
+              <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200 text-xs">
+                <div class="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-emerald-200">
+                  <span class="text-[11px] text-emerald-700 font-medium">Functional:</span>
+                  <span class="font-bold font-mono text-emerald-800"><?= $boards_func ?></span>
+                </div>
+                <div class="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-rose-200">
+                  <span class="text-[11px] text-rose-700 font-medium">Non-Func:</span>
+                  <span class="font-bold font-mono text-rose-800"><?= $boards_non_func ?></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Student Benches & Desks -->
+            <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/70 space-y-2.5">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <div class="w-7 h-7 rounded-lg bg-blue-100 text-blue-800 flex items-center justify-center font-bold">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 18v3"/><path d="M20 18v3"/><path d="M4 14h16"/><path d="M4 10h16"/><path d="M6 6h12"/></svg>
+                  </div>
+                  <span class="text-xs font-bold text-textMain">Student Benches</span>
+                </div>
+                <span class="text-sm font-bold font-mono text-govNavy"><?= $benches_tot ?> <span class="text-[10px] font-normal text-muted">Total</span></span>
+              </div>
+              <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200 text-xs">
+                <div class="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-emerald-200">
+                  <span class="text-[11px] text-emerald-700 font-medium">Functional:</span>
+                  <span class="font-bold font-mono text-emerald-800"><?= $benches_func ?></span>
+                </div>
+                <div class="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-rose-200">
+                  <span class="text-[11px] text-rose-700 font-medium">Non-Func:</span>
+                  <span class="font-bold font-mono text-rose-800"><?= $benches_non_func ?></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Electric Fans -->
+            <div class="p-4 rounded-xl border border-slate-200 bg-slate-50/70 space-y-2.5">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <div class="w-7 h-7 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M12 12a3 3 0 1 0 6 0 3 3 0 0 0-6 0Z"/><path d="M12 12a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z"/><path d="M12 12a3 3 0 1 0-6 0 3 3 0 0 0 6 0Z"/><circle cx="12" cy="12" r="9"/></svg>
+                  </div>
+                  <span class="text-xs font-bold text-textMain">Electric Fans</span>
+                </div>
+                <span class="text-sm font-bold font-mono text-govNavy"><?= $fans_tot ?> <span class="text-[10px] font-normal text-muted">Total</span></span>
+              </div>
+              <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200 text-xs">
+                <div class="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-emerald-200">
+                  <span class="text-[11px] text-emerald-700 font-medium">Functional:</span>
+                  <span class="font-bold font-mono text-emerald-800"><?= $fans_func ?></span>
+                </div>
+                <div class="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-rose-200">
+                  <span class="text-[11px] text-rose-700 font-medium">Non-Func:</span>
+                  <span class="font-bold font-mono text-rose-800"><?= $fans_non_func ?></span>
+                </div>
+              </div>
             </div>
 
           </div>

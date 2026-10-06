@@ -52,9 +52,42 @@ $session_initial  = strtoupper(substr($session_username, 0, 1));
   <!-- Notifications -->
   <?php 
     $header_unread_complaints = ExcelDB::getUnreadComplaintsCount('admin');
+    $header_unread_messages   = ExcelDB::getUnreadMessagesCount('admin');
+    $header_total_unread      = $header_unread_complaints + $header_unread_messages;
+
     $allComplaintsList = ExcelDB::all('complaints');
-    usort($allComplaintsList, fn($a, $b) => strcmp($b['updated_at'] ?? $b['created_at'] ?? '', $a['updated_at'] ?? $a['created_at'] ?? ''));
-    $recentNotifs = array_slice($allComplaintsList, 0, 4);
+    $allMessagesList   = ExcelDB::all('admin_messages');
+
+    $adminNotifItems = [];
+    foreach ($allMessagesList as $m) {
+        if (($m['unread_admin'] ?? '0') === '1') {
+            $adminNotifItems[] = [
+                'type'        => 'message',
+                'id'          => $m['thread_id'] ?? '',
+                'title'       => $m['school_name'] ?? 'School Reply',
+                'subtitle'    => $m['subject'] ?? 'Direct Message',
+                'url'         => BASE_URL . '/admin/message-thread.php?thread=' . urlencode($m['thread_id'] ?? ''),
+                'date'        => $m['updated_at'] ?? $m['created_at'] ?? 'now',
+                'is_unread'   => true
+            ];
+        }
+    }
+    foreach ($allComplaintsList as $c) {
+        $isUnread = ($c['unread_admin'] ?? '0') === '1' || strtolower($c['status'] ?? '') === 'pending';
+        if ($isUnread) {
+            $adminNotifItems[] = [
+                'type'        => 'complaint',
+                'id'          => $c['ticket_no'] ?? '',
+                'title'       => $c['school_name'] ?? 'School',
+                'subtitle'    => $c['subject'] ?? '',
+                'url'         => BASE_URL . '/admin/complaint-details.php?ticket=' . urlencode($c['ticket_no'] ?? ''),
+                'date'        => $c['updated_at'] ?? $c['created_at'] ?? 'now',
+                'is_unread'   => true
+            ];
+        }
+    }
+    usort($adminNotifItems, fn($a, $b) => strcmp($b['date'], $a['date']));
+    $recentNotifs = array_slice($adminNotifItems, 0, 5);
   ?>
   <div class="relative">
     <button id="notif-btn" onclick="toggleNotif()" class="relative text-muted hover:text-primary p-1.5 rounded hover:bg-background" aria-label="Notifications">
@@ -62,15 +95,15 @@ $session_initial  = strtoupper(substr($session_username, 0, 1));
         <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
         <path d="M13.73 21a2 2 0 01-3.46 0"/>
       </svg>
-      <span class="complaints-header-dot absolute top-0.5 right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-surface <?= $header_unread_complaints > 0 ? '' : 'hidden' ?>"></span>
+      <span class="header-unread-dot complaints-header-dot absolute top-0.5 right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-surface <?= $header_total_unread > 0 ? '' : 'hidden' ?>"></span>
     </button>
     <!-- Notification Dropdown -->
     <div id="notif-dropdown" class="hidden absolute right-0 top-10 w-80 bg-surface border border-border rounded-xl shadow-xl z-50 overflow-hidden">
       <div class="flex items-center justify-between px-4 py-3 border-b border-border bg-slate-50/50">
         <div class="flex items-center gap-1.5">
-          <span class="font-bold text-xs text-textMain">Complaints &amp; Alerts</span>
-          <span class="complaints-header-count text-[10px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded-full <?= $header_unread_complaints > 0 ? '' : 'hidden' ?>">
-            <?= $header_unread_complaints ?> New
+          <span class="font-bold text-xs text-textMain">Alerts &amp; Updates</span>
+          <span class="header-unread-count complaints-header-count text-[10px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded-full <?= $header_total_unread > 0 ? '' : 'hidden' ?>">
+            <?= $header_total_unread ?> New
           </span>
         </div>
         <button onclick="window.playNotificationChime()" class="text-[11px] text-secondary hover:underline flex items-center gap-1">
@@ -80,28 +113,32 @@ $session_initial  = strtoupper(substr($session_username, 0, 1));
       </div>
       <div class="divide-y divide-border max-h-72 overflow-y-auto text-xs">
         <?php if (empty($recentNotifs)): ?>
-          <div class="p-4 text-center text-muted text-xs">No notifications recorded yet.</div>
+          <div class="p-5 text-center text-muted text-xs">No pending alerts or unread messages.</div>
         <?php else: ?>
           <?php foreach ($recentNotifs as $notif): 
-            $isUnreadNotif = ($notif['unread_admin'] ?? '0') === '1' || strtolower($notif['status'] ?? '') === 'pending';
+            $isMsg = ($notif['type'] === 'message');
           ?>
-            <a href="<?= BASE_URL ?>/admin/complaint-details.php?ticket=<?= urlencode($notif['ticket_no'] ?? '') ?>" class="px-4 py-3 hover:bg-background flex gap-3 cursor-pointer block transition <?= $isUnreadNotif ? 'bg-amber-50/30' : '' ?>">
-              <div class="w-2 h-2 mt-1.5 rounded-full <?= $isUnreadNotif ? 'bg-red-500' : 'bg-slate-300' ?> flex-shrink-0"></div>
-              <div class="overflow-hidden">
-                <div class="text-xs font-semibold text-textMain truncate"><?= e($notif['school_name'] ?? 'School') ?></div>
-                <div class="text-[11px] text-muted truncate mt-0.5"><?= e($notif['subject'] ?? '') ?></div>
-                <div class="text-[10px] text-slate-400 mt-1 flex items-center gap-2">
-                  <span class="font-mono"><?= e($notif['ticket_no'] ?? '') ?></span>
-                  <span>&bull;</span>
-                  <span><?= date('M d, H:i', strtotime($notif['updated_at'] ?? $notif['created_at'] ?? 'now')) ?></span>
+            <a href="<?= $notif['url'] ?>" class="px-4 py-3 hover:bg-background flex gap-3 cursor-pointer block transition <?= $isMsg ? 'bg-blue-50/30' : 'bg-amber-50/30' ?>">
+              <div class="w-2 h-2 mt-1.5 rounded-full <?= $isMsg ? 'bg-blue-500' : 'bg-red-500' ?> flex-shrink-0 animate-pulse"></div>
+              <div class="overflow-hidden flex-1">
+                <div class="flex items-center justify-between gap-1">
+                  <span class="text-[10px] font-bold <?= $isMsg ? 'text-blue-700' : 'text-emerald-700' ?> uppercase tracking-wider"><?= $isMsg ? 'Direct Message Reply' : 'Grievance Alert' ?></span>
+                  <span class="font-mono text-[9px] text-slate-500"><?= e($notif['id']) ?></span>
+                </div>
+                <div class="text-xs font-semibold text-textMain truncate mt-0.5"><?= e($notif['title']) ?></div>
+                <div class="text-[11px] text-muted truncate mt-0.5"><?= e($notif['subtitle']) ?></div>
+                <div class="text-[10px] text-slate-400 mt-1">
+                  <?= date('M d, H:i A', strtotime($notif['date'])) ?>
                 </div>
               </div>
             </a>
           <?php endforeach; ?>
         <?php endif; ?>
       </div>
-      <div class="px-4 py-2.5 border-t border-border text-center bg-slate-50/50">
-        <a href="<?= BASE_URL ?>/admin/complaints.php" class="text-xs text-primary font-bold hover:underline">View All Grievances &rarr;</a>
+      <div class="px-4 py-2.5 border-t border-border flex items-center justify-between bg-slate-50/50 text-xs font-semibold">
+        <a href="<?= BASE_URL ?>/admin/messages.php" class="text-blue-600 hover:underline">Direct Messages</a>
+        <span class="text-border">|</span>
+        <a href="<?= BASE_URL ?>/admin/complaints.php" class="text-primary hover:underline">Grievances</a>
       </div>
     </div>
   </div>

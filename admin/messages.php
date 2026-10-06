@@ -96,12 +96,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'delete_thread') {
         $threadId = trim($_POST['thread_id'] ?? '');
         if (!empty($threadId)) {
-            ExcelDB::delete('admin_messages', 'thread_id', $threadId);
-            $allReplies = ExcelDB::all('admin_message_replies');
-            ExcelDB::writeTable('admin_message_replies', array_values(array_filter($allReplies, fn($r) => ($r['thread_id'] ?? '') !== $threadId)));
-            $flash_success = 'Conversation <strong>' . e($threadId) . '</strong> has been permanently deleted.';
+            $deleted = ExcelDB::deleteMessageThread($threadId);
+            if ($deleted) {
+                $flash_success = 'Conversation <strong>' . e($threadId) . '</strong> has been permanently deleted.';
+            } else {
+                $flash_error = 'Failed to delete conversation. Please try again.';
+            }
         }
     }
+}
+
+if (isset($_GET['deleted']) && !empty($_GET['thread'])) {
+    $flash_success = 'Conversation <strong>' . e($_GET['thread']) . '</strong> has been permanently deleted.';
 }
 
 // ── Fetch & Filter ─────────────────────────────────────────────────────────
@@ -138,6 +144,9 @@ $closedThreads = count(array_filter($allThreads, fn($t) => strtolower($t['status
 $unreadThreads = count(array_filter($allThreads, fn($t) => ($t['unread_admin'] ?? '0') === '1'));
 
 $allSchools = ExcelDB::all('schools');
+// Auto-open modal pre-filled from ?semis= param (e.g., from school-profile button)
+$autoOpenSemis = trim($_GET['semis'] ?? '');
+$autoOpenModal = !empty($autoOpenSemis) && !empty($_GET['compose']) ? 'true' : 'false';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -174,6 +183,13 @@ $allSchools = ExcelDB::all('schools');
     #sidebar { transition: transform .25s cubic-bezier(.4,0,.2,1); }
     #overlay { transition: opacity .25s; }
     .thread-row:hover { background: #f8fafc; }
+    /* Searchable school picker */
+    #schoolPickerDropdown { max-height: 220px; overflow-y: auto; scroll-behavior: smooth; }
+    #schoolPickerDropdown::-webkit-scrollbar { width: 4px; }
+    #schoolPickerDropdown::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
+    .school-opt { cursor: pointer; transition: background .1s; }
+    .school-opt:hover, .school-opt.highlighted { background: #EBF2FA; }
+    .school-opt.selected { background: #DBEAFE; }
   </style>
 </head>
 <body class="bg-background text-textMain min-h-screen flex flex-col">
@@ -355,12 +371,10 @@ $allSchools = ExcelDB::all('schools');
                           <button type="submit" class="px-3 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-[11px] font-semibold rounded-lg transition">Reopen</button>
                         </form>
                       <?php endif; ?>
-                      <form method="POST" class="inline" onsubmit="return confirmFormSubmit(event, this, 'Permanently delete this conversation and all its messages?', {title:'Delete Conversation', okText:'Yes, Delete', isDanger:true})">
-                        <input type="hidden" name="action" value="delete_thread">
-                        <input type="hidden" name="thread_id" value="<?= e($t['thread_id']) ?>">
-                        <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-                        <button type="submit" class="px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 text-[11px] font-semibold rounded-lg transition">Delete</button>
-                      </form>
+                      <button type="button"
+                              id="del-btn-<?= e($t['thread_id']) ?>"
+                              onclick="setDeleteTarget('<?= e($t['thread_id']) ?>')"
+                              class="px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 text-[11px] font-semibold rounded-lg transition">Delete</button>
                     </div>
                   </td>
                 </tr>
@@ -376,8 +390,14 @@ $allSchools = ExcelDB::all('schools');
     <?php require_once dirname(__DIR__) . '/includes/footer.php'; ?>
   </div>
 </div>
+<!-- ── Static Delete Form (pre-rendered, reused for all delete actions) ──── -->
+<form id="deleteThreadForm" method="POST" style="display:none">
+  <input type="hidden" name="action" value="delete_thread">
+  <input type="hidden" name="thread_id" id="deleteThreadId" value="">
+  <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+</form>
 
-<!-- ── New Message Modal ─────────────────────────────────────────────────── -->
+<!-- ── New Message Modal ──────────────────────────────────────────────────── -->
 <div id="newMsgModal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 hidden" role="dialog" aria-modal="true">
   <div class="bg-surface rounded-2xl shadow-2xl w-full max-w-lg border border-border">
     <div class="flex items-center justify-between px-6 py-4 border-b border-border">
@@ -399,16 +419,46 @@ $allSchools = ExcelDB::all('schools');
       <input type="hidden" name="action" value="new_message">
       <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
 
+      <!-- Hidden real input for form submission -->
+      <input type="hidden" name="semis_code" id="schoolSelectHidden" required>
+
       <div>
-        <label class="block text-xs font-semibold text-textMain mb-1.5" for="schoolSelect">Select School <span class="text-red-500">*</span></label>
-        <select name="semis_code" id="schoolSelect" required class="w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-background focus:outline-none focus:border-primary text-textMain">
-          <option value="">— Choose a school —</option>
+        <label class="block text-xs font-semibold text-textMain mb-1.5">Select School <span class="text-red-500">*</span></label>
+        <!-- Selected school pill preview -->
+        <div id="selectedSchoolPill" class="hidden mb-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between gap-2">
+          <div class="flex-1 min-w-0">
+            <div id="selectedSchoolName" class="text-xs font-semibold text-primary truncate"></div>
+            <div id="selectedSchoolCode" class="text-[10px] text-muted font-mono"></div>
+          </div>
+          <button type="button" onclick="clearSchoolSelection()" class="text-muted hover:text-danger flex-shrink-0" title="Clear selection">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <!-- Search input -->
+        <div class="relative">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-muted" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="schoolSearchInput" autocomplete="off"
+                 placeholder="Search by school name or SEMIS code…"
+                 class="w-full pl-8 pr-3 py-2.5 text-sm border border-border rounded-lg bg-background focus:outline-none focus:border-primary"
+                 oninput="filterSchools(this.value)"
+                 onfocus="openSchoolDropdown()"/>
+        </div>
+        <!-- Dropdown list -->
+        <div id="schoolPickerDropdown" class="hidden mt-1 border border-border rounded-lg bg-surface shadow-lg z-10 relative">
           <?php foreach ($allSchools as $sc): ?>
-            <option value="<?= e($sc['semis_code']) ?>">
-              <?= e($sc['school_name']) ?> (<?= e($sc['semis_code']) ?>)
-            </option>
+          <div class="school-opt px-3 py-2.5 flex items-center justify-between gap-2 border-b border-border/50 last:border-0"
+               data-semis="<?= e($sc['semis_code']) ?>"
+               data-name="<?= e($sc['school_name']) ?>"
+               data-search="<?= strtolower(e($sc['school_name']) . ' ' . e($sc['semis_code'])) ?>"
+               onclick="selectSchool('<?= e($sc['semis_code']) ?>', '<?= addslashes(e($sc['school_name'])) ?>')">
+            <span class="text-xs text-textMain leading-snug"><?= e($sc['school_name']) ?></span>
+            <span class="text-[10px] font-mono text-primary bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded flex-shrink-0"><?= e($sc['semis_code']) ?></span>
+          </div>
           <?php endforeach; ?>
-        </select>
+          <div id="schoolNoResults" class="hidden px-4 py-4 text-center text-xs text-muted">
+            No schools matched. Try a different name or SEMIS code.
+          </div>
+        </div>
       </div>
 
       <div>
@@ -451,16 +501,105 @@ document.addEventListener('click', function(e) {
   const b = document.getElementById('notif-btn'), d = document.getElementById('notif-dropdown');
   if (b && d && !b.contains(e.target) && !d.contains(e.target)) d.classList.add('hidden');
 });
-function openNewMessageModal() {
+function openNewMessageModal(preSelectSemis, preSelectName) {
   document.getElementById('newMsgModal').classList.remove('hidden');
-  setTimeout(() => document.getElementById('schoolSelect').focus(), 50);
+  if (preSelectSemis && preSelectName) {
+    selectSchool(preSelectSemis, preSelectName);
+  } else {
+    setTimeout(() => document.getElementById('schoolSearchInput').focus(), 80);
+  }
 }
 function closeNewMessageModal() {
   document.getElementById('newMsgModal').classList.add('hidden');
+  closeSchoolDropdown();
 }
 document.getElementById('newMsgModal').addEventListener('click', function(e) {
   if (e.target === this) closeNewMessageModal();
 });
+
+// ── Searchable School Picker ──────────────────────────────────────────────────
+function openSchoolDropdown() {
+  document.getElementById('schoolPickerDropdown').classList.remove('hidden');
+}
+function closeSchoolDropdown() {
+  document.getElementById('schoolPickerDropdown').classList.add('hidden');
+}
+function filterSchools(query) {
+  openSchoolDropdown();
+  const q = query.toLowerCase().trim();
+  const opts = document.querySelectorAll('.school-opt');
+  let visible = 0;
+  opts.forEach(opt => {
+    const match = !q || opt.getAttribute('data-search').includes(q);
+    opt.classList.toggle('hidden', !match);
+    if (match) visible++;
+  });
+  document.getElementById('schoolNoResults').classList.toggle('hidden', visible > 0);
+}
+function selectSchool(semis, name) {
+  // Set hidden input
+  document.getElementById('schoolSelectHidden').value = semis;
+  // Show selected pill
+  document.getElementById('selectedSchoolName').textContent = name;
+  document.getElementById('selectedSchoolCode').textContent = 'SEMIS: ' + semis;
+  document.getElementById('selectedSchoolPill').classList.remove('hidden');
+  // Clear & close search
+  document.getElementById('schoolSearchInput').value = '';
+  filterSchools('');
+  closeSchoolDropdown();
+  // Highlight selected option
+  document.querySelectorAll('.school-opt').forEach(o => {
+    o.classList.toggle('selected', o.getAttribute('data-semis') === semis);
+  });
+  // Focus on subject
+  setTimeout(() => document.getElementById('msgSubject').focus(), 50);
+}
+function clearSchoolSelection() {
+  document.getElementById('schoolSelectHidden').value = '';
+  document.getElementById('selectedSchoolPill').classList.add('hidden');
+  document.getElementById('selectedSchoolName').textContent = '';
+  document.getElementById('selectedSchoolCode').textContent = '';
+  document.querySelectorAll('.school-opt').forEach(o => o.classList.remove('selected'));
+  filterSchools('');
+  setTimeout(() => document.getElementById('schoolSearchInput').focus(), 50);
+}
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+  const picker = document.getElementById('schoolPickerDropdown');
+  const searchInput = document.getElementById('schoolSearchInput');
+  if (picker && searchInput && !picker.contains(e.target) && e.target !== searchInput) {
+    closeSchoolDropdown();
+  }
+});
+
+// Auto-open modal if ?compose=1&semis=... is in URL
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('compose') === '1') {
+    const semis = params.get('semis') || '';
+    if (semis) {
+      // Find school name from the DOM options
+      const opt = document.querySelector(`.school-opt[data-semis="${CSS.escape(semis)}"]`);
+      const name = opt ? opt.getAttribute('data-name') : semis;
+      openNewMessageModal(semis, name);
+    } else {
+      openNewMessageModal();
+    }
+  }
+})();
+
+// ── Delete Conversation ───────────────────────────────────────────────────────
+// Uses a pre-rendered static form (#deleteThreadForm) — 100% reliable in all browsers.
+function setDeleteTarget(threadId) {
+  document.getElementById('deleteThreadId').value = threadId;
+  customConfirm(
+    'Permanently delete this conversation and all its messages? This cannot be undone.',
+    function() {
+      document.getElementById('deleteThreadForm').submit();
+    },
+    { title: 'Delete Conversation', okText: 'Yes, Delete', isDanger: true }
+  );
+}
 </script>
 </body>
 </html>

@@ -124,7 +124,7 @@ function sidebar_link_class(string $page, string $active): string {
         </svg>
         <span>Direct Messages</span>
       </div>
-      <span class="<?= ($admin_unread_messages > 0 ? '' : 'hidden') ?> px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-500 text-white">
+      <span class="messages-badge-count <?= ($admin_unread_messages > 0 ? '' : 'hidden') ?> px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-500 text-white">
         <?= $admin_unread_messages ?>
       </span>
     </a>

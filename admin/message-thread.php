@@ -79,6 +79,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ]);
         $thread['status'] = 'Open';
         $flash_success = 'Conversation has been reopened.';
+    } elseif ($action === 'delete_thread') {
+        ExcelDB::deleteMessageThread($threadId);
+        header('Location: ' . BASE_URL . '/admin/messages.php?deleted=1&thread=' . urlencode($threadId));
+        exit;
     }
 }
 
@@ -185,6 +189,14 @@ $page_title = 'Thread ' . e($threadId) . ' — ' . e($thread['school_name'] ?? '
               </button>
             </form>
           <?php endif; ?>
+          <form method="POST" class="inline" onsubmit="return confirmFormSubmit(event, this, 'Permanently delete this conversation and all its messages?', {title:'Delete Conversation', okText:'Yes, Delete', isDanger:true})">
+            <input type="hidden" name="action" value="delete_thread">
+            <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+            <button type="submit" class="px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 text-xs font-semibold rounded-lg border border-red-200 transition flex items-center gap-1.5">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              Delete
+            </button>
+          </form>
           <?php if (!empty($school['semis_code'])): ?>
             <a href="<?= BASE_URL ?>/admin/school-profile.php?semis=<?= urlencode($school['semis_code']) ?>" class="px-3 py-1.5 bg-surface border border-border text-muted hover:text-primary text-xs font-semibold rounded-lg transition">
               School Profile
@@ -224,21 +236,21 @@ $page_title = 'Thread ' . e($threadId) . ' — ' . e($thread['school_name'] ?? '
 
             <div id="chatBox" class="p-5 space-y-4 max-h-[520px] overflow-y-auto">
               <?php if (empty($replies)): ?>
-                <div class="text-center text-xs text-muted py-6">No messages yet.</div>
+                <div id="emptyChatNotice" class="text-center text-xs text-muted py-6">No messages yet. Start the conversation below.</div>
               <?php else: ?>
                 <?php foreach ($replies as $r):
                   $isAdminMsg = ($r['sender_role'] ?? '') === 'admin';
                 ?>
-                  <div class="flex <?= $isAdminMsg ? 'justify-end' : 'justify-start' ?>">
+                  <div class="flex <?= $isAdminMsg ? 'justify-end' : 'justify-start' ?> msg-row" data-reply-id="<?= e($r['id'] ?? '0') ?>">
                     <div class="max-w-[80%] space-y-1">
                       <div class="flex items-center gap-1.5 <?= $isAdminMsg ? 'justify-end' : '' ?>">
-                        <div class="w-5 h-5 rounded-full <?= $isAdminMsg ? 'bg-primary text-white order-last' : 'bg-emerald-700 text-white' ?> flex items-center justify-center text-[9px] font-bold">
+                        <div class="w-5 h-5 rounded-full <?= $isAdminMsg ? 'bg-primary text-white order-last' : 'bg-emerald-700 text-white' ?> flex items-center justify-center text-[9px] font-bold flex-shrink-0">
                           <?= $isAdminMsg ? 'A' : 'S' ?>
                         </div>
                         <span class="text-[10px] font-semibold <?= $isAdminMsg ? 'text-primary' : 'text-emerald-700' ?>"><?= e($r['sender_name'] ?? '') ?></span>
                         <span class="text-[10px] text-muted"><?= date('M d, h:i A', strtotime($r['created_at'] ?? 'now')) ?></span>
                       </div>
-                      <div class="px-4 py-3 rounded-2xl text-xs leading-relaxed text-textMain whitespace-pre-line <?= $isAdminMsg ? 'msg-bubble-admin rounded-tr-sm' : 'msg-bubble-school rounded-tl-sm' ?>">
+                      <div class="px-4 py-3 rounded-2xl text-xs leading-relaxed text-textMain whitespace-pre-line shadow-xs <?= $isAdminMsg ? 'msg-bubble-admin rounded-tr-sm' : 'msg-bubble-school rounded-tl-sm' ?>">
                         <?= e($r['message'] ?? '') ?>
                       </div>
                     </div>
@@ -249,39 +261,47 @@ $page_title = 'Thread ' . e($threadId) . ' — ' . e($thread['school_name'] ?? '
           </div>
 
           <!-- Reply Box -->
-          <?php if (!$isClosed): ?>
-            <div class="bg-surface border border-border rounded-xl p-5 shadow-xs">
-              <h3 class="font-bold text-xs text-textMain mb-3 flex items-center gap-2">
-                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="text-primary"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                Send a Message
-              </h3>
-              <form method="POST" class="space-y-3">
-                <input type="hidden" name="action" value="post_reply">
-                <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
-
-                <textarea name="message" rows="4" required placeholder="Type your official message to the school Head Master…" class="w-full px-3.5 py-2.5 text-xs border border-border rounded-lg bg-background focus:outline-none focus:border-primary text-textMain leading-relaxed resize-none"></textarea>
-
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <div class="flex items-center gap-2 text-xs">
-                    <label class="font-semibold text-muted text-[11px]">After sending:</label>
-                    <select name="status_change" class="px-2.5 py-1.5 border border-border rounded-md text-xs bg-background focus:outline-none focus:border-primary">
-                      <option value="">Keep Open</option>
-                      <option value="Closed">Send & Close Conversation</option>
-                    </select>
+          <div id="replySection">
+            <?php if (!$isClosed): ?>
+              <div id="replyBoxWrap" class="bg-surface border border-border rounded-xl p-5 shadow-xs">
+                <h3 class="font-bold text-xs text-textMain mb-3 flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="text-primary"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    <span>Send a Message</span>
                   </div>
-                  <button type="submit" class="px-5 py-2 bg-primary hover:bg-primaryDark text-white text-xs font-semibold rounded-lg shadow-xs transition flex items-center gap-2">
-                    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                    Send
-                  </button>
-                </div>
-              </form>
-            </div>
-          <?php else: ?>
-            <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center text-xs text-slate-500">
-              <svg class="w-8 h-8 mx-auto text-slate-400 mb-2" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-              This conversation is <strong>Closed</strong>. No further messages can be sent until it is reopened.
-            </div>
-          <?php endif; ?>
+                  <span class="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Live Sync Active
+                  </span>
+                </h3>
+                <form id="replyForm" method="POST" class="space-y-3">
+                  <input type="hidden" name="action" value="post_reply">
+                  <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+
+                  <textarea name="message" id="messageInput" rows="3" required placeholder="Type your official message to the school Head Master… (Press Enter to send, Shift+Enter for new line)" class="w-full px-3.5 py-2.5 text-xs border border-border rounded-lg bg-background focus:outline-none focus:border-primary text-textMain leading-relaxed resize-none"></textarea>
+
+                  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div class="flex items-center gap-2 text-xs">
+                      <label class="font-semibold text-muted text-[11px]">After sending:</label>
+                      <select name="status_change" id="statusChangeSelect" class="px-2.5 py-1.5 border border-border rounded-md text-xs bg-background focus:outline-none focus:border-primary">
+                        <option value="">Keep Open</option>
+                        <option value="Closed">Send & Close Conversation</option>
+                      </select>
+                    </div>
+                    <button type="submit" id="sendBtn" class="px-5 py-2 bg-primary hover:bg-primaryDark text-white text-xs font-semibold rounded-lg shadow-xs transition flex items-center justify-center gap-2">
+                      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                      <span>Send</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+            <?php else: ?>
+              <div id="closedNoticeWrap" class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center text-xs text-slate-500 shadow-xs">
+                <svg class="w-8 h-8 mx-auto text-slate-400 mb-2" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                This conversation is <strong>Closed</strong>. No further messages can be sent until it is reopened.
+              </div>
+            <?php endif; ?>
+          </div>
         </div>
 
         <!-- Right Sidebar: Thread Info -->
@@ -331,7 +351,7 @@ $page_title = 'Thread ' . e($threadId) . ' — ' . e($thread['school_name'] ?? '
             </div>
             <div class="flex justify-between py-1 border-b border-border/60">
               <span class="text-muted">Status</span>
-              <span class="font-bold <?= $isClosed ? 'text-slate-500' : 'text-emerald-600' ?>"><?= e($thread['status'] ?? 'Open') ?></span>
+              <span id="threadMetaStatus" class="font-bold <?= $isClosed ? 'text-slate-500' : 'text-emerald-600' ?>"><?= e($thread['status'] ?? 'Open') ?></span>
             </div>
             <div class="flex justify-between py-1 border-b border-border/60">
               <span class="text-muted">Started By</span>
@@ -343,7 +363,7 @@ $page_title = 'Thread ' . e($threadId) . ' — ' . e($thread['school_name'] ?? '
             </div>
             <div class="flex justify-between py-1">
               <span class="text-muted">Last Activity</span>
-              <span class="text-textMain"><?= date('M d, Y h:i A', strtotime($thread['updated_at'] ?? $thread['created_at'] ?? 'now')) ?></span>
+              <span id="threadMetaActivity" class="text-textMain"><?= date('M d, Y h:i A', strtotime($thread['updated_at'] ?? $thread['created_at'] ?? 'now')) ?></span>
             </div>
           </div>
 
@@ -353,7 +373,7 @@ $page_title = 'Thread ' . e($threadId) . ' — ' . e($thread['school_name'] ?? '
               <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
               Direct Messaging Policy
             </div>
-            <p class="leading-relaxed text-[11px]">Only the District RSU Admin can initiate a message thread. Schools may reply but cannot start new conversations. Close the thread to stop further school replies.</p>
+            <p class="leading-relaxed text-[11px]">Only the District RSU Admin can initiate a message thread. Schools may reply in real-time. Close the thread to stop further school replies.</p>
           </div>
 
         </div>
@@ -366,6 +386,16 @@ $page_title = 'Thread ' . e($threadId) . ' — ' . e($thread['school_name'] ?? '
 </div>
 
 <script>
+const LSU_THREAD_ID = <?= json_encode($threadId) ?>;
+const LSU_CURRENT_ROLE = 'admin';
+const LSU_BASE = <?= json_encode(BASE_URL) ?>;
+
+let maxReplyId = 0;
+document.querySelectorAll('.msg-row').forEach(el => {
+  const rid = parseInt(el.getAttribute('data-reply-id'), 10) || 0;
+  if (rid > maxReplyId) maxReplyId = rid;
+});
+
 function openSidebar() {
   document.getElementById('sidebar').classList.remove('-translate-x-full');
   const o = document.getElementById('overlay'); o.classList.remove('hidden'); setTimeout(() => o.classList.remove('opacity-0'), 10);
@@ -380,10 +410,174 @@ document.addEventListener('click', function(e) {
   if (b && d && !b.contains(e.target) && !d.contains(e.target)) d.classList.add('hidden');
 });
 
-// Auto-scroll chat to bottom
-window.addEventListener('DOMContentLoaded', function() {
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/[&<>"']/g, function(m) {
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m];
+  });
+}
+
+function scrollToBottom() {
   const box = document.getElementById('chatBox');
-  if (box) box.scrollTop = box.scrollHeight;
+  if (box) {
+    box.scrollTop = box.scrollHeight;
+  }
+}
+
+function appendMessageBubble(msg) {
+  const box = document.getElementById('chatBox');
+  if (!box) return;
+
+  const emptyNotice = document.getElementById('emptyChatNotice');
+  if (emptyNotice) emptyNotice.remove();
+
+  const msgId = parseInt(msg.id || msg.message_id, 10) || 0;
+  if (msgId > maxReplyId) maxReplyId = msgId;
+
+  // Avoid duplicate bubble
+  if (msgId && document.querySelector(`[data-reply-id="${msgId}"]`)) return;
+
+  const isAdminMsg = (msg.sender_role === 'admin');
+  const div = document.createElement('div');
+  div.className = `flex ${isAdminMsg ? 'justify-end' : 'justify-start'} msg-row animate-in fade-in slide-in-from-bottom-2 duration-200`;
+  if (msgId) div.setAttribute('data-reply-id', msgId);
+
+  div.innerHTML = `
+    <div class="max-w-[80%] space-y-1">
+      <div class="flex items-center gap-1.5 ${isAdminMsg ? 'justify-end' : ''}">
+        <div class="w-5 h-5 rounded-full ${isAdminMsg ? 'bg-primary text-white order-last' : 'bg-emerald-700 text-white'} flex items-center justify-center text-[9px] font-bold flex-shrink-0">
+          ${isAdminMsg ? 'A' : 'S'}
+        </div>
+        <span class="text-[10px] font-semibold ${isAdminMsg ? 'text-primary' : 'text-emerald-700'}">${escapeHtml(msg.sender_name || '')}</span>
+        <span class="text-[10px] text-muted">${escapeHtml(msg.time_fmt || 'Just now')}</span>
+      </div>
+      <div class="px-4 py-3 rounded-2xl text-xs leading-relaxed text-textMain whitespace-pre-line shadow-xs ${isAdminMsg ? 'msg-bubble-admin rounded-tr-sm' : 'msg-bubble-school rounded-tl-sm'}">
+        ${escapeHtml(msg.message || '')}
+      </div>
+    </div>
+  `;
+
+  box.appendChild(div);
+  scrollToBottom();
+}
+
+function setThreadClosedUI() {
+  const sec = document.getElementById('replySection');
+  if (sec && !document.getElementById('closedNoticeWrap')) {
+    sec.innerHTML = `
+      <div id="closedNoticeWrap" class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center text-xs text-slate-500 shadow-xs">
+        <svg class="w-8 h-8 mx-auto text-slate-400 mb-2" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+        This conversation is <strong>Closed</strong>. No further messages can be sent until it is reopened.
+      </div>
+    `;
+  }
+  const statusMeta = document.getElementById('threadMetaStatus');
+  if (statusMeta) {
+    statusMeta.textContent = 'Closed';
+    statusMeta.className = 'font-bold text-slate-500';
+  }
+}
+
+// ── AJAX Real-Time Message Sending ──────────────────────────────────────────
+const replyForm = document.getElementById('replyForm');
+if (replyForm) {
+  const msgInput = document.getElementById('messageInput');
+
+  // Enter to send (Shift+Enter for new line)
+  if (msgInput) {
+    msgInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        replyForm.dispatchEvent(new Event('submit', { cancelable: true }));
+      }
+    });
+  }
+
+  replyForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const msgText = msgInput.value.trim();
+    if (!msgText) return;
+
+    const btn = document.getElementById('sendBtn');
+    const origHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `<svg class="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> <span>Sending…</span>`;
+
+    const statusChange = document.getElementById('statusChangeSelect')?.value || '';
+    const csrf = replyForm.querySelector('input[name="csrf_token"]').value;
+
+    const fd = new FormData();
+    fd.append('action', 'post_reply');
+    fd.append('thread_id', LSU_THREAD_ID);
+    fd.append('message', msgText);
+    fd.append('status_change', statusChange);
+    fd.append('csrf_token', csrf);
+
+    fetch(`${LSU_BASE}/api/thread-messages.php`, {
+      method: 'POST',
+      body: fd,
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(res => res.json())
+    .then(data => {
+      btn.disabled = false;
+      btn.innerHTML = origHtml;
+
+      if (data.success) {
+        msgInput.value = '';
+        appendMessageBubble(data);
+        if (data.thread_status === 'Closed') {
+          setThreadClosedUI();
+        }
+      } else {
+        showToast(data.error || 'Failed to send message', 'danger');
+      }
+    })
+    .catch(() => {
+      btn.disabled = false;
+      btn.innerHTML = origHtml;
+      showToast('Network error while sending message', 'danger');
+    });
+  });
+}
+
+// ── Real-Time Polling for Incoming Replies ──────────────────────────────────
+function pollNewMessages() {
+  fetch(`${LSU_BASE}/api/thread-messages.php?thread=${encodeURIComponent(LSU_THREAD_ID)}&after_id=${maxReplyId}`, {
+    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (!data.success) return;
+
+    if (data.messages && data.messages.length > 0) {
+      let incomingCount = 0;
+      data.messages.forEach(m => {
+        const mId = parseInt(m.id, 10) || 0;
+        if (mId && !document.querySelector(`[data-reply-id="${mId}"]`)) {
+          appendMessageBubble(m);
+          if (m.sender_role !== LSU_CURRENT_ROLE) {
+            incomingCount++;
+          }
+        }
+      });
+
+      if (incomingCount > 0 && window.playNotificationChime) {
+        window.playNotificationChime();
+      }
+    }
+
+    if (data.thread_status === 'Closed') {
+      setThreadClosedUI();
+    }
+  })
+  .catch(() => {});
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  scrollToBottom();
+  // Poll every 2.5 seconds
+  setInterval(pollNewMessages, 2500);
 });
 </script>
 </body>

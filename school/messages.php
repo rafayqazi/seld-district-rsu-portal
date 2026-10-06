@@ -185,7 +185,7 @@ $unreadThreads = count(array_filter($myThreads, fn($t) => ($t['unread_school'] ?
 
     </main>
 
-    <?php require_once __DIR__ . '/includes/footer.php'; ?>
+    <?php require_once dirname(__DIR__) . '/includes/footer.php'; ?>
   </div>
 </div>
 

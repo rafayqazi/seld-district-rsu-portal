@@ -281,6 +281,24 @@ $active_schools = 0;
 $attention_schools = 0;
 $not_reporting_schools = 0;
 
+// Pre-calculate profile completion data for all schools
+$completion_map = [];
+$complete_count = 0;
+$incomplete_count = 0;
+
+foreach ($schools_dir as $s) {
+    $semis = trim((string)($s['semis_code'] ?? ''));
+    if (!empty($semis)) {
+        $c = ExcelDB::calculateSchoolProfileCompletion($semis);
+        $completion_map[$semis] = $c;
+        if ((int)($c['percentage'] ?? 0) === 100) {
+            $complete_count++;
+        } else {
+            $incomplete_count++;
+        }
+    }
+}
+
 foreach ($schools_dir as $s) {
     $st = $s['status'] ?? '';
     if ($st === 'Active' || $st === 'Good') {
@@ -302,9 +320,9 @@ $existing_semis_list = array_column($schools_dir, 'semis_code');
 <title><?= e($page_title) ?></title>
 <meta name="description" content="District RSU School Directory — manage and monitor all schools in the district"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 <script src="https://cdn.tailwindcss.com"></script>
-<script>tailwind.config={theme:{extend:{colors:{primary:'#123B63',primaryDark:'#0B2946',secondary:'#0F766E',surface:'#FFFFFF',background:'#F5F7FA',textMain:'#172033',muted:'#64748B',border:'#E2E8F0',success:'#15803D',warning:'#D97706',danger:'#DC2626'},fontFamily:{sans:['Inter','system-ui','sans-serif']}}}}</script>
+<script>tailwind.config={theme:{extend:{colors:{primary:'#123B63',primaryDark:'#0B2946',secondary:'#0F766E',surface:'#FFFFFF',background:'#F5F7FA',textMain:'#172033',muted:'#64748B',border:'#E2E8F0',success:'#15803D',warning:'#D97706',danger:'#DC2626'},fontFamily:{sans:['Inter','system-ui','sans-serif'],serif:['Cinzel','Georgia','serif']}}}}</script>
 <style>
 body{font-family:'Inter',system-ui,sans-serif;}
 .sidebar-link{transition:background .15s,color .15s;}.sidebar-link:hover{background:rgba(255,255,255,.08);}.sidebar-link.active{background:rgba(255,255,255,.14);border-left:3px solid #0F766E;}
@@ -317,10 +335,78 @@ body{font-family:'Inter',system-ui,sans-serif;}
 .badge-active{background:#DCFCE7;color:#15803D;}.badge-good{background:#D1FAE5;color:#065F46;}.badge-attention{background:#FEF3C7;color:#92400E;}.badge-not-rep{background:#F1F5F9;color:#475569;}
 .table-row:hover{background:#F8FAFC;}
 #sidebar{transition:transform .25s cubic-bezier(.4,0,.2,1);}#overlay{transition:opacity .25s;}
+
+/* Print Rules for Bulk Documents */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm;
+  }
+  html, body {
+    background: #fff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    color: #000 !important;
+  }
+  body * {
+    visibility: hidden !important;
+  }
+  #bulk-print-modal, #bulk-print-modal * {
+    visibility: visible !important;
+  }
+  #bulk-print-modal {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    z-index: 9999999 !important;
+    display: block !important;
+  }
+  #bulk-modal-wrapper {
+    max-width: 100% !important;
+    width: 100% !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-height: none !important;
+  }
+  #bulk-print-scroll-wrap {
+    overflow: visible !important;
+    max-height: none !important;
+    padding: 0 !important;
+  }
+  .print-page-break {
+    page-break-after: always !important;
+    break-after: page !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    width: 100% !important;
+    min-height: 98vh !important;
+    padding: 24px !important;
+    margin: 0 auto !important;
+    box-sizing: border-box !important;
+    background: #fff !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+  }
+  .print-page-break:last-child {
+    page-break-after: auto !important;
+    break-after: auto !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
 </style>
 </head>
 <body class="bg-background text-textMain min-h-screen flex flex-col">
-<div class="bg-primaryDark text-white text-xs py-1.5 px-4 flex items-center justify-between z-50 relative">
+<div class="bg-primaryDark text-white text-xs py-1.5 px-4 flex items-center justify-between z-50 relative no-print">
   <span class="font-medium tracking-wide"><?= APP_GOVT ?> &nbsp;|&nbsp; <?= APP_DEPARTMENT ?></span>
   <span class="hidden sm:block opacity-75"><?= APP_NAME ?></span>
 </div>
@@ -423,6 +509,23 @@ body{font-family:'Inter',system-ui,sans-serif;}
         <option value="">All Gender</option>
         <option>Boys</option><option>Girls</option><option>Co-education</option>
       </select>
+      <select id="sch-progress" class="text-xs border border-border rounded px-3 py-1.5 bg-background font-medium focus:outline-none focus:border-primary text-textMain" onchange="filterSch()">
+        <option value="">All Progress</option>
+        <option id="opt-progress-100" value="100">Complete (100%) (<?= $complete_count ?>)</option>
+        <option id="opt-progress-below100" value="below100">Below 100% (<?= $incomplete_count ?>)</option>
+      </select>
+
+      <!-- Bulk Print Action Buttons (Shown conditionally based on Progress dropdown) -->
+      <button id="btn-bulk-appreciation" type="button" onclick="openBulkAppreciationModal()" class="hidden text-xs bg-emerald-700 hover:bg-emerald-800 text-white font-semibold px-3 py-1.5 rounded flex items-center gap-1.5 shadow-sm transition animate-in fade-in duration-150">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 15l-2 5l9-5l-9-5l2 5zm0 0v-8"/><circle cx="12" cy="8" r="7"/></svg>
+        <span>Print Appreciation Certificates (<span id="count-appreciation"><?= $complete_count ?></span>)</span>
+      </button>
+
+      <button id="btn-bulk-warning" type="button" onclick="openBulkWarningModal()" class="hidden text-xs bg-red-600 hover:bg-red-700 text-white font-semibold px-3 py-1.5 rounded flex items-center gap-1.5 shadow-sm transition animate-in fade-in duration-150">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span>Print Show Cause Notices (<span id="count-warning"><?= $incomplete_count ?></span>)</span>
+      </button>
+
       <button onclick="resetSch()" class="text-xs border border-border rounded px-3 py-1.5 bg-background text-muted hover:bg-border">Reset</button>
     </div>
     <div class="overflow-x-auto">
@@ -434,16 +537,26 @@ body{font-family:'Inter',system-ui,sans-serif;}
           <th class="px-4 py-3 font-semibold">Gender</th>
           <th class="px-4 py-3 font-semibold">Taluka</th>
           <th class="px-4 py-3 font-semibold text-right">Enrollment</th>
+          <th class="px-4 py-3 font-semibold text-center">Progress</th>
           <th class="px-4 py-3 font-semibold">Status</th>
           <th class="px-4 py-3 font-semibold text-center">Actions</th>
         </tr></thead>
         <tbody id="sch-tbody" class="divide-y divide-border text-textMain">
           <?php foreach ($schools_dir as $s): ?>
           <?php 
-            $cred = ExcelDB::getHeadMasterCredentials($s['semis_code'] ?? '');
+            $sSemis = trim((string)($s['semis_code'] ?? ''));
+            $cred = ExcelDB::getHeadMasterCredentials($sSemis);
+            $comp = $completion_map[$sSemis] ?? ['percentage' => 0, 'missing_count' => 0];
+            $pct = (int)($comp['percentage'] ?? 0);
+            $isComplete = ($pct === 100);
           ?>
-          <tr class="table-row cursor-pointer hover:bg-slate-100/70 transition-colors" onclick="handleRowClick(event, '<?= BASE_URL ?>/admin/school-profile.php?semis=<?= urlencode($s['semis_code'] ?? '') ?>')" title="Click to open <?= e($s['school_name'] ?? '') ?> Profile">
-            <td class="px-5 py-3 font-mono font-semibold text-primary"><?= e($s['semis_code'] ?? '') ?></td>
+          <tr class="table-row cursor-pointer hover:bg-slate-100/70 transition-colors" 
+              data-semis="<?= e($sSemis) ?>"
+              data-progress="<?= $isComplete ? '100' : 'below100' ?>"
+              data-progress-pct="<?= $pct ?>"
+              onclick="handleRowClick(event, '<?= BASE_URL ?>/admin/school-profile.php?semis=<?= urlencode($sSemis) ?>')" 
+              title="Click to open <?= e($s['school_name'] ?? '') ?> Profile">
+            <td class="px-5 py-3 font-mono font-semibold text-primary"><?= e($sSemis) ?></td>
             <td class="px-4 py-3">
               <div class="font-medium text-textMain"><?= e($s['school_name'] ?? '') ?></div>
               <div class="text-[11px] text-muted flex items-center gap-2 mt-0.5">
@@ -473,12 +586,27 @@ body{font-family:'Inter',system-ui,sans-serif;}
               <div class="font-mono font-bold text-textMain"><?= number_format($tot_e) ?></div>
               <div class="text-[10px] text-muted font-mono"><?= number_format($b_cnt) ?>B / <?= number_format($g_cnt) ?>G</div>
             </td>
+            <td class="px-4 py-3 text-center">
+              <?php if ($isComplete): ?>
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                  <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                  100%
+                </span>
+              <?php else: ?>
+                <div class="inline-flex flex-col items-center">
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold <?= $pct < 60 ? 'bg-rose-100 text-rose-800 border border-rose-200' : 'bg-amber-100 text-amber-800 border border-amber-200' ?>">
+                    <?= $pct ?>%
+                  </span>
+                  <span class="text-[10px] text-muted mt-0.5"><?= (int)($comp['missing_count'] ?? 0) ?> missing</span>
+                </div>
+              <?php endif; ?>
+            </td>
             <td class="px-4 py-3"><span class="status-badge <?= e($s['status_badge'] ?? 'badge-active') ?>"><?= e($s['status'] ?? 'Active') ?></span></td>
             <td class="px-4 py-3 text-center" onclick="event.stopPropagation()">
               <div class="flex items-center justify-center gap-1.5">
-                <a href="<?= BASE_URL ?>/admin/school-profile.php?semis=<?= urlencode($s['semis_code'] ?? '') ?>" class="btn-primary px-2 py-1 rounded text-xs" title="View Full Profile">Profile</a>
+                <a href="<?= BASE_URL ?>/admin/school-profile.php?semis=<?= urlencode($sSemis) ?>" class="btn-primary px-2 py-1 rounded text-xs" title="View Full Profile">Profile</a>
                 <button type="button" 
-                        data-semis="<?= e($s['semis_code'] ?? '') ?>"
+                        data-semis="<?= e($sSemis) ?>"
                         data-school="<?= e($s['school_name'] ?? '') ?>"
                         data-hm="<?= e($s['head_master'] ?? '') ?>"
                         data-cnic="<?= e($cred['cnic'] ?? $s['cnic'] ?? '') ?>"
@@ -488,7 +616,7 @@ body{font-family:'Inter',system-ui,sans-serif;}
                         title="View HM Portal Login & Password">
                   <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                 </button>
-                <button onclick="event.stopPropagation(); confirmDeleteSchool('<?= e($s['semis_code'] ?? '') ?>', '<?= e(addslashes($s['school_name'] ?? '')) ?>')" class="p-1 rounded text-muted hover:text-danger hover:bg-red-50 transition" title="Delete School">
+                <button onclick="event.stopPropagation(); confirmDeleteSchool('<?= e($sSemis) ?>', '<?= e(addslashes($s['school_name'] ?? '')) ?>')" class="p-1 rounded text-muted hover:text-danger hover:bg-red-50 transition" title="Delete School">
                   <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                 </button>
               </div>
@@ -895,8 +1023,46 @@ body{font-family:'Inter',system-ui,sans-serif;}
   </div>
 </div>
 
+<!-- ── Bulk Print Preview & Execution Modal ── -->
+<div id="bulk-print-modal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-2 sm:p-4 backdrop-blur-xs">
+  <div id="bulk-modal-wrapper" class="bg-surface border border-border rounded-xl max-w-5xl w-full p-4 sm:p-6 shadow-2xl relative max-h-[92vh] flex flex-col">
+    <!-- Header / Toolbar (hidden in print) -->
+    <div class="flex items-center justify-between pb-3.5 border-b border-border mb-4 no-print flex-shrink-0">
+      <div class="flex items-center gap-2.5">
+        <div id="bulk-modal-icon-wrap" class="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 15l-2 5l9-5l-9-5l2 5zm0 0v-8"/><circle cx="12" cy="8" r="7"/></svg>
+        </div>
+        <div>
+          <h3 id="bulk-modal-title" class="text-sm font-bold text-textMain">Bulk Appreciation Certificates</h3>
+          <p id="bulk-modal-subtitle" class="text-xs text-muted">Ready to print <span id="bulk-modal-count" class="font-bold text-textMain">0</span> document(s) &bull; 1 page per school</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="triggerBulkPrint()" class="btn-primary px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm hover:opacity-95 cursor-pointer">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          <span>Print All / Save PDF</span>
+        </button>
+        <button onclick="closeBulkPrintModal()" class="text-muted hover:text-textMain text-2xl leading-none px-2 py-1 rounded hover:bg-slate-100 cursor-pointer">&times;</button>
+      </div>
+    </div>
+
+    <!-- Scrollable Printable Container -->
+    <div class="flex-1 overflow-y-auto space-y-6 pr-1 bg-slate-100/60 p-3 sm:p-4 rounded-lg border border-slate-200" id="bulk-print-scroll-wrap">
+      <div id="bulk-print-container" class="space-y-6">
+        <!-- Rendered dynamically by JS -->
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 const existingSemisCodes = <?= json_encode(array_map('strval', $existing_semis_list)) ?>;
+const allSchoolsData = <?= json_encode($schools_dir) ?>;
+const schoolCompletionData = <?= json_encode($completion_map) ?>;
+const currentDistrictName = <?= json_encode(APP_DISTRICT) ?>;
+const currentYearStr = <?= json_encode(date('Y')) ?>;
+const currentDateStr = <?= json_encode(date('d F Y')) ?>;
+
 let rawParsedRows = [];
 let csvHeaders = [];
 
@@ -906,17 +1072,80 @@ function toggleNotif(){document.getElementById('notif-dropdown').classList.toggl
 document.addEventListener('click',function(e){const b=document.getElementById('notif-btn');const d=document.getElementById('notif-dropdown');if(b&&d&&!b.contains(e.target)&&!d.contains(e.target))d.classList.add('hidden');});
 
 function filterSch(){
-  const s=document.getElementById('sch-search').value.toLowerCase();
-  const t=document.getElementById('sch-taluka').value.toLowerCase();
-  const l=document.getElementById('sch-level').value.toLowerCase();
-  const g=document.getElementById('sch-gender').value.toLowerCase();
-  document.querySelectorAll('#sch-tbody tr').forEach(r=>{
-    const tx=r.textContent.toLowerCase();
-    r.style.display=(tx.includes(s)&&(t===''||tx.includes(t))&&(l===''||tx.includes(l))&&(g===''||tx.includes(g)))?'':'none';
+  const s = (document.getElementById('sch-search')?.value || '').toLowerCase().trim();
+  const t = (document.getElementById('sch-taluka')?.value || '').toLowerCase().trim();
+  const l = (document.getElementById('sch-level')?.value || '').toLowerCase().trim();
+  const g = (document.getElementById('sch-gender')?.value || '').toLowerCase().trim();
+  const p = (document.getElementById('sch-progress')?.value || '').trim();
+
+  let totalMatchingComplete = 0;
+  let totalMatchingIncomplete = 0;
+
+  document.querySelectorAll('#sch-tbody tr').forEach(r => {
+    const tx = r.textContent.toLowerCase();
+    const rProgress = r.getAttribute('data-progress') || '';
+    
+    const matchesSearch = s === '' || tx.includes(s);
+    const matchesTaluka = t === '' || tx.includes(t);
+    const matchesLevel  = l === '' || tx.includes(l);
+    const matchesGender = g === '' || tx.includes(g);
+
+    if (matchesSearch && matchesTaluka && matchesLevel && matchesGender) {
+      if (rProgress === '100') {
+        totalMatchingComplete++;
+      } else {
+        totalMatchingIncomplete++;
+      }
+    }
+
+    const matchesProg = (p === '') || (p === '100' && rProgress === '100') || (p === 'below100' && rProgress === 'below100');
+
+    if (matchesSearch && matchesTaluka && matchesLevel && matchesGender && matchesProg) {
+      r.style.display = '';
+    } else {
+      r.style.display = 'none';
+    }
   });
+
+  // Update dropdown option labels
+  const opt100 = document.getElementById('opt-progress-100');
+  const optBelow = document.getElementById('opt-progress-below100');
+  if (opt100) opt100.textContent = `Complete (100%) (${totalMatchingComplete})`;
+  if (optBelow) optBelow.textContent = `Below 100% (${totalMatchingIncomplete})`;
+
+  // Toggle dynamic bulk action buttons
+  const btnApprec = document.getElementById('btn-bulk-appreciation');
+  const btnWarn = document.getElementById('btn-bulk-warning');
+  const countApprec = document.getElementById('count-appreciation');
+  const countWarn = document.getElementById('count-warning');
+
+  if (p === '100') {
+    if (btnApprec) {
+      btnApprec.classList.remove('hidden');
+      if (countApprec) countApprec.textContent = totalMatchingComplete;
+      btnApprec.disabled = (totalMatchingComplete === 0);
+      btnApprec.classList.toggle('opacity-50', totalMatchingComplete === 0);
+    }
+    if (btnWarn) btnWarn.classList.add('hidden');
+  } else if (p === 'below100') {
+    if (btnWarn) {
+      btnWarn.classList.remove('hidden');
+      if (countWarn) countWarn.textContent = totalMatchingIncomplete;
+      btnWarn.disabled = (totalMatchingIncomplete === 0);
+      btnWarn.classList.toggle('opacity-50', totalMatchingIncomplete === 0);
+    }
+    if (btnApprec) btnApprec.classList.add('hidden');
+  } else {
+    if (btnApprec) btnApprec.classList.add('hidden');
+    if (btnWarn) btnWarn.classList.add('hidden');
+  }
 }
+
 function resetSch(){
-  ['sch-search','sch-taluka','sch-level','sch-gender'].forEach(id=>document.getElementById(id).value='');
+  ['sch-search','sch-taluka','sch-level','sch-gender','sch-progress'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
   filterSch();
 }
 
@@ -1274,6 +1503,313 @@ function handleRowClick(event, url) {
   }
   window.location.href = url;
 }
+
+// ─── Bulk Appreciation & Show Cause Notice Print Engine ────────────────────────
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function getMatchingFilteredSchools(targetProgress) {
+  const matching = [];
+  const rows = document.querySelectorAll('#sch-tbody tr');
+
+  rows.forEach(r => {
+    if (r.style.display !== 'none') {
+      const semis = r.getAttribute('data-semis') || '';
+      const prog = r.getAttribute('data-progress') || '';
+      if (!targetProgress || prog === targetProgress) {
+        const sch = allSchoolsData.find(s => String(s.semis_code) === String(semis));
+        if (sch) {
+          matching.push(sch);
+        }
+      }
+    }
+  });
+
+  return matching;
+}
+
+function generateAppreciationCertificateHtml(school, comp) {
+  const semis = escapeHtml(school.semis_code || '');
+  const schoolName = escapeHtml(school.school_name || '');
+  const hmName = escapeHtml(school.head_master || 'Head Master / Head Mistress');
+  const cnic = escapeHtml(school.cnic || 'N/A');
+  const taluka = escapeHtml(school.taluka || currentDistrictName);
+
+  return `
+    <div class="print-page-break bg-white text-slate-900 border-4 border-double border-primary p-6 sm:p-10 rounded-2xl shadow-md font-sans relative overflow-hidden">
+      <!-- Watermark Background -->
+      <div class="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none select-none">
+        <svg width="450" height="450" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zm0 9l2.5-1.25L12 8.5l-2.5 1.25L12 11zm0 2.5l-5-2.5-5 2.5 10 5 10-5-5-2.5-5 2.5z"/></svg>
+      </div>
+
+      <!-- Top Ornate Header -->
+      <div class="text-center pb-4 border-b-2 border-primary/40 relative z-10">
+        <div class="text-[11px] tracking-[0.25em] uppercase font-bold text-slate-700">GOVERNMENT OF SINDH</div>
+        <div class="text-lg sm:text-2xl font-black text-primary uppercase tracking-tight mt-0.5">SCHOOL EDUCATION &amp; LITERACY DEPARTMENT</div>
+        <div class="text-xs sm:text-sm font-bold text-secondary tracking-wide mt-0.5">DISTRICT REFORM SUPPORT UNIT (RSU) &bull; ${escapeHtml(currentDistrictName).toUpperCase()}</div>
+        <div class="text-[11px] text-slate-500 font-mono mt-1">LSU/RSU Education Portal &bull; Institutional Quality &amp; Governance Wing</div>
+      </div>
+
+      <!-- Certificate Title Header -->
+      <div class="text-center my-6 relative z-10">
+        <div class="inline-block px-4 py-1 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-800 text-[11px] font-bold uppercase tracking-widest mb-2">
+          &star; 100% Institutional Compliance Award &star;
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-serif font-black text-primary tracking-wide uppercase">
+          Certificate of Appreciation
+        </h1>
+        <div class="text-sm font-semibold text-slate-600 font-serif italic mt-0.5">
+          سندِ تحسین و اعترافِ خدمت
+        </div>
+        <div class="w-24 h-1 bg-gradient-to-r from-secondary to-primary mx-auto mt-2 rounded-full"></div>
+      </div>
+
+      <!-- Presentation Statement -->
+      <div class="space-y-4 text-center max-w-3xl mx-auto text-xs sm:text-sm text-slate-800 leading-relaxed relative z-10">
+        <p class="text-slate-600 font-medium">This certificate of high merit and distinction is proudly presented to:</p>
+        
+        <div class="bg-slate-50/90 border-2 border-dashed border-primary/30 p-4 rounded-xl shadow-xs">
+          <div class="text-lg sm:text-xl font-extrabold text-primary">${hmName}</div>
+          <div class="text-xs text-slate-700 font-mono mt-1">
+            <strong>CNIC:</strong> ${cnic} &nbsp;&bull;&nbsp; <strong>Designation:</strong> Head Master / Head Mistress
+          </div>
+          <div class="text-sm sm:text-base font-bold text-slate-900 mt-2">${schoolName}</div>
+          <div class="text-xs text-slate-600 font-mono mt-0.5">
+            SEMIS Code: <strong>${semis}</strong> &nbsp;|&nbsp; Taluka: <strong>${taluka}</strong> &nbsp;|&nbsp; District: <strong>${escapeHtml(currentDistrictName)}</strong>
+          </div>
+        </div>
+
+        <p class="text-justify sm:text-center text-xs leading-relaxed text-slate-700 pt-1">
+          In official recognition of outstanding leadership, institutional diligence, and timely achievement of <strong>100% data completion &amp; electronic verification</strong> of school infrastructure, facilities assessment, and teaching staff roster on the <strong>Sindh District LSU/RSU Portal</strong> for the Academic Year <strong>${escapeHtml(currentYearStr)}</strong>.
+        </p>
+      </div>
+
+      <!-- Reference & Date Footer -->
+      <div class="flex justify-between items-center text-[11px] font-mono text-slate-600 pt-6 border-t border-slate-200 mt-4 relative z-10">
+        <div><strong>Ref No:</strong> SELD/RSU-TAY/AC/${escapeHtml(currentYearStr)}/${semis}</div>
+        <div><strong>Date of Issue:</strong> ${escapeHtml(currentDateStr)}</div>
+      </div>
+
+      <!-- Signatures -->
+      <div class="pt-8 grid grid-cols-2 gap-12 text-center text-xs relative z-10">
+        <div class="border-t-2 border-slate-700 pt-2">
+          <div class="font-bold text-slate-900">District RSU Coordinator</div>
+          <div class="text-[11px] text-slate-600">Reform Support Unit (RSU), ${escapeHtml(currentDistrictName)}</div>
+          <div class="text-[10px] text-slate-500 font-mono mt-0.5">SELD &bull; Government of Sindh</div>
+        </div>
+        <div class="border-t-2 border-slate-700 pt-2">
+          <div class="font-bold text-slate-900">District Education Officer (DEO)</div>
+          <div class="text-[11px] text-slate-600">School Education &amp; Literacy Department</div>
+          <div class="text-[10px] text-slate-500 font-mono mt-0.5">District ${escapeHtml(currentDistrictName)}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function generateWarningNoticeHtml(school, comp) {
+  const semis = escapeHtml(school.semis_code || '');
+  const schoolName = escapeHtml(school.school_name || '');
+  const hmName = escapeHtml(school.head_master || 'Head Master / Head Mistress');
+  const cnic = escapeHtml(school.cnic || 'N/A');
+  const taluka = escapeHtml(school.taluka || currentDistrictName);
+  const pct = comp ? (comp.percentage || 0) : 0;
+  const missingCount = comp ? (comp.missing_count || 0) : 0;
+  const missingFields = comp && comp.missing_fields ? comp.missing_fields : [];
+
+  let missingRowsHtml = '';
+  if (missingFields.length > 0) {
+    missingFields.forEach((item, idx) => {
+      const imp = escapeHtml(item.importance || 'High');
+      const isCrit = imp.toLowerCase() === 'critical';
+      missingRowsHtml += `
+        <tr>
+          <td class="py-1.5 px-2 border-r border-slate-300 text-center font-mono font-bold">${idx + 1}</td>
+          <td class="py-1.5 px-2.5 border-r border-slate-300 font-semibold text-slate-800">${escapeHtml(item.category || '')}</td>
+          <td class="py-1.5 px-2.5 border-r border-slate-300">
+            <div class="font-bold text-slate-900">${escapeHtml(item.label || '')}</div>
+            <div class="text-[10px] text-slate-600">${escapeHtml(item.description || '')}</div>
+          </td>
+          <td class="py-1.5 px-2 border-r border-slate-300 text-center font-bold">
+            <span class="px-1.5 py-0.5 rounded text-[10px] ${isCrit ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'}">
+              ${imp}
+            </span>
+          </td>
+          <td class="py-1.5 px-2.5 text-slate-700">
+            Log in to School Portal &bull; update &amp; save required information immediately.
+          </td>
+        </tr>
+      `;
+    });
+  } else {
+    missingRowsHtml = `<tr><td colspan="5" class="py-2 text-center text-muted">No specific deficit items registered.</td></tr>`;
+  }
+
+  return `
+    <div class="print-page-break bg-white text-slate-900 p-6 sm:p-8 rounded-xl border border-slate-300 space-y-4 font-sans shadow-md">
+      <!-- Official Header -->
+      <div class="text-center pb-3 border-b-2 border-slate-800">
+        <div class="text-[11px] tracking-widest uppercase font-bold text-slate-700">GOVERNMENT OF SINDH</div>
+        <div class="text-base sm:text-lg font-extrabold text-slate-900 uppercase tracking-tight mt-0.5">SCHOOL EDUCATION &amp; LITERACY DEPARTMENT</div>
+        <div class="text-xs font-semibold text-slate-700">DISTRICT REFORM SUPPORT UNIT (RSU) &bull; ${escapeHtml(currentDistrictName).toUpperCase()}</div>
+        <div class="text-[11px] text-slate-500 mt-0.5">LSU/RSU Education Portal &bull; Institutional Quality &amp; Compliance Wing</div>
+      </div>
+
+      <!-- Reference & Date -->
+      <div class="flex justify-between items-center text-xs font-mono pt-1">
+        <div><strong>Ref No:</strong> SELD/RSU-TAY/SC-DEF/${escapeHtml(currentYearStr)}/${semis}</div>
+        <div><strong>Date:</strong> ${escapeHtml(currentDateStr)}</div>
+      </div>
+
+      <!-- Addressee -->
+      <div class="text-xs space-y-1 bg-slate-50 p-3 rounded-lg border border-slate-200">
+        <div><strong>To:</strong> The Head Master / Head Mistress,</div>
+        <div class="text-sm font-bold text-slate-900">${schoolName}</div>
+        <div class="flex flex-wrap items-center gap-3 text-slate-600 font-mono text-[11px]">
+          <span>SEMIS Code: <strong>${semis}</strong></span>
+          <span>&bull;</span>
+          <span>Taluka: <strong>${taluka}</strong></span>
+          <span>&bull;</span>
+          <span>Head: <strong>${hmName}</strong></span>
+          <span>&bull;</span>
+          <span>CNIC: <strong>${cnic}</strong></span>
+        </div>
+      </div>
+
+      <!-- Subject -->
+      <div class="text-xs border-b border-slate-300 pb-1.5">
+        <span class="font-bold uppercase tracking-wide text-slate-900">SUBJECT: </span>
+        <strong class="text-red-700 uppercase">
+          SHOW CAUSE NOTICE &amp; URGENT DIRECTIVE: SUBMISSION OF DEFICIT INSTITUTIONAL &amp; STAFF PROFILE DATA
+        </strong>
+      </div>
+
+      <!-- Letter Body -->
+      <div class="text-xs leading-relaxed space-y-2 text-slate-800 text-justify">
+        <p>
+          In accordance with the mandatory digital governance and monitoring directives of the School Education &amp; Literacy Department (SELD), Government of Sindh, an official institutional data compliance audit was performed for your school on the <strong>District RSU Portal</strong>.
+        </p>
+        <p>
+          The audit results indicate an overall profile completeness rate of <strong class="text-red-700 text-sm font-bold">${pct}%</strong>. The following <strong class="text-red-700">${missingCount} mandatory information items</strong> remain incomplete or unverified in the portal database:
+        </p>
+      </div>
+
+      <!-- Checklist Table -->
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-[11px] border border-slate-300">
+          <thead>
+            <tr class="bg-slate-100 text-slate-800 font-bold uppercase tracking-wider border-b border-slate-300">
+              <th class="py-1.5 px-2 border-r border-slate-300 text-center w-8">#</th>
+              <th class="py-1.5 px-2.5 border-r border-slate-300">Category</th>
+              <th class="py-1.5 px-2.5 border-r border-slate-300">Deficit Information</th>
+              <th class="py-1.5 px-2 border-r border-slate-300 text-center w-20">Priority</th>
+              <th class="py-1.5 px-2.5">Directive for Head Master</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200">
+            ${missingRowsHtml}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Compliance Directive Warning -->
+      <div class="p-2.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-950 font-medium leading-relaxed">
+        <strong>COMPLIANCE INSTRUCTION:</strong> You are hereby instructed to log in to the School Head Portal using your official CNIC number (<strong>${cnic}</strong>) and update the missing information within <strong>seven (07) calendar days</strong>. Non-compliance will result in notice escalation to TEVO / DEO office for administrative inquiry.
+      </div>
+
+      <!-- Signature Blocks -->
+      <div class="pt-6 grid grid-cols-2 gap-8 text-center text-xs">
+        <div class="border-t border-slate-400 pt-2">
+          <div class="font-bold text-slate-900">District RSU Coordinator</div>
+          <div class="text-[11px] text-slate-600">Reform Support Unit (RSU), ${escapeHtml(currentDistrictName)}</div>
+          <div class="text-[10px] text-slate-500 font-mono mt-0.5">SELD &bull; Government of Sindh</div>
+        </div>
+        <div class="border-t border-slate-400 pt-2">
+          <div class="font-bold text-slate-900">District Education Officer (DEO)</div>
+          <div class="text-[11px] text-slate-600">School Education &amp; Literacy Department</div>
+          <div class="text-[10px] text-slate-500 font-mono mt-0.5">District ${escapeHtml(currentDistrictName)}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function openBulkAppreciationModal() {
+  const schools = getMatchingFilteredSchools('100');
+  if (schools.length === 0) {
+    alert('No schools with 100% profile completion are currently visible in the filtered list.');
+    return;
+  }
+
+  const container = document.getElementById('bulk-print-container');
+  container.innerHTML = '';
+
+  schools.forEach(sch => {
+    const sCode = String(sch.semis_code || '');
+    const comp = schoolCompletionData[sCode] || { percentage: 100, missing_count: 0 };
+    container.innerHTML += generateAppreciationCertificateHtml(sch, comp);
+  });
+
+  const iconWrap = document.getElementById('bulk-modal-icon-wrap');
+  if (iconWrap) {
+    iconWrap.className = 'w-9 h-9 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold';
+    iconWrap.innerHTML = '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 15l-2 5l9-5l-9-5l2 5zm0 0v-8"/><circle cx="12" cy="8" r="7"/></svg>';
+  }
+
+  document.getElementById('bulk-modal-title').textContent = 'Bulk Appreciation Certificates';
+  document.getElementById('bulk-modal-subtitle').innerHTML = `Ready to print <span id="bulk-modal-count" class="font-bold text-emerald-800">${schools.length}</span> certificate(s) &bull; 1 page per school`;
+
+  document.getElementById('bulk-print-modal').classList.remove('hidden');
+}
+
+function openBulkWarningModal() {
+  const schools = getMatchingFilteredSchools('below100');
+  if (schools.length === 0) {
+    alert('No schools with incomplete profile records are currently visible in the filtered list.');
+    return;
+  }
+
+  const container = document.getElementById('bulk-print-container');
+  container.innerHTML = '';
+
+  schools.forEach(sch => {
+    const sCode = String(sch.semis_code || '');
+    const comp = schoolCompletionData[sCode] || { percentage: 0, missing_count: 0, missing_fields: [] };
+    container.innerHTML += generateWarningNoticeHtml(sch, comp);
+  });
+
+  const iconWrap = document.getElementById('bulk-modal-icon-wrap');
+  if (iconWrap) {
+    iconWrap.className = 'w-9 h-9 rounded-lg bg-red-100 text-red-800 flex items-center justify-center font-bold';
+    iconWrap.innerHTML = '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+  }
+
+  document.getElementById('bulk-modal-title').textContent = 'Bulk Show Cause & Deficit Notices';
+  document.getElementById('bulk-modal-subtitle').innerHTML = `Ready to print <span id="bulk-modal-count" class="font-bold text-red-800">${schools.length}</span> notice(s) &bull; 1 page per school`;
+
+  document.getElementById('bulk-print-modal').classList.remove('hidden');
+}
+
+function triggerBulkPrint() {
+  window.print();
+}
+
+function closeBulkPrintModal() {
+  const modal = document.getElementById('bulk-print-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
+// Check if progress parameter was passed in URL query
+document.addEventListener('DOMContentLoaded', () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const progParam = urlParams.get('progress');
+  if (progParam && document.getElementById('sch-progress')) {
+    document.getElementById('sch-progress').value = progParam;
+  }
+  filterSch();
+});
 </script>
 </body>
 </html>

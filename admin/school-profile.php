@@ -63,6 +63,29 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         $drain       = trim($_POST['drainage_sewerage'] ?? 'Functional Drainage');
         $flood       = trim($_POST['flood_prone'] ?? 'No');
         $furniture   = trim($_POST['furniture_condition'] ?? 'Adequate');
+
+        // Classroom Assets & Equipment
+        $boards_func     = max(0, (int)($_POST['boards_functional'] ?? 0));
+        $boards_non_func = max(0, (int)($_POST['boards_non_functional'] ?? 0));
+        $boards_tot      = $boards_func + $boards_non_func;
+        if ($boards_tot === 0 && isset($_POST['boards_total'])) {
+            $boards_tot = max(0, (int)$_POST['boards_total']);
+        }
+
+        $benches_func     = max(0, (int)($_POST['benches_functional'] ?? 0));
+        $benches_non_func = max(0, (int)($_POST['benches_non_functional'] ?? 0));
+        $benches_tot      = $benches_func + $benches_non_func;
+        if ($benches_tot === 0 && isset($_POST['benches_total'])) {
+            $benches_tot = max(0, (int)$_POST['benches_total']);
+        }
+
+        $fans_func     = max(0, (int)($_POST['fans_functional'] ?? 0));
+        $fans_non_func = max(0, (int)($_POST['fans_non_functional'] ?? 0));
+        $fans_tot      = $fans_func + $fans_non_func;
+        if ($fans_tot === 0 && isset($_POST['fans_total'])) {
+            $fans_tot = max(0, (int)$_POST['fans_total']);
+        }
+
         ExcelDB::update('schools', 'semis_code', $targetSemis, [
             'classrooms'             => (string)$rooms,
             'facility_electricity'   => $elec,
@@ -74,6 +97,15 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             'drainage_sewerage'      => $drain,
             'flood_prone'            => $flood,
             'furniture_condition'    => $furniture,
+            'boards_total'           => (string)$boards_tot,
+            'boards_functional'      => (string)$boards_func,
+            'boards_non_functional'  => (string)$boards_non_func,
+            'benches_total'          => (string)$benches_tot,
+            'benches_functional'     => (string)$benches_func,
+            'benches_non_functional' => (string)$benches_non_func,
+            'fans_total'             => (string)$fans_tot,
+            'fans_functional'        => (string)$fans_func,
+            'fans_non_functional'    => (string)$fans_non_func,
         ]);
         ExcelDB::autoFlagSchoolRisks($targetSemis);
         header('Location: ' . BASE_URL . '/admin/school-profile.php?semis=' . urlencode($targetSemis) . '&msg=facilities_updated');
@@ -110,6 +142,28 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         $drain   = trim($_POST['drainage_sewerage'] ?? 'Functional Drainage');
         $flood   = trim($_POST['flood_prone'] ?? 'No');
         $furn    = trim($_POST['furniture_condition'] ?? 'Adequate');
+
+        // Classroom Assets & Equipment
+        $boards_func     = max(0, (int)($_POST['boards_functional'] ?? 0));
+        $boards_non_func = max(0, (int)($_POST['boards_non_functional'] ?? 0));
+        $boards_tot      = $boards_func + $boards_non_func;
+        if ($boards_tot === 0 && isset($_POST['boards_total'])) {
+            $boards_tot = max(0, (int)$_POST['boards_total']);
+        }
+
+        $benches_func     = max(0, (int)($_POST['benches_functional'] ?? 0));
+        $benches_non_func = max(0, (int)($_POST['benches_non_functional'] ?? 0));
+        $benches_tot      = $benches_func + $benches_non_func;
+        if ($benches_tot === 0 && isset($_POST['benches_total'])) {
+            $benches_tot = max(0, (int)$_POST['benches_total']);
+        }
+
+        $fans_func     = max(0, (int)($_POST['fans_functional'] ?? 0));
+        $fans_non_func = max(0, (int)($_POST['fans_non_functional'] ?? 0));
+        $fans_tot      = $fans_func + $fans_non_func;
+        if ($fans_tot === 0 && isset($_POST['fans_total'])) {
+            $fans_tot = max(0, (int)$_POST['fans_total']);
+        }
 
         // Validate SEMIS Code if changed by Admin
         if ($newSemis !== $targetSemis) {
@@ -159,6 +213,15 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                 'drainage_sewerage'      => $drain,
                 'flood_prone'            => $flood,
                 'furniture_condition'    => $furn,
+                'boards_total'           => (string)$boards_tot,
+                'boards_functional'      => (string)$boards_func,
+                'boards_non_functional'  => (string)$boards_non_func,
+                'benches_total'          => (string)$benches_tot,
+                'benches_functional'     => (string)$benches_func,
+                'benches_non_functional' => (string)$benches_non_func,
+                'fans_total'             => (string)$fans_tot,
+                'fans_functional'        => (string)$fans_func,
+                'fans_non_functional'    => (string)$fans_non_func,
             ];
 
             ExcelDB::update('schools', 'semis_code', $targetSemis, $updateData);
@@ -260,6 +323,19 @@ $totalEnrollment = $boysEst + $girlsEst;
 
 $cleanAtt = (int)preg_replace('/[^0-9]/', '', $school['attendance_pct'] ?? '90');
 if ($cleanAtt <= 0) $cleanAtt = 90;
+
+// ─── Classroom Assets & Equipment ───────────────────────────────────────────
+$boards_func     = max(0, (int)($school['boards_functional'] ?? 0));
+$boards_non_func = max(0, (int)($school['boards_non_functional'] ?? 0));
+$boards_tot      = isset($school['boards_total']) && $school['boards_total'] !== '' ? max(0, (int)$school['boards_total']) : ($boards_func + $boards_non_func);
+
+$benches_func     = max(0, (int)($school['benches_functional'] ?? 0));
+$benches_non_func = max(0, (int)($school['benches_non_functional'] ?? 0));
+$benches_tot      = isset($school['benches_total']) && $school['benches_total'] !== '' ? max(0, (int)$school['benches_total']) : ($benches_func + $benches_non_func);
+
+$fans_func     = max(0, (int)($school['fans_functional'] ?? 0));
+$fans_non_func = max(0, (int)($school['fans_non_functional'] ?? 0));
+$fans_tot      = isset($school['fans_total']) && $school['fans_total'] !== '' ? max(0, (int)$school['fans_total']) : ($fans_func + $fans_non_func);
 
 // ─── School-specific Complaints Summary ──────────────────────────────────────
 $allComplaints = ExcelDB::all('complaints');
@@ -375,6 +451,13 @@ body{font-family:'Inter',system-ui,sans-serif;}
         </div>
       </div>
       <div class="flex flex-wrap items-center gap-2">
+        <!-- Direct Message Button -->
+        <a href="<?= BASE_URL ?>/admin/messages.php?compose=1&semis=<?= urlencode($semis) ?>" 
+           id="btnDirectMessage"
+           class="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded shadow-sm transition">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="12" y2="13"/></svg>
+          Direct Message
+        </a>
         <!-- Edit School Button -->
         <button onclick="openEditSchoolModal()" class="btn-primary px-3.5 py-2 rounded text-xs font-semibold flex items-center gap-1.5 shadow-sm">
           <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -512,6 +595,103 @@ body{font-family:'Inter',system-ui,sans-serif;}
             <span class="status-badge <?= e($fc[2]['class']) ?> mt-1 inline-block"><?= e($fc[2]['status']) ?></span>
           </div>
           <?php endforeach; ?>
+        </div>
+      </section>
+
+      <!-- Classroom Equipment & Assets Inventory -->
+      <section class="bg-surface border border-border rounded-lg shadow-sm">
+        <div class="px-5 py-3.5 border-b border-border flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <div class="w-6 h-6 rounded bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+            </div>
+            <h2 class="text-sm font-semibold text-textMain">Classroom Equipment &amp; Assets</h2>
+            <span class="text-[11px] text-muted hidden sm:inline">&bull; Physical inventory audit</span>
+          </div>
+          <button onclick="openEditFacilitiesModal()" class="text-xs text-primary hover:text-primaryDark flex items-center gap-1 font-medium transition group">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="group-hover:scale-110 transition-transform"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            <span>Update Inventory</span>
+          </button>
+        </div>
+
+        <div class="p-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Writing Boards -->
+          <div class="p-3.5 rounded-xl border border-slate-200 bg-slate-50/70 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-textMain">Writing Boards</div>
+                  <div class="text-[10px] text-muted">Black / White Boards</div>
+                </div>
+              </div>
+              <span class="text-sm font-bold font-mono text-govNavy"><?= $boards_tot ?> <span class="text-[10px] font-normal text-muted">Total</span></span>
+            </div>
+            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200 text-xs">
+              <div class="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-emerald-200">
+                <span class="text-[11px] text-emerald-700 font-medium">Functional:</span>
+                <span class="font-bold font-mono text-emerald-800"><?= $boards_func ?></span>
+              </div>
+              <div class="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-rose-200">
+                <span class="text-[11px] text-rose-700 font-medium">Non-Func:</span>
+                <span class="font-bold font-mono text-rose-800"><?= $boards_non_func ?></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Student Benches & Desks -->
+          <div class="p-3.5 rounded-xl border border-slate-200 bg-slate-50/70 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-blue-100 text-blue-800 flex items-center justify-center font-bold">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 18v3"/><path d="M20 18v3"/><path d="M4 14h16"/><path d="M4 10h16"/><path d="M6 6h12"/></svg>
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-textMain">Student Benches</div>
+                  <div class="text-[10px] text-muted">Desks &amp; Benches</div>
+                </div>
+              </div>
+              <span class="text-sm font-bold font-mono text-govNavy"><?= $benches_tot ?> <span class="text-[10px] font-normal text-muted">Total</span></span>
+            </div>
+            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200 text-xs">
+              <div class="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-emerald-200">
+                <span class="text-[11px] text-emerald-700 font-medium">Functional:</span>
+                <span class="font-bold font-mono text-emerald-800"><?= $benches_func ?></span>
+              </div>
+              <div class="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-rose-200">
+                <span class="text-[11px] text-rose-700 font-medium">Non-Func:</span>
+                <span class="font-bold font-mono text-rose-800"><?= $benches_non_func ?></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Electric Fans -->
+          <div class="p-3.5 rounded-xl border border-slate-200 bg-slate-50/70 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M12 12a3 3 0 1 0 6 0 3 3 0 0 0-6 0Z"/><path d="M12 12a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z"/><path d="M12 12a3 3 0 1 0-6 0 3 3 0 0 0 6 0Z"/><circle cx="12" cy="12" r="9"/></svg>
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-textMain">Electric Fans</div>
+                  <div class="text-[10px] text-muted">Ceiling / Bracket Fans</div>
+                </div>
+              </div>
+              <span class="text-sm font-bold font-mono text-govNavy"><?= $fans_tot ?> <span class="text-[10px] font-normal text-muted">Total</span></span>
+            </div>
+            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200 text-xs">
+              <div class="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-emerald-200">
+                <span class="text-[11px] text-emerald-700 font-medium">Functional:</span>
+                <span class="font-bold font-mono text-emerald-800"><?= $fans_func ?></span>
+              </div>
+              <div class="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-rose-200">
+                <span class="text-[11px] text-rose-700 font-medium">Non-Func:</span>
+                <span class="font-bold font-mono text-rose-800"><?= $fans_non_func ?></span>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -1054,6 +1234,77 @@ body{font-family:'Inter',system-ui,sans-serif;}
         </div>
       </div>
 
+      <!-- Classroom Equipment Inventory (Boards, Benches, Fans) -->
+      <div class="p-3.5 bg-slate-50 border border-border rounded-lg space-y-3">
+        <div class="text-xs font-bold text-primary flex items-center justify-between">
+          <span class="flex items-center gap-1.5">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+            Classroom Equipment &amp; Assets Inventory
+          </span>
+          <span class="text-[10px] text-muted font-normal">Functional &amp; Non-Functional counts</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          
+          <!-- Boards -->
+          <div class="p-2.5 bg-white border border-border rounded-lg space-y-2">
+            <div class="text-[11px] font-bold text-textMain flex items-center justify-between">
+              <span>Writing Boards</span>
+              <span class="text-[10px] font-mono text-muted">Total: <strong id="admin_boards_total_disp"><?= $boards_tot ?></strong></span>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[10px] font-semibold text-emerald-800 mb-0.5">Functional</label>
+                <input type="number" id="admin_boards_functional" name="boards_functional" min="0" value="<?= $boards_func ?>" class="w-full text-xs font-mono font-bold border border-emerald-300 rounded px-2 py-1 bg-emerald-50/40 text-emerald-900 focus:outline-none" oninput="adminCalcEquipment()"/>
+              </div>
+              <div>
+                <label class="block text-[10px] font-semibold text-rose-800 mb-0.5">Non-Func</label>
+                <input type="number" id="admin_boards_non_functional" name="boards_non_functional" min="0" value="<?= $boards_non_func ?>" class="w-full text-xs font-mono font-bold border border-rose-300 rounded px-2 py-1 bg-rose-50/40 text-rose-900 focus:outline-none" oninput="adminCalcEquipment()"/>
+              </div>
+            </div>
+            <input type="hidden" id="admin_boards_total" name="boards_total" value="<?= $boards_tot ?>"/>
+          </div>
+
+          <!-- Benches -->
+          <div class="p-2.5 bg-white border border-border rounded-lg space-y-2">
+            <div class="text-[11px] font-bold text-textMain flex items-center justify-between">
+              <span>Student Benches</span>
+              <span class="text-[10px] font-mono text-muted">Total: <strong id="admin_benches_total_disp"><?= $benches_tot ?></strong></span>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[10px] font-semibold text-emerald-800 mb-0.5">Functional</label>
+                <input type="number" id="admin_benches_functional" name="benches_functional" min="0" value="<?= $benches_func ?>" class="w-full text-xs font-mono font-bold border border-emerald-300 rounded px-2 py-1 bg-emerald-50/40 text-emerald-900 focus:outline-none" oninput="adminCalcEquipment()"/>
+              </div>
+              <div>
+                <label class="block text-[10px] font-semibold text-rose-800 mb-0.5">Non-Func</label>
+                <input type="number" id="admin_benches_non_functional" name="benches_non_functional" min="0" value="<?= $benches_non_func ?>" class="w-full text-xs font-mono font-bold border border-rose-300 rounded px-2 py-1 bg-rose-50/40 text-rose-900 focus:outline-none" oninput="adminCalcEquipment()"/>
+              </div>
+            </div>
+            <input type="hidden" id="admin_benches_total" name="benches_total" value="<?= $benches_tot ?>"/>
+          </div>
+
+          <!-- Fans -->
+          <div class="p-2.5 bg-white border border-border rounded-lg space-y-2">
+            <div class="text-[11px] font-bold text-textMain flex items-center justify-between">
+              <span>Electric Fans</span>
+              <span class="text-[10px] font-mono text-muted">Total: <strong id="admin_fans_total_disp"><?= $fans_tot ?></strong></span>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[10px] font-semibold text-emerald-800 mb-0.5">Functional</label>
+                <input type="number" id="admin_fans_functional" name="fans_functional" min="0" value="<?= $fans_func ?>" class="w-full text-xs font-mono font-bold border border-emerald-300 rounded px-2 py-1 bg-emerald-50/40 text-emerald-900 focus:outline-none" oninput="adminCalcEquipment()"/>
+              </div>
+              <div>
+                <label class="block text-[10px] font-semibold text-rose-800 mb-0.5">Non-Func</label>
+                <input type="number" id="admin_fans_non_functional" name="fans_non_functional" min="0" value="<?= $fans_non_func ?>" class="w-full text-xs font-mono font-bold border border-rose-300 rounded px-2 py-1 bg-rose-50/40 text-rose-900 focus:outline-none" oninput="adminCalcEquipment()"/>
+              </div>
+            </div>
+            <input type="hidden" id="admin_fans_total" name="fans_total" value="<?= $fans_tot ?>"/>
+          </div>
+
+        </div>
+      </div>
+
       <!-- Address -->
       <div>
         <label class="block text-xs font-semibold text-textMain mb-1">School Physical Address</label>
@@ -1245,6 +1496,78 @@ body{font-family:'Inter',system-ui,sans-serif;}
             <span class="text-[10px] text-muted">Desks, chairs, and teaching equipment</span>
           </div>
         </div>
+
+        <!-- Classroom Equipment Inventory (Boards, Benches, Fans) -->
+        <div class="mt-3 pt-3 border-t border-slate-200 space-y-3">
+          <div class="text-xs font-bold text-primary flex items-center justify-between">
+            <span class="flex items-center gap-1.5">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+              Classroom Equipment &amp; Assets Inventory
+            </span>
+            <span class="text-[10px] text-muted">Functional &amp; Non-Functional</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            
+            <!-- Boards -->
+            <div class="p-2.5 bg-slate-50 border border-border rounded-lg space-y-2">
+              <div class="text-[11px] font-bold text-textMain flex items-center justify-between">
+                <span>Boards</span>
+                <span class="text-[10px] font-mono text-muted">Total: <strong id="fac_boards_total_disp"><?= $boards_tot ?></strong></span>
+              </div>
+              <div class="grid grid-cols-2 gap-1.5">
+                <div>
+                  <label class="block text-[10px] font-semibold text-emerald-800 mb-0.5">Func</label>
+                  <input type="number" id="fac_boards_functional" name="boards_functional" min="0" value="<?= $boards_func ?>" class="w-full text-xs font-mono font-bold border border-emerald-300 rounded px-1.5 py-1 bg-white text-emerald-900 focus:outline-none" oninput="facCalcEquipment()"/>
+                </div>
+                <div>
+                  <label class="block text-[10px] font-semibold text-rose-800 mb-0.5">Non-Func</label>
+                  <input type="number" id="fac_boards_non_functional" name="boards_non_functional" min="0" value="<?= $boards_non_func ?>" class="w-full text-xs font-mono font-bold border border-rose-300 rounded px-1.5 py-1 bg-white text-rose-900 focus:outline-none" oninput="facCalcEquipment()"/>
+                </div>
+              </div>
+              <input type="hidden" id="fac_boards_total" name="boards_total" value="<?= $boards_tot ?>"/>
+            </div>
+
+            <!-- Benches -->
+            <div class="p-2.5 bg-slate-50 border border-border rounded-lg space-y-2">
+              <div class="text-[11px] font-bold text-textMain flex items-center justify-between">
+                <span>Benches</span>
+                <span class="text-[10px] font-mono text-muted">Total: <strong id="fac_benches_total_disp"><?= $benches_tot ?></strong></span>
+              </div>
+              <div class="grid grid-cols-2 gap-1.5">
+                <div>
+                  <label class="block text-[10px] font-semibold text-emerald-800 mb-0.5">Func</label>
+                  <input type="number" id="fac_benches_functional" name="benches_functional" min="0" value="<?= $benches_func ?>" class="w-full text-xs font-mono font-bold border border-emerald-300 rounded px-1.5 py-1 bg-white text-emerald-900 focus:outline-none" oninput="facCalcEquipment()"/>
+                </div>
+                <div>
+                  <label class="block text-[10px] font-semibold text-rose-800 mb-0.5">Non-Func</label>
+                  <input type="number" id="fac_benches_non_functional" name="benches_non_functional" min="0" value="<?= $benches_non_func ?>" class="w-full text-xs font-mono font-bold border border-rose-300 rounded px-1.5 py-1 bg-white text-rose-900 focus:outline-none" oninput="facCalcEquipment()"/>
+                </div>
+              </div>
+              <input type="hidden" id="fac_benches_total" name="benches_total" value="<?= $benches_tot ?>"/>
+            </div>
+
+            <!-- Fans -->
+            <div class="p-2.5 bg-slate-50 border border-border rounded-lg space-y-2">
+              <div class="text-[11px] font-bold text-textMain flex items-center justify-between">
+                <span>Fans</span>
+                <span class="text-[10px] font-mono text-muted">Total: <strong id="fac_fans_total_disp"><?= $fans_tot ?></strong></span>
+              </div>
+              <div class="grid grid-cols-2 gap-1.5">
+                <div>
+                  <label class="block text-[10px] font-semibold text-emerald-800 mb-0.5">Func</label>
+                  <input type="number" id="fac_fans_functional" name="fans_functional" min="0" value="<?= $fans_func ?>" class="w-full text-xs font-mono font-bold border border-emerald-300 rounded px-1.5 py-1 bg-white text-emerald-900 focus:outline-none" oninput="facCalcEquipment()"/>
+                </div>
+                <div>
+                  <label class="block text-[10px] font-semibold text-rose-800 mb-0.5">Non-Func</label>
+                  <input type="number" id="fac_fans_non_functional" name="fans_non_functional" min="0" value="<?= $fans_non_func ?>" class="w-full text-xs font-mono font-bold border border-rose-300 rounded px-1.5 py-1 bg-white text-rose-900 focus:outline-none" oninput="facCalcEquipment()"/>
+                </div>
+              </div>
+              <input type="hidden" id="fac_fans_total" name="fans_total" value="<?= $fans_tot ?>"/>
+            </div>
+
+          </div>
+        </div>
+
         <div class="mt-3 p-2.5 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800 flex items-start gap-2">
           <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="mt-0.5 flex-shrink-0"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
           Saving these fields will <strong>automatically flag this school at-risk</strong> in the At-Risk Schools Registry based on the reported conditions.
@@ -1470,6 +1793,64 @@ function adminCalcEnrollment() {
   const g = parseInt(document.getElementById('admin_enrollment_girls')?.value) || 0;
   const tot = document.getElementById('admin_total_enrollment');
   if (tot) tot.value = b + g;
+}
+
+function adminCalcEquipment() {
+  // Boards
+  const bf = parseInt(document.getElementById('admin_boards_functional')?.value) || 0;
+  const bnf = parseInt(document.getElementById('admin_boards_non_functional')?.value) || 0;
+  const btot = bf + bnf;
+  const bInput = document.getElementById('admin_boards_total');
+  const bDisp = document.getElementById('admin_boards_total_disp');
+  if (bInput) bInput.value = btot;
+  if (bDisp) bDisp.innerText = btot;
+
+  // Benches
+  const dnf = parseInt(document.getElementById('admin_benches_functional')?.value) || 0;
+  const dnnf = parseInt(document.getElementById('admin_benches_non_functional')?.value) || 0;
+  const dtot = dnf + dnnf;
+  const dInput = document.getElementById('admin_benches_total');
+  const dDisp = document.getElementById('admin_benches_total_disp');
+  if (dInput) dInput.value = dtot;
+  if (dDisp) dDisp.innerText = dtot;
+
+  // Fans
+  const ff = parseInt(document.getElementById('admin_fans_functional')?.value) || 0;
+  const fnf = parseInt(document.getElementById('admin_fans_non_functional')?.value) || 0;
+  const ftot = ff + fnf;
+  const fInput = document.getElementById('admin_fans_total');
+  const fDisp = document.getElementById('admin_fans_total_disp');
+  if (fInput) fInput.value = ftot;
+  if (fDisp) fDisp.innerText = ftot;
+}
+
+function facCalcEquipment() {
+  // Boards
+  const bf = parseInt(document.getElementById('fac_boards_functional')?.value) || 0;
+  const bnf = parseInt(document.getElementById('fac_boards_non_functional')?.value) || 0;
+  const btot = bf + bnf;
+  const bInput = document.getElementById('fac_boards_total');
+  const bDisp = document.getElementById('fac_boards_total_disp');
+  if (bInput) bInput.value = btot;
+  if (bDisp) bDisp.innerText = btot;
+
+  // Benches
+  const dnf = parseInt(document.getElementById('fac_benches_functional')?.value) || 0;
+  const dnnf = parseInt(document.getElementById('fac_benches_non_functional')?.value) || 0;
+  const dtot = dnf + dnnf;
+  const dInput = document.getElementById('fac_benches_total');
+  const dDisp = document.getElementById('fac_benches_total_disp');
+  if (dInput) dInput.value = dtot;
+  if (dDisp) dDisp.innerText = dtot;
+
+  // Fans
+  const ff = parseInt(document.getElementById('fac_fans_functional')?.value) || 0;
+  const fnf = parseInt(document.getElementById('fac_fans_non_functional')?.value) || 0;
+  const ftot = ff + fnf;
+  const fInput = document.getElementById('fac_fans_total');
+  const fDisp = document.getElementById('fac_fans_total_disp');
+  if (fInput) fInput.value = ftot;
+  if (fDisp) fDisp.innerText = ftot;
 }
 
 function openEditStaffModal() {
