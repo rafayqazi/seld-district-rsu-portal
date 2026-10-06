@@ -527,7 +527,7 @@ if (isset($_GET['reason'])) {
                 <span>ہیڈ ماسٹر / مسٹریس پورٹل لاگ ان</span>
               </div>
               <div class="mt-1 text-[11px] leading-relaxed text-emerald-900">
-                ہر اسکول کا ہیڈ ماسٹر اپنے 13 ہندسوں کے <strong>شناختی کارڈ نمبر (CNIC)</strong> سے پورٹل لاگ ان کر سکتا ہے۔
+                ہر اسکول کا ہیڈ ماسٹر اپنے <strong>شناختی کارڈ نمبر (CNIC)</strong> یا اسکول کے <strong>SEMIS Code</strong> سے لاگ ان کر سکتا ہے — دونوں قابل قبول ہیں۔
               </div>
             </div>
 
@@ -539,9 +539,9 @@ if (isset($_GET['reason'])) {
               <div class="mb-4">
                 <div class="flex items-center justify-between mb-1.5">
                   <label for="school-cnic" class="block text-xs font-semibold text-slate-700">
-                    Head Master CNIC / NIC (شناختی کارڈ نمبر)
+                    CNIC / SEMIS Code (شناختی کارڈ یا سیمس کوڈ)
                   </label>
-                  <span class="text-[10px] text-slate-400 font-mono">13 Digits</span>
+                  <span class="text-[10px] text-emerald-700 font-semibold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">Either Accepted</span>
                 </div>
                 <div class="relative">
                   <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -551,13 +551,15 @@ if (isset($_GET['reason'])) {
                   </span>
                   <input type="text" id="school-cnic" name="hm_cnic"
                          class="gov-input font-mono"
-                         placeholder="e.g. 41302-1849201-3 (یا 4130218492013)"
+                         placeholder="CNIC: 41302-1849201-3  یا  SEMIS: 403010001"
                          value="<?= ($active_tab === 'school' && isset($_POST['hm_cnic'])) ? htmlspecialchars($_POST['hm_cnic'], ENT_QUOTES, 'UTF-8') : '' ?>"
                          autocomplete="username"
                          required/>
                 </div>
-                <div class="text-[10px] text-slate-500 mt-1 flex items-center justify-between">
-                  <span>Enter Head Master CNIC as registered in district census</span>
+                <div class="text-[10px] text-slate-500 mt-1 flex items-center gap-3">
+                  <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span> HM CNIC (13 digits)</span>
+                  <span class="text-slate-300">|</span>
+                  <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block"></span> School SEMIS Code (numeric)</span>
                 </div>
               </div>
 
