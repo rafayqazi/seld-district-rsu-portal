@@ -15,24 +15,40 @@ if (!defined('APP_NAME')) {
 }
 
 // Configure secure session cookie settings (must be before session_start)
+$httpsEnabled = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
+    (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https') ||
+    (!empty($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443);
+
 if (session_status() === PHP_SESSION_NONE) {
     session_name(SESSION_NAME);
     session_set_cookie_params([
         'lifetime' => SESSION_TIMEOUT,
         'path'     => '/',
         'domain'   => '',
-        'secure'   => false,      // Set to true when using HTTPS
-        'httponly' => true,       // Prevents JavaScript access to session cookie
-        'samesite' => 'Strict',   // Prevents CSRF via cross-site requests
+        'secure'   => $httpsEnabled,
+        'httponly' => true,
+        'samesite' => 'Strict',
     ]);
     session_start();
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────
 // Session Timeout Check
-// ─────────────────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────
+if (!isset($_SESSION['created_at'])) {
+    $_SESSION['created_at'] = time();
+}
+
+$sessionAge = time() - (int)$_SESSION['created_at'];
+if ($sessionAge > SESSION_TIMEOUT) {
+    session_unset();
+    session_destroy();
+    header('Location: ' . BASE_URL . '/login.php?reason=timeout');
+    exit;
+}
+
 if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity']) > SESSION_TIMEOUT) {
-    // Session expired — destroy and redirect
+    session_regenerate_id(true);
     session_unset();
     session_destroy();
     header('Location: ' . BASE_URL . '/login.php?reason=timeout');
@@ -40,18 +56,18 @@ if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity']) >
 }
 $_SESSION['last_activity'] = time();
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────
 // Authentication Check
-// ─────────────────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────
 if (!isset($_SESSION['lsu_logged_in']) || $_SESSION['lsu_logged_in'] !== true) {
     // Not authenticated — redirect to login
     header('Location: ' . BASE_URL . '/login.php');
     exit;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────
 // Role check helpers
-// ─────────────────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────
 function require_role(string $role): void {
     if (!isset($_SESSION['lsu_role']) || $_SESSION['lsu_role'] !== $role) {
         header('Location: ' . BASE_URL . '/login.php?reason=unauthorized');
