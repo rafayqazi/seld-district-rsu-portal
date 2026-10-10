@@ -119,6 +119,22 @@ function school_sidebar_link(string $page, string $active): string {
       </span>
     </a>
 
+    <?php
+      $school_unread_forms = count(array_filter(ExcelDB::all('form_assignments'), fn($assignment) =>
+        trim((string)($assignment['semis_code'] ?? '')) === trim($school_semis)
+        && ($assignment['unread_school'] ?? '0') === '1'
+      ));
+    ?>
+    <a href="<?= $base ?>forms.php" class="<?= school_sidebar_link('forms', $active_page) ?> justify-between">
+      <div class="flex items-center gap-3">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/>
+        </svg>
+        <span>District Forms</span>
+      </div>
+      <span class="forms-badge-count <?= $school_unread_forms > 0 ? '' : 'hidden' ?> px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500 text-white animate-pulse"><?= $school_unread_forms ?></span>
+    </a>
+
 
     <div class="px-2 pt-4 pb-1 text-[10px] tracking-wider font-bold uppercase text-white/40">Account &amp; Security</div>
 

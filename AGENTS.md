@@ -36,6 +36,9 @@ LSU-PORTAL/
 │   ├── complaints.php             # GRM complaint inbox and reply management
 │   ├── messages.php               # Admin Direct Messaging — initiate conversations with any school
 │   ├── message-thread.php         # Admin message thread view — reply & close/reopen conversation
+│   ├── forms.php                  # District forms, deadlines, and response progress
+│   ├── form-builder.php           # Draft form builder and publish workflow
+│   ├── form-report.php            # Per-school response report and CSV export
 │   ├── settings.php               # Portal settings, district config, taluka management
 │   ├── students.php               # REDIRECT STUB → schools.php (deprecated)
 │   └── attendance.php             # REDIRECT STUB → dashboard.php (deprecated)
@@ -48,6 +51,7 @@ LSU-PORTAL/
 │   ├── complaints.php             # HM GRM complaint submission & reply
 │   ├── messages.php               # School inbox for admin-sent messages (read & reply only)
 │   ├── message-thread.php         # School message thread view & reply
+│   ├── forms.php                  # Assigned forms and school responses
 │   ├── settings.php               # HM password change
 │   ├── students.php               # REDIRECT STUB → dashboard.php (deprecated)
 │   └── attendance.php             # REDIRECT STUB → dashboard.php (deprecated)
@@ -58,6 +62,7 @@ LSU-PORTAL/
 ├── includes/                      # Reusable PHP components & guards
 │   ├── auth.php                   # Authentication check, session security, CSRF helpers
 │   ├── excel_db.php               # ExcelDB class (CSV engine + autoFlagSchoolRisks)
+│   ├── forms.php                  # Shared form validation and deadline helpers
 │   ├── sidebar.php                # Admin navigation sidebar with $active_page indicator
 │   ├── header.php                 # Top app bar (district badge, profile, notifications)
 │   └── footer.php                 # Standard copyright and department footer
@@ -74,6 +79,9 @@ LSU-PORTAL/
 │   ├── complaint_replies.csv      # GRM conversation threads
 │   ├── admin_messages.csv         # Admin-initiated direct message threads (admin-only initiation)
 │   ├── admin_message_replies.csv  # Message replies within each direct thread
+│   ├── forms.csv                  # Form definitions, questions, targets and deadlines
+│   ├── form_assignments.csv       # Per-school assignments and unread notification state
+│   ├── form_responses.csv         # Per-school submitted answers
 │   └── settings.csv               # Dynamic portal configuration
 │
 ├── assets/                        # Static assets (images, logos, custom CSS overrides)
@@ -144,6 +152,7 @@ The portal follows the Sindh Government District Education aesthetic:
   - `'school-profile'` → School Profile
   - `'at-risk-schools'` → At-Risk Schools Registry
   - `'complaints'` → GRM Complaints
+  - `'forms'` → School Forms
   - `'settings'` → Settings
 - **Responsiveness:** Sidebar is collapsable on mobile with smooth transition and dark overlay backdrop (`#overlay`). Header contains the hamburger toggle button.
 
@@ -152,7 +161,7 @@ The portal follows the Sindh Government District Education aesthetic:
 ### Excel Database Architecture
 - **Engine:** `includes/excel_db.php` (`ExcelDB` class)
 - **File Storage:** `/data/` protected by Apache `.htaccess` (`Deny from all`)
-- **Active Tables (6 core):**
+- **Active Tables:**
   | Table | Description |
   |---|---|
   | `schools.csv` | School registry with full facility, infrastructure, and staffing data |
@@ -161,6 +170,11 @@ The portal follows the Sindh Government District Education aesthetic:
   | `talukas.csv` | District taluka/sub-division registry |
   | `complaints.csv` | GRM grievance tickets |
   | `complaint_replies.csv` | Thread replies for each complaint ticket |
+  | `admin_messages.csv` | Admin-initiated direct message threads |
+  | `admin_message_replies.csv` | Direct message thread replies |
+  | `forms.csv` | Form definitions, questions, targets, status and deadlines |
+  | `form_assignments.csv` | Per-school assignments and unread notification state |
+  | `form_responses.csv` | One editable-until-deadline response per school |
   | `settings.csv` | Dynamic portal configuration (district, academic year, thresholds) |
 - **Deprecated Tables (no longer used, files may exist but are never read/written):** `students.csv`, `attendance.csv`, `at_risk.csv`.
 - **Excel Compatibility:** Written with UTF-8 BOM (`\xEF\xBB\xBF`) and standard CSV delimiter for seamless double-click opening in Microsoft Excel.
@@ -287,3 +301,5 @@ The portal follows the Sindh Government District Education aesthetic:
 | 2026-10-07 | Antigravity AI | **Admin Portal Audio Chime Fix:** Fixed Web Audio API not playing notification sound on the Admin portal. Root cause: `AudioContext` was created before any user interaction, putting it in `suspended` state, and the old `click`-only unlock listener never fired if the admin interacted via keyboard or touch. Fixed in `assets/js/notifications.js` by: (1) adding `initAudioContext()` function that pre-creates and unlocks AudioContext, (2) attaching it to `click`, `pointerdown`, `keydown`, `touchstart` events (not one-shot), (3) restructuring `playNotificationChime()` to call `audioContext.resume().then(playWhenReady)` so sound always fires after context is resumed. Polling interval also tightened to 8 seconds. |
 | 2026-10-07 | Antigravity AI | **Profile Progress Filter & Bulk Appreciation / Show Cause Notice Print Engine:** Added "Progress" filter dropdown next to Gender in `admin/schools.php` with 2 options: "Complete (100%)" and "Below 100%". Pre-computes profile completion for all schools via `ExcelDB::calculateSchoolProfileCompletion()`. Dynamically displays green "Print Appreciation Certificates" button when 100% is selected, and red "Print Show Cause Notices" button when Below 100% is selected, updating live with matching visible counts. Built bulk printable modal and print-ready 1-page A4 templates (`@media print`, `page-break-after: always`) containing School Name, HM Name, HM CNIC, SEMIS Code, Taluka, Ref No, deficit checklist table (for notices), compliance directives, and dual official signatures (District RSU Coordinator & DEO). |
 | 2026-10-07 | Antigravity AI | **Interactive Clickable KPI Cards on At-Risk Schools Registry:** Made all 4 summary cards (Critical, High Risk, Medium, Resolved) on `admin/at-risk-schools.php` clickable with smooth hover animations and active ring highlights. Clicking any card instantly filters the registry table by that severity or status. Clicking the active card again toggles/resets the filter back to All. Also made Risk Category Breakdown pills clickable buttons to filter by specific risk categories. |
+| 2026-10-11 | Copilot | **Confirmation Dialog Callback Fix:** Fixed the shared custom confirmation dialog clearing its callback before invocation. Confirmed actions, including permanent direct-message deletion from `admin/messages.php`, now correctly execute after confirmation. |
+| 2026-10-11 | Copilot | **District School Forms:** Added an admin form builder with draft/publish workflow, supported question types (short/long text, number, date, radio, checkbox and dropdown), individual-school or level targeting, publish-time duration and automatic deadline enforcement. Added school notifications and response submission, per-school progress and answer review with CSV export, response editing until close, and deadline extension/manual close controls. Added `forms.csv`, `form_assignments.csv` and `form_responses.csv` schemas. |

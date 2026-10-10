@@ -107,6 +107,18 @@ class ExcelDB {
             'headers' => ['id', 'thread_id', 'sender_role', 'sender_name', 'message', 'created_at'],
             'seeds'   => []
         ],
+        'forms' => [
+            'headers' => ['form_id', 'title', 'description', 'questions_json', 'target_type', 'target_value', 'status', 'created_by', 'created_at', 'updated_at', 'published_at', 'closes_at'],
+            'seeds'   => []
+        ],
+        'form_assignments' => [
+            'headers' => ['id', 'form_id', 'semis_code', 'school_name', 'assigned_at', 'unread_school'],
+            'seeds'   => []
+        ],
+        'form_responses' => [
+            'headers' => ['id', 'form_id', 'semis_code', 'school_name', 'answers_json', 'submitted_at', 'updated_at'],
+            'seeds'   => []
+        ],
         'school_staff' => [
             'headers' => ['id', 'semis_code', 'personal_no', 'full_name', 'cnic', 'gender', 'staff_type', 'designation', 'bps_scale', 'qualification_academic', 'qualification_professional', 'contact_phone', 'appointment_date', 'status', 'created_at', 'updated_at'],
             'seeds' => [
@@ -1436,5 +1448,4 @@ class ExcelDB {
         ];
     }
 }
-
 

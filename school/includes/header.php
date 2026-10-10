@@ -58,7 +58,15 @@ $hm_initial = strtoupper(substr($hm_name, 0, 1));
     <?php 
       $school_unread_complaints = ExcelDB::getUnreadComplaintsCount('school', $school_semis);
       $school_unread_messages   = ExcelDB::getUnreadMessagesCount('school', $school_semis);
-      $school_total_unread      = $school_unread_complaints + $school_unread_messages;
+      $allSchoolFormAssignments = array_values(array_filter(ExcelDB::all('form_assignments'), fn($a) => trim((string)($a['semis_code'] ?? '')) === trim($school_semis)));
+      $school_unread_forms = count(array_filter($allSchoolFormAssignments, fn($a) => ($a['unread_school'] ?? '0') === '1'));
+      $school_total_unread      = $school_unread_complaints + $school_unread_messages + $school_unread_forms;
+
+      $formRecordsById = [];
+      foreach (ExcelDB::all('forms') as $formRecord) $formRecordsById[$formRecord['form_id'] ?? ''] = $formRecord;
+      $unreadFormList = array_values(array_filter($allSchoolFormAssignments, fn($a) =>
+        ($a['unread_school'] ?? '0') === '1' && isset($formRecordsById[$a['form_id'] ?? ''])
+      ));
 
       $allMyMessages = array_filter(ExcelDB::all('admin_messages'), fn($m) => trim($m['semis_code'] ?? '') === trim($school_semis));
       $unreadMsgList = array_values(array_filter($allMyMessages, fn($m) => ($m['unread_school'] ?? '0') === '1'));
@@ -88,6 +96,22 @@ $hm_initial = strtoupper(substr($hm_name, 0, 1));
           </span>
         </div>
         <div class="divide-y divide-border max-h-72 overflow-y-auto">
+
+          <?php foreach ($unreadFormList as $uf):
+            $formRecord = $formRecordsById[$uf['form_id'] ?? ''];
+          ?>
+            <a href="<?= BASE_URL ?>/school/forms.php?form=<?= urlencode($uf['form_id'] ?? '') ?>" class="flex items-start gap-3 px-4 py-3 bg-amber-50/50 hover:bg-amber-50 transition group">
+              <div class="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0 mt-0.5 text-amber-700">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-1"><span class="text-[10px] font-bold text-amber-700 uppercase tracking-wide">New District Form</span><span class="font-mono text-[9px] text-amber-700"><?= e($uf['form_id'] ?? '') ?></span></div>
+                <div class="text-xs font-semibold text-textMain truncate mt-0.5 group-hover:text-amber-800"><?= e($formRecord['title'] ?? 'School Form') ?></div>
+                <div class="text-[10px] text-muted mt-0.5">Please respond by <?= !empty($formRecord['closes_at']) ? e(date('M d, Y h:i A', strtotime($formRecord['closes_at']))) : 'the closing date' ?></div>
+              </div>
+              <span class="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0 mt-1.5 animate-pulse"></span>
+            </a>
+          <?php endforeach; ?>
 
           <?php if (!empty($unreadMsgList)): ?>
             <?php foreach ($unreadMsgList as $um): ?>
@@ -127,7 +151,7 @@ $hm_initial = strtoupper(substr($hm_name, 0, 1));
             <?php endforeach; ?>
           <?php endif; ?>
 
-          <?php if (empty($unreadMsgList) && empty($unreadCmpList)): ?>
+          <?php if (empty($unreadFormList) && empty($unreadMsgList) && empty($unreadCmpList)): ?>
             <div class="px-4 py-6 text-center text-xs text-muted">
               <svg class="w-8 h-8 mx-auto text-slate-300 mb-2" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
               No unread notifications
@@ -136,6 +160,8 @@ $hm_initial = strtoupper(substr($hm_name, 0, 1));
 
         </div>
         <div class="px-4 py-2.5 border-t border-border bg-slate-50 flex items-center justify-between text-xs font-semibold">
+          <a href="<?= BASE_URL ?>/school/forms.php" class="text-amber-700 hover:text-amber-900">District Forms</a>
+          <span class="text-border">|</span>
           <a href="<?= BASE_URL ?>/school/messages.php" class="text-blue-600 hover:text-blue-800 flex items-center gap-1">
             <span>Direct Messages</span>
             <span class="messages-badge-count <?= ($school_unread_messages > 0 ? '' : 'hidden') ?> bg-blue-100 text-blue-700 text-[10px] px-1.5 py-0.2 rounded-full"><?= $school_unread_messages ?></span>

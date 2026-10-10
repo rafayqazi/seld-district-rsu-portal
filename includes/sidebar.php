@@ -131,6 +131,12 @@ function sidebar_link_class(string $page, string $active): string {
 
     <!-- Reports -->
     <div class="px-2 pt-3 pb-1 sidebar-group-title text-white/40">Reports</div>
+    <a href="<?= $base ?>forms.php" class="<?= sidebar_link_class('forms', $active_page) ?>">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/>
+      </svg>
+      School Forms
+    </a>
     <a href="#" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded text-white/80 text-sm hover:text-white opacity-60 cursor-not-allowed">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
         <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>

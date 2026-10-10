@@ -142,8 +142,9 @@ function customConfirm(message, onConfirm, options = {}) {
   _lsuConfirmCallback = onConfirm;
 
   okBtn.onclick = function() {
+    const onConfirm = _lsuConfirmCallback;
     closeCustomConfirm();
-    if (_lsuConfirmCallback) _lsuConfirmCallback();
+    if (onConfirm) onConfirm();
   };
 }
 
@@ -188,5 +189,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 <?php endif; ?>
-
 

@@ -95,11 +95,14 @@
         }
 
         const isMessage = (alertType === 'message');
-        const badgeColor = isMessage ? 'bg-blue-600/30 border-blue-500/40 text-blue-400' : 'bg-emerald-600/30 border-emerald-500/40 text-emerald-400';
-        const tagText = isMessage ? 'New Direct Message' : 'New Grievance Alert';
+        const isForm = (alertType === 'form');
+        const badgeColor = isMessage ? 'bg-blue-600/30 border-blue-500/40 text-blue-400' : (isForm ? 'bg-amber-600/30 border-amber-500/40 text-amber-300' : 'bg-emerald-600/30 border-emerald-500/40 text-emerald-400');
+        const tagText = isMessage ? 'New Direct Message' : (isForm ? 'New District Form' : 'New Grievance Alert');
         const iconSvg = isMessage
             ? `<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="12" y2="13"/></svg>`
-            : `<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>`;
+            : (isForm
+                ? `<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>`
+                : `<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>`);
 
         const toast = document.createElement('div');
         toast.className = 'pointer-events-auto bg-slate-900 text-white rounded-xl shadow-2xl p-4 border border-slate-700 flex items-start gap-3 transform transition-all duration-300 translate-y-4 opacity-0';
@@ -108,10 +111,10 @@
                 ${iconSvg}
             </div>
             <div class="flex-1 overflow-hidden">
-                <div class="text-[10px] font-bold ${isMessage ? 'text-blue-400' : 'text-emerald-400'} uppercase tracking-wider">${tagText}</div>
+                <div class="text-[10px] font-bold ${isMessage ? 'text-blue-400' : (isForm ? 'text-amber-300' : 'text-emerald-400')} uppercase tracking-wider">${tagText}</div>
                 <div class="text-xs font-bold text-white mt-0.5 truncate">${escapeHtml(title)}</div>
                 <div class="text-[11px] text-slate-300 mt-0.5 line-clamp-2">${escapeHtml(message)}</div>
-                ${link ? `<a href="${link}" class="inline-block mt-2 text-xs ${isMessage ? 'text-blue-300' : 'text-emerald-300'} font-semibold hover:underline">View & Reply &rarr;</a>` : ''}
+                ${link ? `<a href="${link}" class="inline-block mt-2 text-xs ${isMessage ? 'text-blue-300' : (isForm ? 'text-amber-300' : 'text-emerald-300')} font-semibold hover:underline">${isForm ? 'Open Form' : 'View & Reply'} &rarr;</a>` : ''}
             </div>
             <button onclick="this.parentElement.remove()" class="text-slate-400 hover:text-white p-1" aria-label="Close">
                 <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -140,6 +143,7 @@
     function updateBadges(totalCount, data) {
         const complaintsCount = data.unread_complaints || 0;
         const messagesCount   = data.unread_messages || 0;
+        const formsCount = data.unread_forms || 0;
 
         // 1. Complaints sidebar badges
         document.querySelectorAll('.complaints-badge-count').forEach(el => {
@@ -155,6 +159,15 @@
         document.querySelectorAll('.messages-badge-count').forEach(el => {
             if (messagesCount > 0) {
                 el.textContent = messagesCount;
+                el.classList.remove('hidden');
+            } else {
+                el.classList.add('hidden');
+            }
+        });
+
+        document.querySelectorAll('.forms-badge-count').forEach(el => {
+            if (formsCount > 0) {
+                el.textContent = formsCount;
                 el.classList.remove('hidden');
             } else {
                 el.classList.add('hidden');
@@ -201,6 +214,9 @@
                             ? `${baseUrl}/admin/message-thread.php?thread=${encodeURIComponent(latest.thread_id)}`
                             : `${baseUrl}/school/message-thread.php?thread=${encodeURIComponent(latest.thread_id)}`;
                         showNotificationToast('message', `Thread ${latest.thread_id}: ${latest.school_name || 'RSU'}`, latest.subject, viewUrl);
+                    } else if (latest.type === 'form') {
+                        const viewUrl = `${baseUrl}/school/forms.php?form=${encodeURIComponent(latest.form_id)}`;
+                        showNotificationToast('form', latest.title || 'District form', 'A new form has been assigned to your school.', viewUrl);
                     } else {
                         const viewUrl = data.role === 'admin' 
                             ? `${baseUrl}/admin/complaint-details.php?ticket=${encodeURIComponent(latest.ticket_no)}`

@@ -101,8 +101,8 @@ When a new page is added, update the appropriate sidebar component (`includes/si
 ```
 
 ### Active Pages Registry
-- **Admin Portal:** `'dashboard'`, `'schools'`, `'school-profile'`, `'at-risk-schools'`, `'staff'`, `'complaints'`, `'messages'`, `'settings'`
-- **School Portal:** `'dashboard'`, `'profile'`, `'staff'`, `'at-risk'`, `'complaints'`, `'messages'`, `'settings'`
+- **Admin Portal:** `'dashboard'`, `'schools'`, `'school-profile'`, `'at-risk-schools'`, `'staff'`, `'complaints'`, `'messages'`, `'forms'`, `'settings'`
+- **School Portal:** `'dashboard'`, `'profile'`, `'staff'`, `'at-risk'`, `'complaints'`, `'messages'`, `'forms'`, `'settings'`
 
 > **⚠️ MANDATORY:** Whenever you add/remove a page, column, or feature, update BOTH this file AND `AGENTS.md` (Revision History). This is enforced to keep future AI agents in sync with the codebase.
 
@@ -180,7 +180,7 @@ $talukas = ExcelDB::getTalukas(true); // active only
 
 - **Engine:** `includes/excel_db.php` (`ExcelDB` static class)
 - **Storage:** `/data/*.csv` protected by `.htaccess`
-- **Active Tables:** `schools`, `school_staff`, `school_risks`, `users`, `settings`, `talukas`, `complaints`, `complaint_replies`, `admin_messages`, `admin_message_replies`
+- **Active Tables:** `schools`, `school_staff`, `school_risks`, `users`, `settings`, `talukas`, `complaints`, `complaint_replies`, `admin_messages`, `admin_message_replies`, `forms`, `form_assignments`, `form_responses`
 - **Deprecated (never read/write):** `students`, `attendance`, `at_risk`
 
 ### School Staff Table — Key Columns (`school_staff.csv`)
@@ -323,6 +323,7 @@ ExcelDB::calculateSchoolProfileCompletion('403010001'); // Returns percentage, m
 - Thread status: `Open` (replies allowed) | `Closed` (no replies until reopened by admin).
 - `unread_admin = '1'` when school replies. `unread_school = '1'` when admin sends/replies.
 - Marked as read when thread-view page loads (before rendering).
+- Admin can permanently delete a conversation from the inbox or thread view; confirmation dialogs must preserve and invoke their callback after closing so the protected deletion POST is submitted.
 
 ### Searchable School Picker (admin/messages.php modal)
 - The "Select School" field is a **custom JS picker** with a search input + scrollable list.
@@ -359,3 +360,26 @@ ExcelDB::deleteMessageThread($threadId);                   // delete thread + al
 ExcelDB::generateMessageThreadId();                        // generate MSG-XXXXXXXX ID
 ```
 
+## 13. District School Forms
+
+### Pages
+| Page | Role | Description |
+|---|---|---|
+| `admin/forms.php` | Admin | Draft/published form list, deadline controls and progress overview |
+| `admin/form-builder.php` | Admin | Create/edit drafts and publish to selected schools or one school level |
+| `admin/form-report.php?id=FORM-...` | Admin | Per-school submission status, answer review and CSV export |
+| `school/forms.php` | School HM | View assigned forms and submit/update the school's response |
+
+### CSV Tables
+- **`forms`**: One record per form (`form_id`, `title`, `description`, `questions_json`, `target_type`, `target_value`, `status`, `created_by`, `created_at`, `updated_at`, `published_at`, `closes_at`).
+- **`form_assignments`**: Snapshot of each recipient school (`id`, `form_id`, `semis_code`, `school_name`, `assigned_at`, `unread_school`).
+- **`form_responses`**: One response per form and school (`id`, `form_id`, `semis_code`, `school_name`, `answers_json`, `submitted_at`, `updated_at`).
+
+### Rules
+- Drafts can be edited. Publishing requires a non-empty title, 1–50 valid questions, at least one recipient, and a duration of 1–365 days.
+- Supported question types: short text, paragraph, number, date, radio, checkbox and dropdown. Choice questions require 2–30 options; required/optional validation is enforced server-side.
+- Recipients are snapshotted at publish time: either all schools in one level or one/more selected SEMIS codes. School accounts can access only their own assigned forms.
+- Form questions and recipients are locked after publishing. Admin can close a published form immediately or extend its deadline by 1–365 days; extending reopens a closed/expired form.
+- Deadlines are enforced at response time as well as in the UI. One response per school is retained and can be updated until the form closes.
+- School sidebar/header badges and live notification polling use each assignment's `unread_school` flag. Opening an assigned form marks its notification as read.
+- Admin reports show submitted and outstanding schools, answer details, filters and an Excel-compatible CSV export. CSV formula-leading values are escaped.

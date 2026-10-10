@@ -21,9 +21,16 @@ $semisCode = $_SESSION['lsu_school_semis'] ?? '';
 
 $allComplaints = ExcelDB::all('complaints');
 $allMessages   = ExcelDB::all('admin_messages');
+$allForms = ExcelDB::all('forms');
+$allFormAssignments = ExcelDB::all('form_assignments');
+$formsById = [];
+foreach ($allForms as $form) {
+    $formsById[$form['form_id'] ?? ''] = $form;
+}
 
 $unreadComplaints = 0;
 $unreadMessages   = 0;
+$unreadForms      = 0;
 $pendingCount     = 0;
 $items            = [];
 
@@ -87,6 +94,7 @@ if ($role === 'admin') {
                 ];
             }
         }
+
     }
 
     // 2. Check Direct Messages for School
@@ -107,6 +115,22 @@ if ($role === 'admin') {
             }
         }
     }
+
+    foreach ($allFormAssignments as $assignment) {
+        if (trim((string)($assignment['semis_code'] ?? '')) !== trim($semisCode)
+            || ($assignment['unread_school'] ?? '0') !== '1') {
+            continue;
+        }
+        $form = $formsById[$assignment['form_id'] ?? ''] ?? null;
+        if (!$form) continue;
+        $unreadForms++;
+        $items[] = [
+            'type' => 'form',
+            'form_id' => $form['form_id'] ?? '',
+            'title' => $form['title'] ?? 'District Form',
+            'updated_at' => $assignment['assigned_at'] ?? $form['published_at'] ?? '',
+        ];
+    }
 }
 
 // Sort items by updated_at descending
@@ -114,7 +138,7 @@ usort($items, function($a, $b) {
     return strcmp($b['updated_at'] ?? '', $a['updated_at'] ?? '');
 });
 
-$totalUnread = $unreadComplaints + $unreadMessages;
+$totalUnread = $unreadComplaints + $unreadMessages + $unreadForms;
 
 echo json_encode([
     'success'           => true,
@@ -122,6 +146,7 @@ echo json_encode([
     'unread_count'      => $totalUnread,
     'unread_complaints' => $unreadComplaints,
     'unread_messages'   => $unreadMessages,
+    'unread_forms'      => $unreadForms,
     'pending_count'     => $pendingCount,
     'notifications'     => array_slice($items, 0, 8),
     'timestamp'         => time()
