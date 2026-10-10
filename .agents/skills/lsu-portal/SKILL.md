@@ -383,3 +383,4 @@ ExcelDB::generateMessageThreadId();                        // generate MSG-XXXXX
 - Deadlines are enforced at response time as well as in the UI. One response per school is retained and can be updated until the form closes.
 - School sidebar/header badges and live notification polling use each assignment's `unread_school` flag. Opening an assigned form marks its notification as read.
 - Admin reports show submitted and outstanding schools, answer details, filters and an Excel-compatible CSV export. CSV formula-leading values are escaped.
+- The form report can print one show-cause notice per non-submitting school in the currently filtered results. Each A4 notice includes school leadership and SEMIS details, form title and portal deadline, seven-day compliance instructions, and district signature blocks. Notices print in an isolated A4 document with one page per school so portal overflow/layout styles do not clip output.
