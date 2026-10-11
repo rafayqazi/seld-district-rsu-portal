@@ -139,19 +139,24 @@
         });
     }
 
+    function setBadgeVisible(element, visible) {
+        element.classList.toggle('hidden', !visible);
+        element.style.display = visible ? '' : 'none';
+    }
+
     // Update UI badge elements across both sidebars and headers
     function updateBadges(totalCount, data) {
-        const complaintsCount = data.unread_complaints || 0;
-        const messagesCount   = data.unread_messages || 0;
-        const formsCount = data.unread_forms || 0;
+        const complaintsCount = Number(data.unread_complaints) || 0;
+        const messagesCount   = Number(data.unread_messages) || 0;
+        const formsCount = Number(data.unread_forms) || 0;
 
         // 1. Complaints sidebar badges
         document.querySelectorAll('.complaints-badge-count').forEach(el => {
             if (complaintsCount > 0) {
                 el.textContent = complaintsCount;
-                el.classList.remove('hidden');
+                setBadgeVisible(el, true);
             } else {
-                el.classList.add('hidden');
+                setBadgeVisible(el, false);
             }
         });
 
@@ -159,36 +164,38 @@
         document.querySelectorAll('.messages-badge-count').forEach(el => {
             if (messagesCount > 0) {
                 el.textContent = messagesCount;
-                el.classList.remove('hidden');
+                setBadgeVisible(el, true);
             } else {
-                el.classList.add('hidden');
+                setBadgeVisible(el, false);
             }
         });
 
         document.querySelectorAll('.forms-badge-count').forEach(el => {
             if (formsCount > 0) {
                 el.textContent = formsCount;
-                el.classList.remove('hidden');
+                setBadgeVisible(el, true);
             } else {
-                el.classList.add('hidden');
+                setBadgeVisible(el, false);
             }
         });
 
-        // 3. Header notification dots & counts
-        document.querySelectorAll('.complaints-header-dot, .header-unread-dot').forEach(el => {
+        // 3. Header notification count badges and dropdown labels
+        document.querySelectorAll('.notification-count-badge').forEach(el => {
             if (totalCount > 0) {
-                el.classList.remove('hidden');
+                const count = el.querySelector('.notification-count-number');
+                if (count) count.textContent = totalCount;
+                setBadgeVisible(el, true);
             } else {
-                el.classList.add('hidden');
+                setBadgeVisible(el, false);
             }
         });
 
-        document.querySelectorAll('.complaints-header-count, .header-unread-count').forEach(el => {
+        document.querySelectorAll('.header-unread-label').forEach(el => {
             if (totalCount > 0) {
                 el.textContent = totalCount + ' New';
-                el.classList.remove('hidden');
+                setBadgeVisible(el, true);
             } else {
-                el.classList.add('hidden');
+                setBadgeVisible(el, false);
             }
         });
     }
@@ -199,10 +206,13 @@
         fetch(`${baseUrl}/api/check-complaints.php`, {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         })
-        .then(res => res.json())
+        .then(res => {
+            if (!res.ok) throw new Error(`Notification request failed with HTTP ${res.status}`);
+            return res.json();
+        })
         .then(data => {
-            if (!data.success) return;
-            const currentTotal = data.unread_count || 0;
+            if (!data.success) throw new Error(data.error || 'Notification request returned an unsuccessful response');
+            const currentTotal = Number(data.unread_count) || 0;
 
             if (lastUnreadCount !== null && currentTotal > lastUnreadCount) {
                 // New notification detected! Play chime!
@@ -230,7 +240,7 @@
             updateBadges(currentTotal, data);
         })
         .catch(err => {
-            // Silently handle network polling fails
+            console.error('Unable to refresh portal notifications:', err);
         });
     }
 

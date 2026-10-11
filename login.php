@@ -174,6 +174,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['lsu_school_id']    = $schoolRecord['id'] ?? '1';
                     $_SESSION['lsu_school_semis'] = $schoolRecord['semis_code'] ?? ($userRecord['school_semis'] ?? '');
                     $_SESSION['lsu_school_name']  = $schoolRecord['school_name'] ?? 'District School';
+                    $_SESSION['lsu_login_instance'] = bin2hex(random_bytes(16));
                     $_SESSION['last_activity']    = time();
                     $_SESSION['csrf_token']       = bin2hex(random_bytes(32));
 

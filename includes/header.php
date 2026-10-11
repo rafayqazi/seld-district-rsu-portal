@@ -219,14 +219,16 @@ if ($global_search_schools_json === false) {
         <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
         <path d="M13.73 21a2 2 0 01-3.46 0"/>
       </svg>
-      <span class="header-unread-dot complaints-header-dot absolute top-0.5 right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-surface <?= $header_total_unread > 0 ? '' : 'hidden' ?>"></span>
+      <span class="notification-count-badge header-unread-dot absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-600 text-white text-[10px] leading-none font-bold rounded-full border-2 border-surface inline-flex items-center justify-center <?= $header_total_unread > 0 ? '' : 'hidden' ?>" style="<?= $header_total_unread > 0 ? '' : 'display:none' ?>">
+        <span class="notification-count-number"><?= $header_total_unread ?></span>
+      </span>
     </button>
     <!-- Notification Dropdown -->
     <div id="notif-dropdown" class="hidden absolute right-0 top-10 w-80 bg-surface border border-border rounded-xl shadow-xl z-50 overflow-hidden">
       <div class="flex items-center justify-between px-4 py-3 border-b border-border bg-slate-50/50">
         <div class="flex items-center gap-1.5">
           <span class="font-bold text-xs text-textMain">Alerts &amp; Updates</span>
-          <span class="header-unread-count complaints-header-count text-[10px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded-full <?= $header_total_unread > 0 ? '' : 'hidden' ?>">
+          <span class="header-unread-label text-[10px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded-full <?= $header_total_unread > 0 ? '' : 'hidden' ?>" style="<?= $header_total_unread > 0 ? '' : 'display:none' ?>">
             <?= $header_total_unread ?> New
           </span>
         </div>
@@ -313,4 +315,3 @@ if ($global_search_schools_json === false) {
   });
 </script>
 <script src="<?= BASE_URL ?>/assets/js/notifications.js"></script>
-

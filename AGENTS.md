@@ -39,6 +39,7 @@ LSU-PORTAL/
 │   ├── forms.php                  # District forms, deadlines, and response progress
 │   ├── form-builder.php           # Draft form builder and publish workflow
 │   ├── form-report.php            # Per-school response report and CSV export
+│   ├── announcements.php          # Targeted school announcements and popup management
 │   ├── settings.php               # Portal settings, district config, taluka management
 │   ├── students.php               # REDIRECT STUB → schools.php (deprecated)
 │   └── attendance.php             # REDIRECT STUB → dashboard.php (deprecated)
@@ -82,6 +83,7 @@ LSU-PORTAL/
 │   ├── forms.csv                  # Form definitions, questions, targets and deadlines
 │   ├── form_assignments.csv       # Per-school assignments and unread notification state
 │   ├── form_responses.csv         # Per-school submitted answers
+│   ├── announcements.csv          # Targeted school announcement popups and closure state
 │   └── settings.csv               # Dynamic portal configuration
 │
 ├── assets/                        # Static assets (images, logos, custom CSS overrides)
@@ -175,6 +177,7 @@ The portal follows the Sindh Government District Education aesthetic:
   | `forms.csv` | Form definitions, questions, targets, status and deadlines |
   | `form_assignments.csv` | Per-school assignments and unread notification state |
   | `form_responses.csv` | One editable-until-deadline response per school |
+  | `announcements.csv` | Targeted school announcement popups and closure state |
   | `settings.csv` | Dynamic portal configuration (district, academic year, thresholds) |
 - **Deprecated Tables (no longer used, files may exist but are never read/written):** `students.csv`, `attendance.csv`, `at_risk.csv`.
 - **Excel Compatibility:** Written with UTF-8 BOM (`\xEF\xBB\xBF`) and standard CSV delimiter for seamless double-click opening in Microsoft Excel.
@@ -305,3 +308,6 @@ The portal follows the Sindh Government District Education aesthetic:
 | 2026-10-11 | Copilot | **District School Forms:** Added an admin form builder with draft/publish workflow, supported question types (short/long text, number, date, radio, checkbox and dropdown), individual-school or level targeting, publish-time duration and automatic deadline enforcement. Added school notifications and response submission, per-school progress and answer review with CSV export, response editing until close, and deadline extension/manual close controls. Added `forms.csv`, `form_assignments.csv` and `form_responses.csv` schemas. |
 | 2026-10-11 | Copilot | **Show-Cause Notices for Missing Form Responses:** Added a print-ready bulk show-cause notice action to `admin/form-report.php`, targeting only non-submitting schools in the current filtered report and including school leadership, form title, deadline, and submission instructions. Printing uses an isolated A4 document with one page per school to avoid clipping by portal layout styles. |
 | 2026-10-11 | Copilot | **Admin Global School Search:** Enabled the admin header search to find schools by school name or SEMIS code, show matching school details, and navigate directly to the selected school's profile. |
+| 2026-10-11 | Copilot | **Notification Badge Visibility:** Added numeric unread-count badges to Admin and School notification bells and made polling updates explicitly control badge visibility, including sidebar counts. Notification polling failures are now reported to the browser console instead of being silently swallowed. |
+| 2026-10-11 | Copilot | **Targeted School Announcement Popups:** Replaced the inactive Documents sidebar item with the Admin Announcements & Popups page. Admins can publish notices to a school or school level and close them at any time; targeted schools see active notices in a shared login popup that can be dismissed for the current login and appears again on their next login. Added the `announcements.csv` table. Popup includes the portal logo, and admins can attach validated image files to announcements. |
+| 2026-10-11 | Copilot | **Closed Announcement Deletion:** Added a confirmation-protected delete action that is available only after an announcement is closed. Deletion removes the announcement record and its associated generated upload image when applicable. |

@@ -15,6 +15,7 @@ task.md
 
 # Live Data Directory (CSV database files — never push to repo)
 /data/
+/assets/uploads/announcements/
 
 # Vendor / Node (if any future packages added)
 /vendor/

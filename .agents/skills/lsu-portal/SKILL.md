@@ -101,7 +101,7 @@ When a new page is added, update the appropriate sidebar component (`includes/si
 ```
 
 ### Active Pages Registry
-- **Admin Portal:** `'dashboard'`, `'schools'`, `'school-profile'`, `'at-risk-schools'`, `'staff'`, `'complaints'`, `'messages'`, `'forms'`, `'settings'`
+- **Admin Portal:** `'dashboard'`, `'schools'`, `'school-profile'`, `'at-risk-schools'`, `'staff'`, `'complaints'`, `'messages'`, `'forms'`, `'announcements'`, `'settings'`
 - **School Portal:** `'dashboard'`, `'profile'`, `'staff'`, `'at-risk'`, `'complaints'`, `'messages'`, `'forms'`, `'settings'`
 
 > **⚠️ MANDATORY:** Whenever you add/remove a page, column, or feature, update BOTH this file AND `AGENTS.md` (Revision History). This is enforced to keep future AI agents in sync with the codebase.
@@ -180,7 +180,7 @@ $talukas = ExcelDB::getTalukas(true); // active only
 
 - **Engine:** `includes/excel_db.php` (`ExcelDB` static class)
 - **Storage:** `/data/*.csv` protected by `.htaccess`
-- **Active Tables:** `schools`, `school_staff`, `school_risks`, `users`, `settings`, `talukas`, `complaints`, `complaint_replies`, `admin_messages`, `admin_message_replies`, `forms`, `form_assignments`, `form_responses`
+- **Active Tables:** `schools`, `school_staff`, `school_risks`, `users`, `settings`, `talukas`, `complaints`, `complaint_replies`, `admin_messages`, `admin_message_replies`, `forms`, `form_assignments`, `form_responses`, `announcements`
 - **Deprecated (never read/write):** `students`, `attendance`, `at_risk`
 
 ### School Staff Table — Key Columns (`school_staff.csv`)
@@ -295,6 +295,7 @@ ExcelDB::calculateSchoolProfileCompletion('403010001'); // Returns percentage, m
   - **Complaints:** total grievance count and pending ticket badge (links to `admin/complaints.php`).
 - All donut charts and performance indicator progress bars must compute their values and SVG stroke coordinates dynamically on page render.
 - The admin header's global school search matches school names and SEMIS codes, shows up to eight ranked matches, supports keyboard selection, and opens the selected school profile.
+- Admin and School notification bells display the current numeric unread count; the shared polling script synchronizes bell, dropdown, and sidebar badges and logs request failures for diagnosis.
 
 - **Secrets:**
   - `FTP_SERVER`: `ftpupload.net`
@@ -385,3 +386,15 @@ ExcelDB::generateMessageThreadId();                        // generate MSG-XXXXX
 - School sidebar/header badges and live notification polling use each assignment's `unread_school` flag. Opening an assigned form marks its notification as read.
 - Admin reports show submitted and outstanding schools, answer details, filters and an Excel-compatible CSV export. CSV formula-leading values are escaped.
 - The form report can print one show-cause notice per non-submitting school in the currently filtered results. Each A4 notice includes school leadership and SEMIS details, form title and portal deadline, seven-day compliance instructions, and district signature blocks. Notices print in an isolated A4 document with one page per school so portal overflow/layout styles do not clip output.
+
+## 14. District Announcements & Popups
+
+### Page and Data
+- `admin/announcements.php` replaces the inactive Documents link in the Admin sidebar. Admins create and publish an announcement with a title and message, targeting either one school by SEMIS code or all schools at one level.
+- The `announcements` CSV table stores `announcement_id`, `title`, `message`, `image_url`, `target_type`, `target_value`, `status`, `created_by`, `created_at`, and `closed_at`.
+
+### Rules
+- Only active announcements are shown, and recipients are matched against their current SEMIS code or exact school level.
+- The shared School Portal header displays matching announcements in a prominent popup across all school pages. Dismissal lasts for the current school login; a fresh login displays still-active announcements again.
+- The popup header displays the portal logo. Admins may optionally upload a JPG, PNG, WEBP, or GIF image (maximum 5 MB); uploaded files use randomized filenames under `assets/uploads/announcements/` and are MIME- and image-validated before storage.
+- Admins close announcements with a CSRF-protected action. Closed announcements stop appearing on subsequent page requests and can then be permanently deleted with a separate CSRF-protected, confirmation-guarded action. Deleting a closed announcement also removes its generated upload image when the stored path matches the announcement upload naming scheme.

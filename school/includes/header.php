@@ -8,6 +8,16 @@
 $session_avatar = $school_logo ?? ($_SESSION['lsu_avatar'] ?? '');
 $has_avatar = !empty($session_avatar) && file_exists(ROOT_PATH . str_replace(BASE_URL, '', $session_avatar));
 $hm_initial = strtoupper(substr($hm_name, 0, 1));
+$school_announcements = [];
+if (($_SESSION['lsu_login_type'] ?? '') === 'school' && !empty($_SESSION['lsu_login_instance'])) {
+  $school_announcements = array_values(array_filter(ExcelDB::all('announcements'), fn($announcement) =>
+    ($announcement['status'] ?? '') === 'Active'
+    && (($announcement['target_type'] ?? '') === 'school'
+      ? trim((string)($announcement['target_value'] ?? '')) === trim((string)$school_semis)
+      : (($announcement['target_type'] ?? '') === 'level'
+        && trim((string)($announcement['target_value'] ?? '')) === trim((string)$school_level)))
+  ));
+}
 ?>
 <header class="bg-surface border-b border-border px-4 md:px-6 py-3 flex items-center justify-between sticky top-0 z-20 shadow-xs">
 
@@ -82,8 +92,8 @@ $hm_initial = strtoupper(substr($hm_name, 0, 1));
           <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
           <path d="M13.73 21a2 2 0 01-3.46 0"/>
         </svg>
-        <span class="header-unread-dot complaints-header-dot absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center border-2 border-surface <?= $school_total_unread > 0 ? '' : 'hidden' ?>">
-          <span class="header-unread-count complaints-header-count"><?= $school_total_unread ?></span>
+        <span class="notification-count-badge header-unread-dot absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-600 text-white text-[10px] leading-none font-bold rounded-full border-2 border-surface inline-flex items-center justify-center <?= $school_total_unread > 0 ? '' : 'hidden' ?>" style="<?= $school_total_unread > 0 ? '' : 'display:none' ?>">
+          <span class="notification-count-number"><?= $school_total_unread ?></span>
         </span>
       </button>
 
@@ -91,7 +101,7 @@ $hm_initial = strtoupper(substr($hm_name, 0, 1));
       <div id="notif-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-surface border border-border rounded-xl shadow-xl z-50 overflow-hidden">
         <div class="px-4 py-3 border-b border-border bg-slate-50 flex items-center justify-between">
           <span class="font-bold text-xs text-textMain">Notifications</span>
-          <span class="header-unread-count complaints-header-count bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full <?= $school_total_unread > 0 ? '' : 'hidden' ?>">
+          <span class="header-unread-label bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full <?= $school_total_unread > 0 ? '' : 'hidden' ?>" style="<?= $school_total_unread > 0 ? '' : 'display:none' ?>">
             <?= $school_total_unread ?> New
           </span>
         </div>
@@ -205,9 +215,61 @@ $hm_initial = strtoupper(substr($hm_name, 0, 1));
 
 </header>
 
+<?php if ($school_announcements): ?>
+<div id="school-announcement-modal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="school-announcement-heading">
+  <div class="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-2xl">
+    <div class="bg-primary px-6 py-5 text-white">
+      <div class="flex items-center gap-3">
+        <img src="<?= BASE_URL ?>/assets/images/rsu-favicon.png" alt="<?= e(APP_NAME) ?> logo" class="h-10 w-10 rounded bg-white p-1 object-contain">
+        <div>
+          <div class="text-xs font-bold uppercase tracking-[.18em] text-white/75">District announcement</div>
+          <h2 id="school-announcement-heading" class="mt-1 text-xl font-bold">Important information for your school</h2>
+        </div>
+      </div>
+    </div>
+    <div class="divide-y divide-slate-200">
+      <?php foreach ($school_announcements as $announcement): ?>
+      <article class="school-announcement-item px-6 py-5" data-announcement-id="<?= e($announcement['announcement_id'] ?? '') ?>">
+        <h3 class="text-lg font-bold text-slate-900"><?= e($announcement['title'] ?? '') ?></h3>
+        <p class="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700"><?= e($announcement['message'] ?? '') ?></p>
+        <?php if (!empty($announcement['image_url'])): ?>
+        <img src="<?= e($announcement['image_url']) ?>" alt="<?= e($announcement['title'] ?? 'Announcement image') ?>" class="mt-4 max-h-80 w-full rounded-xl border border-slate-200 bg-slate-50 object-contain">
+        <?php endif; ?>
+        <p class="mt-4 text-xs text-slate-500">Issued <?= e($announcement['created_at'] ?? '') ?></p>
+      </article>
+      <?php endforeach; ?>
+    </div>
+    <div class="flex justify-end border-t border-slate-200 px-6 py-4">
+      <button id="dismiss-school-announcement" type="button" class="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primaryDark">Close for now</button>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
+
 <script>
   window.LSU_BASE_URL = '<?= BASE_URL ?>';
   window.LSU_SCHOOL_SEMIS = '<?= e($school_semis) ?>';
+
+  const schoolAnnouncementModal = document.getElementById('school-announcement-modal');
+  if (schoolAnnouncementModal) {
+    const announcementSessionKey = 'lsu-announcement-dismissed-' + <?= json_encode($_SESSION['lsu_login_instance'] . '-' . $school_semis, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?> + '-';
+    const announcementItems = Array.from(schoolAnnouncementModal.querySelectorAll('.school-announcement-item'));
+    announcementItems.forEach(function(item) {
+      item.dataset.dismissKey = announcementSessionKey + item.dataset.announcementId;
+      if (sessionStorage.getItem(item.dataset.dismissKey) === '1') item.classList.add('hidden');
+    });
+    if (announcementItems.some(function(item) { return !item.classList.contains('hidden'); })) {
+      schoolAnnouncementModal.classList.remove('hidden');
+      schoolAnnouncementModal.classList.add('flex');
+    }
+    document.getElementById('dismiss-school-announcement').addEventListener('click', function() {
+      announcementItems.forEach(function(item) {
+        if (!item.classList.contains('hidden')) sessionStorage.setItem(item.dataset.dismissKey, '1');
+      });
+      schoolAnnouncementModal.classList.add('hidden');
+      schoolAnnouncementModal.classList.remove('flex');
+    });
+  }
 
   function toggleNotif() {
     const d = document.getElementById('notif-dropdown');

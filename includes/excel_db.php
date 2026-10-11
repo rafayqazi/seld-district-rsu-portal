@@ -119,6 +119,10 @@ class ExcelDB {
             'headers' => ['id', 'form_id', 'semis_code', 'school_name', 'answers_json', 'submitted_at', 'updated_at'],
             'seeds'   => []
         ],
+        'announcements' => [
+            'headers' => ['announcement_id', 'title', 'message', 'image_url', 'target_type', 'target_value', 'status', 'created_by', 'created_at', 'closed_at'],
+            'seeds'   => []
+        ],
         'school_staff' => [
             'headers' => ['id', 'semis_code', 'personal_no', 'full_name', 'cnic', 'gender', 'staff_type', 'designation', 'bps_scale', 'qualification_academic', 'qualification_professional', 'contact_phone', 'appointment_date', 'status', 'created_at', 'updated_at'],
             'seeds' => [
@@ -1448,4 +1452,3 @@ class ExcelDB {
         ];
     }
 }
-

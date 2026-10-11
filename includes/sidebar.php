@@ -146,13 +146,13 @@ function sidebar_link_class(string $page, string $active): string {
       District Reports
     </a>
 
-    <!-- Documents -->
-    <div class="px-2 pt-3 pb-1 sidebar-group-title text-white/40">Documents</div>
-    <a href="#" class="sidebar-link flex items-center gap-3 px-3 py-2 rounded text-white/80 text-sm hover:text-white opacity-60 cursor-not-allowed">
+    <!-- Announcements -->
+    <div class="px-2 pt-3 pb-1 sidebar-group-title text-white/40">Communications</div>
+    <a href="<?= $base ?>announcements.php" class="<?= sidebar_link_class('announcements', $active_page) ?>">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-        <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
+        <path d="M3 11v2a1 1 0 001 1h2l8 5V5l-8 5H4a1 1 0 00-1 1z"/><path d="M14 8.5a5 5 0 010 7"/><path d="M6 14l1.5 6H11l-2-5"/>
       </svg>
-      Documents
+      Announcements &amp; Popups
     </a>
 
     <!-- Account -->
