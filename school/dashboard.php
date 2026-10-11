@@ -191,18 +191,6 @@ $fans_tot      = isset($current_school['fans_total']) && $current_school['fans_t
 
             <!-- Quick Action Buttons -->
             <div class="flex flex-wrap items-center gap-2 pt-2 md:pt-0">
-              <a href="<?= BASE_URL ?>/school/messages.php" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg flex items-center gap-1.5 shadow-xs transition">
-                <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="12" y2="13"/></svg>
-                <span>Direct Messages</span>
-                <?php $unread_msg_count = ExcelDB::getUnreadMessagesCount('school', $school_semis); ?>
-                <?php if ($unread_msg_count > 0): ?>
-                  <span class="messages-badge-count bg-white text-blue-700 text-[10px] font-bold px-1.5 py-0.2 rounded-full animate-pulse"><?= $unread_msg_count ?></span>
-                <?php endif; ?>
-              </a>
-              <a href="<?= BASE_URL ?>/school/complaints.php" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold px-3.5 py-2 rounded-lg flex items-center gap-1.5 shadow-xs transition">
-                <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-                <span>Lodge Grievance</span>
-              </a>
               <a href="<?= BASE_URL ?>/school/profile.php" class="btn-primary text-xs font-semibold px-3.5 py-2 rounded-lg flex items-center gap-1.5 shadow-xs">
                 <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                 <span>School Profile</span>
