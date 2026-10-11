@@ -12,6 +12,19 @@
 $session_username = isset($_SESSION['lsu_username']) ? e($_SESSION['lsu_username']) : 'Admin';
 $session_role     = isset($_SESSION['lsu_role'])     ? e($_SESSION['lsu_role'])     : 'Administrator';
 $session_initial  = strtoupper(substr($session_username, 0, 1));
+$global_search_schools = array_values(array_map(static fn($school) => [
+    'semis_code' => (string)($school['semis_code'] ?? ''),
+    'school_name' => (string)($school['school_name'] ?? ''),
+    'level' => (string)($school['level'] ?? ''),
+    'taluka' => (string)($school['taluka'] ?? ''),
+], ExcelDB::all('schools')));
+$global_search_schools_json = json_encode(
+    $global_search_schools,
+    JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+);
+if ($global_search_schools_json === false) {
+    $global_search_schools_json = '[]';
+}
 ?>
 <header class="bg-surface border-b border-border px-4 md:px-6 py-3 flex items-center gap-3 sticky top-0 z-20 shadow-sm">
 
@@ -38,14 +51,125 @@ $session_initial  = strtoupper(substr($session_username, 0, 1));
   </div>
 
   <!-- Global Search -->
-  <div class="flex-1 max-w-sm ml-2 hidden sm:block relative">
+  <div id="global-school-search-wrap" class="flex-1 max-w-sm ml-2 hidden sm:block relative">
     <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-muted" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
       <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
     </svg>
-    <input id="global-search" type="search" placeholder="Search schools, students, staff…"
+    <input id="global-search" type="search" placeholder="Search schools by name or SEMIS…"
            class="w-full pl-9 pr-4 py-2 text-sm border border-border rounded bg-background text-textMain placeholder-muted focus:border-primary focus:outline-none"
-           aria-label="Global search"/>
+           aria-label="Search schools by name or SEMIS code" aria-autocomplete="list"
+           aria-controls="global-search-results" aria-expanded="false" autocomplete="off"/>
+    <div id="global-search-results" role="listbox" class="hidden absolute left-0 right-0 top-full mt-1 max-h-80 overflow-y-auto rounded-lg border border-border bg-surface shadow-xl z-50"></div>
   </div>
+  <script type="application/json" id="global-search-school-data"><?= $global_search_schools_json ?></script>
+  <script>
+  (() => {
+    const input = document.getElementById('global-search');
+    const container = document.getElementById('global-school-search-wrap');
+    const results = document.getElementById('global-search-results');
+    const dataElement = document.getElementById('global-search-school-data');
+    if (!input || !container || !results || !dataElement) return;
+
+    const schools = JSON.parse(dataElement.textContent);
+    const profileUrl = <?= json_encode(BASE_URL . '/admin/school-profile.php?semis=', JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+    let activeIndex = -1;
+
+    function closeResults() {
+      results.classList.add('hidden');
+      results.replaceChildren();
+      input.setAttribute('aria-expanded', 'false');
+      input.removeAttribute('aria-activedescendant');
+      activeIndex = -1;
+    }
+
+    function setActive(index) {
+      const options = results.querySelectorAll('[role="option"]');
+      if (!options.length) return;
+      activeIndex = (index + options.length) % options.length;
+      options.forEach((option, optionIndex) => {
+        const active = optionIndex === activeIndex;
+        option.classList.toggle('bg-slate-100', active);
+        option.setAttribute('aria-selected', active ? 'true' : 'false');
+      });
+      input.setAttribute('aria-activedescendant', options[activeIndex].id);
+      options[activeIndex].scrollIntoView({ block: 'nearest' });
+    }
+
+    function renderResults() {
+      const query = input.value.trim().toLocaleLowerCase();
+      results.replaceChildren();
+      activeIndex = -1;
+      input.removeAttribute('aria-activedescendant');
+      if (!query) {
+        closeResults();
+        return;
+      }
+
+      const matches = schools
+        .filter(school => `${school.school_name} ${school.semis_code}`.toLocaleLowerCase().includes(query))
+        .sort((a, b) => {
+          const aCode = a.semis_code.toLocaleLowerCase();
+          const bCode = b.semis_code.toLocaleLowerCase();
+          const aName = a.school_name.toLocaleLowerCase();
+          const bName = b.school_name.toLocaleLowerCase();
+          const aRank = aCode === query || aName === query ? 0 : (aCode.startsWith(query) || aName.startsWith(query) ? 1 : 2);
+          const bRank = bCode === query || bName === query ? 0 : (bCode.startsWith(query) || bName.startsWith(query) ? 1 : 2);
+          return aRank - bRank || aName.localeCompare(bName);
+        })
+        .slice(0, 8);
+
+      if (!matches.length) {
+        const emptyState = document.createElement('div');
+        emptyState.className = 'px-3 py-3 text-xs text-muted';
+        emptyState.textContent = 'No matching schools found.';
+        results.append(emptyState);
+      } else {
+        matches.forEach((school, index) => {
+          const option = document.createElement('button');
+          option.type = 'button';
+          option.id = `global-school-result-${index}`;
+          option.setAttribute('role', 'option');
+          option.setAttribute('aria-selected', 'false');
+          option.className = 'w-full px-3 py-2.5 text-left hover:bg-slate-100 focus:bg-slate-100 focus:outline-none border-b border-border last:border-0';
+          const name = document.createElement('span');
+          name.className = 'block text-sm font-medium text-textMain';
+          name.textContent = school.school_name || 'Unnamed school';
+          const details = document.createElement('span');
+          details.className = 'block mt-0.5 text-[11px] text-muted';
+          details.textContent = `SEMIS ${school.semis_code}${school.level ? ` · ${school.level}` : ''}${school.taluka ? ` · ${school.taluka}` : ''}`;
+          option.append(name, details);
+          option.addEventListener('click', () => {
+            window.location.href = profileUrl + encodeURIComponent(school.semis_code);
+          });
+          results.append(option);
+        });
+      }
+
+      results.classList.remove('hidden');
+      input.setAttribute('aria-expanded', 'true');
+    }
+
+    input.addEventListener('input', renderResults);
+    input.addEventListener('keydown', event => {
+      const options = results.querySelectorAll('[role="option"]');
+      if (event.key === 'ArrowDown' && options.length) {
+        event.preventDefault();
+        setActive(activeIndex + 1);
+      } else if (event.key === 'ArrowUp' && options.length) {
+        event.preventDefault();
+        setActive(activeIndex < 0 ? options.length - 1 : activeIndex - 1);
+      } else if (event.key === 'Enter' && options.length) {
+        event.preventDefault();
+        options[activeIndex < 0 ? 0 : activeIndex].click();
+      } else if (event.key === 'Escape') {
+        closeResults();
+      }
+    });
+    document.addEventListener('click', event => {
+      if (!container.contains(event.target)) closeResults();
+    });
+  })();
+  </script>
 
   <div class="flex-1"></div>
 
@@ -189,5 +313,4 @@ $session_initial  = strtoupper(substr($session_username, 0, 1));
   });
 </script>
 <script src="<?= BASE_URL ?>/assets/js/notifications.js"></script>
-
 

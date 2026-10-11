@@ -294,6 +294,7 @@ ExcelDB::calculateSchoolProfileCompletion('403010001'); // Returns percentage, m
   - **At-Risk Registry:** total unresolved risks vs resolved count (links to `admin/at-risk-schools.php`).
   - **Complaints:** total grievance count and pending ticket badge (links to `admin/complaints.php`).
 - All donut charts and performance indicator progress bars must compute their values and SVG stroke coordinates dynamically on page render.
+- The admin header's global school search matches school names and SEMIS codes, shows up to eight ranked matches, supports keyboard selection, and opens the selected school profile.
 
 - **Secrets:**
   - `FTP_SERVER`: `ftpupload.net`
