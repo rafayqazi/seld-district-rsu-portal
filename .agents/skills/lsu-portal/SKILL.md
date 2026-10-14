@@ -101,7 +101,7 @@ When a new page is added, update the appropriate sidebar component (`includes/si
 ```
 
 ### Active Pages Registry
-- **Admin Portal:** `'dashboard'`, `'schools'`, `'school-profile'`, `'at-risk-schools'`, `'staff'`, `'complaints'`, `'messages'`, `'forms'`, `'announcements'`, `'settings'`
+- **Admin Portal:** `'dashboard'`, `'schools'`, `'school-profile'`, `'at-risk-schools'`, `'facility-map'`, `'staff'`, `'complaints'`, `'messages'`, `'forms'`, `'announcements'`, `'settings'`
 - **School Portal:** `'dashboard'`, `'profile'`, `'staff'`, `'at-risk'`, `'complaints'`, `'messages'`, `'forms'`, `'settings'`
 
 > **⚠️ MANDATORY:** Whenever you add/remove a page, column, or feature, update BOTH this file AND `AGENTS.md` (Revision History). This is enforced to keep future AI agents in sync with the codebase.
@@ -206,19 +206,38 @@ $talukas = ExcelDB::getTalukas(true); // active only
 |---|---|
 | `semis_code` | Unique numerical string — primary lookup key (immutable by HM in School Portal, editable only by District Admin in Admin Portal) |
 | `cnic` | HM CNIC — immutable unique identifier, login username for school portal (editable only by District Admin) |
-| `enrollment` | Total student enrollment (auto-sum: `enrollment_boys + enrollment_girls`) |
-| `enrollment_boys` | Boys enrolled count |
-| `enrollment_girls` | Girls enrolled count |
+| `enrollment` | Total student enrollment; sum of grade boys and girls when grade-wise data is entered |
+| `enrollment_boys` | Boys enrolled count, derived from grade-wise entries when available |
+| `enrollment_girls` | Girls enrolled count, derived from grade-wise entries when available |
 | `building_structure` | Good Condition / Needs Repair / Dangerous / Unsafe / Condemned / Closed |
 | `drainage_sewerage` | Functional Drainage / Partial Drainage / Broken / None |
 | `flood_prone` | No / Yes |
 | `furniture_condition` | Adequate / Shortage / None Available |
 
+### SELD School Census Profile Fields (`schools.csv`)
+The School Portal profile also records these screenshot-referenced census details. ExcelDB migrates existing `schools.csv` files by adding current headers while preserving existing school records and removing obsolete duplicate designation-wise census columns:
+
+- **School details:** location type, medium, shift, UC/TC/MC, Sindhi enrollment, school administration, DDO cost center, number of surrounding schools, adopted-school status, and campus status.
+- **Building status:** building availability, ownership, construction type and condition, total rooms, toilet-block count, and area in square feet (classroom count remains in the existing profile field).
+- **Staff:** staff members are managed through the separate School Staff module; the profile does not duplicate designation-wise staff inputs.
+- **Facilities:** hand-wash, soap, science lab, library, computer lab, playground, and MHM disposal; the existing water, toilets, electricity, and boundary-wall fields remain authoritative.
+- **Inventory:** working and repairable counts for blackboards, whiteboards, smart boards, student chairs/benches, two-/three-seater desks, teachers' tables/chairs, almirahs, and computers.
+- **Enrollment:** boys and girls per ECCE, Katchi, and Grades I–V. In both School and Admin portals, editing grade-wise figures updates gender and total enrollment; legacy aggregate enrollment remains unchanged until grade data is edited.
+- **SMC funds:** received status, amount received, and utilized amount.
+- **Provider / scheme:** data-provider name, designation and contact; ADP scheme number, description, package and progress.
+
 ### Auto-Risk Flagging
 Call `ExcelDB::autoFlagSchoolRisks(string $semisCode): int` after any facility/profile save.
-Evaluates 10 infrastructure rules and inserts new `school_risks` records automatically.
+Evaluates 11 infrastructure rules and inserts new `school_risks` records automatically (13 recognized risk categories). Census `building_condition` is checked alongside `building_structure`, and `has_building = No` creates a High-severity `No School Building` risk.
 Does NOT duplicate unresolved risks for the same school+category.
 Admin resolves risks manually via `admin/at-risk-schools.php`.
+
+### District Facilities Map (`admin/facility-map.php`)
+- Admins can compare school-reported facility availability by selecting a field from the school profile. The map summarizes the official Tando Allahyar, Jhando Mari, and Chambar taluka boundaries and provides ranked breakdowns and district totals.
+- Facility responses are classified as Available, Limited, Unavailable, or Not reported. Availability percentages use only schools with a recognized response; reporting coverage is shown separately. Unknown or unrecognized values are excluded from availability rates.
+- Stored taluka labels without an official mapped boundary (including Nasarpur) remain in district totals and ranked results, but are not assigned to a guessed map region.
+- The MHM disposal facility is stored in `schools.csv` as `facility_mhm_disposal` with Yes/No responses.
+- Simplified Pakistan ADM3 (2017 tehsil) boundaries are from geoBoundaries / Pathways Data Pvt. Ltd. under ODbL 1.0; the page displays attribution.
 
 ### Common Operations
 ```php

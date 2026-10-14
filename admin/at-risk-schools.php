@@ -138,6 +138,7 @@ arsort($categories_map);
 // Predefined risk categories (SELD/SEMIS/PSSF-aligned)
 $risk_categories = [
     'Dangerous Building Structure'   => 'Building structurally unsafe, risk of collapse',
+    'No School Building'             => 'School reports having no building available for instruction',
     'No Boundary Wall'               => 'School has no protective boundary wall',
     'Damaged / Incomplete Wall'      => 'Boundary wall partially damaged or incomplete',
     'No Drinking Water'              => 'No clean/safe drinking water available',

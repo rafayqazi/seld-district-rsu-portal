@@ -74,6 +74,13 @@ function sidebar_link_class(string $page, string $active): string {
       </svg>
       At-Risk Schools
     </a>
+    <a href="<?= $base ?>facility-map.php" class="<?= sidebar_link_class('facility-map', $active_page) ?>">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/>
+        <path d="M9 3v15M15 6v15"/>
+      </svg>
+      Facility Map
+    </a>
 
     <!-- Teachers & Staff -->
     <div class="px-2 pt-3 pb-1 sidebar-group-title text-white/40">Teachers &amp; Staff</div>

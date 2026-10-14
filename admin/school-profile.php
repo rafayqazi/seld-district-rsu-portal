@@ -35,6 +35,15 @@ if (!$school) {
 $available_talukas = ExcelDB::getTalukas();
 $notification = '';
 $notification_type = 'success';
+$enrollmentGradeGroups = [
+    'ecce' => 'ECCE',
+    'katchi' => 'Katchi',
+    'grade_1' => 'I',
+    'grade_2' => 'II',
+    'grade_3' => 'III',
+    'grade_4' => 'IV',
+    'grade_5' => 'V',
+];
 
 // ─── Handle Admin Edit School Form Submissions ──────────────────────────────
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
@@ -121,10 +130,57 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         $taluka  = trim($_POST['taluka'] ?? 'Tando Allahyar');
         $level   = trim($_POST['level'] ?? 'Primary');
         $gender  = trim($_POST['gender'] ?? 'Co-education');
-        $boys    = max(0, (int)($_POST['enrollment_boys'] ?? 0));
-        $girls   = max(0, (int)($_POST['enrollment_girls'] ?? 0));
+        $gradeEnrollment = [];
+        $gradeBoysTotal = 0;
+        $gradeGirlsTotal = 0;
+        foreach ($enrollmentGradeGroups as $grade => $_label) {
+            foreach (['boys', 'girls'] as $studentGender) {
+                $field = 'enrollment_' . $grade . '_' . $studentGender;
+                $value = $_POST[$field] ?? 0;
+                $gradeEnrollment[$field] = is_scalar($value) && is_numeric($value) ? max(0, (int)$value) : 0;
+                if ($studentGender === 'boys') $gradeBoysTotal += $gradeEnrollment[$field];
+                else $gradeGirlsTotal += $gradeEnrollment[$field];
+            }
+        }
+        $gradeEnrollmentChanged = ($_POST['grade_enrollment_changed'] ?? '0') === '1';
+        if ($gradeEnrollmentChanged) {
+            $boys = $gradeBoysTotal;
+            $girls = $gradeGirlsTotal;
+        } else {
+            $boys = max(0, (int)($school['enrollment_boys'] ?? 0));
+            $girls = max(0, (int)($school['enrollment_girls'] ?? 0));
+            $existingGradeBoys = 0;
+            $existingGradeGirls = 0;
+            foreach ($enrollmentGradeGroups as $grade => $_label) {
+                $existingGradeBoys += max(0, (int)($school['enrollment_' . $grade . '_boys'] ?? 0));
+                $existingGradeGirls += max(0, (int)($school['enrollment_' . $grade . '_girls'] ?? 0));
+            }
+            if (($existingGradeBoys + $existingGradeGirls) > 0) {
+                $boys = $existingGradeBoys;
+                $girls = $existingGradeGirls;
+            } elseif (
+                (!isset($school['enrollment_boys']) || $school['enrollment_boys'] === '')
+                && (!isset($school['enrollment_girls']) || $school['enrollment_girls'] === '')
+            ) {
+                $existingTotal = max(0, (int)($school['enrollment'] ?? 0));
+                if (($school['gender'] ?? '') === 'Boys') {
+                    $boys = $existingTotal;
+                    $girls = 0;
+                } elseif (($school['gender'] ?? '') === 'Girls') {
+                    $boys = 0;
+                    $girls = $existingTotal;
+                } else {
+                    $boys = (int)round($existingTotal * 0.52);
+                    $girls = $existingTotal - $boys;
+                }
+            }
+            if (array_key_exists('enrollment_boys', $_POST) && array_key_exists('enrollment_girls', $_POST)) {
+                $boys = max(0, (int)$_POST['enrollment_boys']);
+                $girls = max(0, (int)$_POST['enrollment_girls']);
+            }
+        }
         $enroll  = $boys + $girls;
-        if ($enroll === 0 && isset($_POST['enrollment'])) {
+        if (!$gradeEnrollmentChanged && $enroll === 0 && isset($_POST['enrollment'])) {
             $enroll = max(0, (int)$_POST['enrollment']);
         }
         $att     = trim($_POST['attendance_pct'] ?? '90');
@@ -223,6 +279,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                 'fans_functional'        => (string)$fans_func,
                 'fans_non_functional'    => (string)$fans_non_func,
             ];
+            if ($gradeEnrollmentChanged) {
+                foreach ($gradeEnrollment as $field => $count) {
+                    $updateData[$field] = (string)$count;
+                }
+            }
 
             ExcelDB::update('schools', 'semis_code', $targetSemis, $updateData);
 
@@ -306,6 +367,17 @@ $school = ExcelDB::find('schools', 'semis_code', $semis);
 $totalEnrollment = (int)($school['enrollment'] ?? 0);
 $boysEst  = isset($school['enrollment_boys']) && $school['enrollment_boys'] !== '' ? (int)$school['enrollment_boys'] : null;
 $girlsEst = isset($school['enrollment_girls']) && $school['enrollment_girls'] !== '' ? (int)$school['enrollment_girls'] : null;
+$gradeBoysAggregate = 0;
+$gradeGirlsAggregate = 0;
+foreach ($enrollmentGradeGroups as $grade => $_label) {
+    $gradeBoysAggregate += max(0, (int)($school['enrollment_' . $grade . '_boys'] ?? 0));
+    $gradeGirlsAggregate += max(0, (int)($school['enrollment_' . $grade . '_girls'] ?? 0));
+}
+$hasGradeEnrollment = ($gradeBoysAggregate + $gradeGirlsAggregate) > 0;
+if ($hasGradeEnrollment) {
+    $boysEst = $gradeBoysAggregate;
+    $girlsEst = $gradeGirlsAggregate;
+}
 
 if ($boysEst === null || $girlsEst === null) {
     if (($school['gender'] ?? '') === 'Boys') {
@@ -368,6 +440,73 @@ $cmp_recent = array_slice($schoolComplaints, 0, 3);
 // ─── Profile Data Completion & Missing Information Audit ─────────────────────
 $completion = ExcelDB::calculateSchoolProfileCompletion($semis);
 $schoolStaff = ExcelDB::getStaffBySemis($semis);
+$censusSections = [
+    'School Census Details' => [
+        'location_type' => 'Location',
+        'medium' => 'Medium',
+        'shift' => 'Shift',
+        'local_council' => 'UC / TC / MC',
+        'enrollment_sindhi' => 'Sindhi Enrollment',
+        'school_administration' => 'School Administration',
+        'ddo_cost_center' => 'DDO Cost Center',
+        'surrounding_schools' => 'Total Surrounding Schools',
+        'adopted_school' => 'Adopted School',
+        'is_campus' => 'Is Campus',
+    ],
+    'Building Status' => [
+        'has_building' => 'Having Building',
+        'building_ownership' => 'Ownership',
+        'construction_type' => 'Construction Type',
+        'building_condition' => 'Building Condition',
+        'total_rooms' => 'Total Rooms',
+        'classrooms' => 'Classrooms',
+        'area_sqft' => 'Area (sqft)',
+        'toilet_blocks_count' => 'Toilet Blocks',
+    ],
+    'Basic Facilities' => [
+        'facility_water' => 'Drinking Water',
+        'facility_toilets' => 'Toilets',
+        'facility_handwash' => 'Hand Wash',
+        'facility_soap' => 'Soap',
+        'facility_electricity' => 'Electricity',
+        'facility_boundary_wall' => 'Boundary Wall',
+        'facility_science_lab' => 'Lab / Science Lab',
+        'facility_library' => 'Library',
+        'facility_computer_lab' => 'Computer Lab',
+        'facility_playground' => 'Play Ground',
+        'facility_mhm_disposal' => 'MHM Disposal',
+    ],
+    'SMC Funds' => [
+        'smc_funds_received' => 'Funds Received',
+        'smc_amount_received' => 'Amount Received (Rs)',
+        'smc_amount_utilized' => 'Total Utilized (Rs)',
+    ],
+    'Principal / HM / Data Provider' => [
+        'data_provider_name' => 'Data Provider Name',
+        'data_provider_designation' => 'Designation',
+        'data_provider_contact' => 'Contact',
+    ],
+    'ADP Scheme Details' => [
+        'adp_no' => 'ADP No.',
+        'adp_description' => 'Description',
+        'adp_package' => 'Package',
+        'adp_progress' => 'Progress',
+    ],
+];
+$censusInventoryItems = [
+    'blackboards' => 'Blackboards',
+    'whiteboards' => 'White boards',
+    'smart_boards' => 'Smart Board',
+    'student_chairs' => 'Student Chairs',
+    'student_benches' => 'Student Benches',
+    'two_seater_desks' => 'Two Seater Desks',
+    'three_seater_desks' => 'Three Seater Desks',
+    'teacher_tables' => 'Teachers Tables',
+    'teacher_chairs' => 'Teachers Chairs',
+    'almirahs' => 'Almirahs',
+    'computers' => 'Computers',
+];
+$censusGrades = $enrollmentGradeGroups;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -504,6 +643,77 @@ body{font-family:'Inter',system-ui,sans-serif;}
           <div><div class="text-xs text-muted mb-0.5">Official Contact</div><div class="font-medium"><?= e(!empty($school['phone']) ? $school['phone'] : '+92 22 3892401') ?></div></div>
           <div><div class="text-xs text-muted mb-0.5">Operational Status</div><div><span class="status-badge <?= e($school['status_badge'] ?? 'badge-active') ?>"><?= e($school['status'] ?? 'Active') ?></span></div></div>
           <div class="sm:col-span-2"><div class="text-xs text-muted mb-0.5">Address / Location</div><div class="font-medium"><?= e(!empty($school['address']) ? $school['address'] : 'Main Station Road, Tando Allahyar') ?></div></div>
+        </div>
+      </section>
+
+      <section class="bg-surface border border-border rounded-lg shadow-sm overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-border">
+          <h2 class="text-sm font-semibold text-textMain">SELD School Census &amp; Resource Details</h2>
+          <p class="text-[11px] text-muted mt-1">Submitted by the school through the School Portal profile</p>
+        </div>
+        <div class="p-5 space-y-5">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <?php foreach ($censusSections as $sectionTitle => $sectionFields): ?>
+              <div class="rounded-lg border border-border p-3.5">
+                <h3 class="text-xs font-bold text-primary mb-3"><?= e($sectionTitle) ?></h3>
+                <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2.5">
+                  <?php foreach ($sectionFields as $field => $label):
+                    $censusValue = trim((string)($school[$field] ?? ''));
+                  ?>
+                    <div>
+                      <dt class="text-[10px] text-muted"><?= e($label) ?></dt>
+                      <dd class="text-xs font-medium text-textMain break-words"><?= e($censusValue !== '' ? $censusValue : 'Not provided') ?></dd>
+                    </div>
+                  <?php endforeach; ?>
+                </dl>
+              </div>
+            <?php endforeach; ?>
+          </div>
+
+          <div class="rounded-lg border border-border p-3.5">
+              <h3 class="text-xs font-bold text-primary mb-3">Enrollment by Grade</h3>
+              <?php if (!$hasGradeEnrollment && $totalEnrollment > 0): ?>
+                <p class="text-[10px] text-amber-700 mb-2">Grade-wise counts have not been entered. The total row uses the existing school enrollment record.</p>
+              <?php endif; ?>
+              <div class="overflow-x-auto">
+                <table class="w-full min-w-[360px] text-xs">
+                  <thead class="bg-emerald-50 text-textMain"><tr><th class="p-2 text-left">Grade</th><th class="p-2 text-right">Boys</th><th class="p-2 text-right">Girls</th><th class="p-2 text-right">Total</th></tr></thead>
+                  <tbody class="divide-y divide-border">
+                    <?php
+                    $gradeBoysTotal = 0;
+                    $gradeGirlsTotal = 0;
+                    foreach ($censusGrades as $grade => $label):
+                      $gradeBoys = (int)($school['enrollment_' . $grade . '_boys'] ?? 0);
+                      $gradeGirls = (int)($school['enrollment_' . $grade . '_girls'] ?? 0);
+                      $gradeBoysTotal += $gradeBoys;
+                      $gradeGirlsTotal += $gradeGirls;
+                    ?>
+                      <tr><td class="p-2"><?= e($label) ?></td><td class="p-2 text-right"><?= $hasGradeEnrollment ? $gradeBoys : '—' ?></td><td class="p-2 text-right"><?= $hasGradeEnrollment ? $gradeGirls : '—' ?></td><td class="p-2 text-right font-semibold"><?= $hasGradeEnrollment ? $gradeBoys + $gradeGirls : '—' ?></td></tr>
+                    <?php endforeach; ?>
+                  </tbody>
+                  <tfoot class="bg-slate-50 font-semibold">
+                    <tr><td class="p-2">Total</td><td class="p-2 text-right"><?= $hasGradeEnrollment ? $gradeBoysTotal : (int)$boysEst ?></td><td class="p-2 text-right"><?= $hasGradeEnrollment ? $gradeGirlsTotal : (int)$girlsEst ?></td><td class="p-2 text-right"><?= $hasGradeEnrollment ? $gradeBoysTotal + $gradeGirlsTotal : (int)$totalEnrollment ?></td></tr>
+                  </tfoot>
+                </table>
+              </div>
+          </div>
+
+          <div class="rounded-lg border border-border p-3.5">
+            <h3 class="text-xs font-bold text-primary mb-3">Furniture &amp; Equipment Inventory</h3>
+            <div class="overflow-x-auto">
+              <table class="w-full min-w-[520px] text-xs">
+                <thead class="bg-slate-700 text-white"><tr><th class="p-2 text-left">Item</th><th class="p-2 text-right">Working</th><th class="p-2 text-right">Repairable</th><th class="p-2 text-right">Total</th></tr></thead>
+                <tbody class="divide-y divide-border">
+                  <?php foreach ($censusInventoryItems as $item => $label):
+                    $working = (int)($school['inventory_' . $item . '_working'] ?? 0);
+                    $repairable = (int)($school['inventory_' . $item . '_repairable'] ?? 0);
+                  ?>
+                    <tr><td class="p-2 font-medium"><?= e($label) ?></td><td class="p-2 text-right"><?= $working ?></td><td class="p-2 text-right"><?= $repairable ?></td><td class="p-2 text-right font-semibold"><?= $working + $repairable ?></td></tr>
+                  <?php endforeach; ?>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -1016,10 +1226,11 @@ body{font-family:'Inter',system-ui,sans-serif;}
       <button onclick="closeEditSchoolModal()" class="text-muted hover:text-textMain text-xl leading-none px-1.5 py-0.5 rounded hover:bg-slate-100">&times;</button>
     </div>
 
-    <form method="POST" class="space-y-4">
+    <form method="POST" id="admin-school-profile-form" class="space-y-4">
       <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>"/>
       <input type="hidden" name="update_school_profile" value="1"/>
       <input type="hidden" name="target_semis" value="<?= e($school['semis_code'] ?? '') ?>"/>
+      <input type="hidden" name="grade_enrollment_changed" id="admin_grade_enrollment_changed" value="0"/>
 
       <!-- Basic Identity: SEMIS & Taluka -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
@@ -1076,34 +1287,34 @@ body{font-family:'Inter',system-ui,sans-serif;}
         </div>
       </div>
 
-      <!-- Enrollment Breakdown (Boys / Girls / Total) -->
+      <!-- Enrollment by Grade -->
       <div class="p-3 bg-slate-50 border border-border rounded-lg space-y-2">
         <div class="text-xs font-bold text-primary flex items-center justify-between">
-          <span>Student Enrollment Breakdown</span>
-          <span class="text-[10px] text-muted font-normal">Auto-calculates total</span>
+          <span>Enrollment by Grade</span>
+          <span class="text-[10px] text-muted font-normal">Boys, girls, and totals calculate automatically</span>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div>
-            <label class="block text-xs font-semibold text-textMain mb-1 flex items-center justify-between">
-              <span>Boys</span>
-              <span class="text-[10px] text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded font-bold">Boys</span>
-            </label>
-            <input type="number" id="admin_enrollment_boys" name="enrollment_boys" min="0" value="<?= (int)($school['enrollment_boys'] ?? $boysEst) ?>" class="w-full text-xs border border-border rounded-lg px-3 py-1.5 bg-background focus:outline-none focus:border-primary font-mono" oninput="adminCalcEnrollment()"/>
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-textMain mb-1 flex items-center justify-between">
-              <span>Girls</span>
-              <span class="text-[10px] text-pink-700 bg-pink-50 px-1.5 py-0.5 rounded font-bold">Girls</span>
-            </label>
-            <input type="number" id="admin_enrollment_girls" name="enrollment_girls" min="0" value="<?= (int)($school['enrollment_girls'] ?? $girlsEst) ?>" class="w-full text-xs border border-border rounded-lg px-3 py-1.5 bg-background focus:outline-none focus:border-primary font-mono" oninput="adminCalcEnrollment()"/>
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-textMain mb-1 flex items-center justify-between">
-              <span>Total Enrolled</span>
-              <span class="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-bold">Auto</span>
-            </label>
-            <input type="number" id="admin_total_enrollment" name="enrollment" min="0" readonly value="<?= (int)($school['enrollment'] ?? $totalEnrollment) ?>" class="w-full text-xs font-bold text-emerald-800 border border-emerald-300 rounded-lg px-3 py-1.5 bg-emerald-50/50 cursor-not-allowed font-mono"/>
-          </div>
+        <p class="text-[10px] text-muted">The existing school total is preserved until grade-wise data is edited. Once edited, this grade breakdown becomes the source of truth.</p>
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[420px] text-xs">
+            <thead class="bg-emerald-50 text-textMain"><tr><th class="p-2 text-left">Grade</th><th class="p-2 text-right">Boys</th><th class="p-2 text-right">Girls</th><th class="p-2 text-right">Total</th></tr></thead>
+            <tbody class="divide-y divide-border">
+              <?php foreach ($enrollmentGradeGroups as $grade => $label): ?>
+                <?php
+                  $gradeBoys = max(0, (int)($school['enrollment_' . $grade . '_boys'] ?? 0));
+                  $gradeGirls = max(0, (int)($school['enrollment_' . $grade . '_girls'] ?? 0));
+                ?>
+                <tr>
+                  <td class="p-2 font-medium"><?= e($label) ?></td>
+                  <td class="p-2"><input type="number" min="0" data-grade-enrollment="boys" name="enrollment_<?= e($grade) ?>_boys" value="<?= $gradeBoys ?>" class="admin-grade-enrollment w-full text-right border border-border rounded px-2 py-1 font-mono" oninput="adminCalcEnrollment(true)"/></td>
+                  <td class="p-2"><input type="number" min="0" data-grade-enrollment="girls" name="enrollment_<?= e($grade) ?>_girls" value="<?= $gradeGirls ?>" class="admin-grade-enrollment w-full text-right border border-border rounded px-2 py-1 font-mono" oninput="adminCalcEnrollment(true)"/></td>
+                  <td class="p-2 text-right font-semibold" data-grade-total="<?= e($grade) ?>"><?= $gradeBoys + $gradeGirls ?></td>
+                </tr>
+              <?php endforeach; ?>
+            </tbody>
+            <tfoot class="bg-white font-bold">
+              <tr><td class="p-2">Total</td><td class="p-2 text-right" id="admin_grade_boys_total"><?= (int)$boysEst ?></td><td class="p-2 text-right" id="admin_grade_girls_total"><?= (int)$girlsEst ?></td><td class="p-2 text-right text-emerald-800" id="admin_total_enrollment"><?= (int)$totalEnrollment ?></td></tr>
+            </tfoot>
+          </table>
         </div>
       </div>
 
@@ -1788,11 +1999,27 @@ function closeEditSchoolModal() {
   document.getElementById('edit-school-modal').classList.add('hidden');
 }
 
-function adminCalcEnrollment() {
-  const b = parseInt(document.getElementById('admin_enrollment_boys')?.value) || 0;
-  const g = parseInt(document.getElementById('admin_enrollment_girls')?.value) || 0;
-  const tot = document.getElementById('admin_total_enrollment');
-  if (tot) tot.value = b + g;
+function adminCalcEnrollment(markChanged = false) {
+  const form = document.getElementById('admin-school-profile-form');
+  if (!form) return;
+
+  let boysTotal = 0;
+  let girlsTotal = 0;
+  form.querySelectorAll('[data-grade-enrollment]').forEach(input => {
+    const count = Math.max(0, parseInt(input.value, 10) || 0);
+    if (input.dataset.gradeEnrollment === 'boys') boysTotal += count;
+    else girlsTotal += count;
+
+    const row = input.closest('tr');
+    const boys = Math.max(0, parseInt(row.querySelector('[data-grade-enrollment="boys"]').value, 10) || 0);
+    const girls = Math.max(0, parseInt(row.querySelector('[data-grade-enrollment="girls"]').value, 10) || 0);
+    row.querySelector('[data-grade-total]').textContent = boys + girls;
+  });
+
+  document.getElementById('admin_grade_boys_total').textContent = boysTotal;
+  document.getElementById('admin_grade_girls_total').textContent = girlsTotal;
+  document.getElementById('admin_total_enrollment').textContent = boysTotal + girlsTotal;
+  if (markChanged) document.getElementById('admin_grade_enrollment_changed').value = '1';
 }
 
 function adminCalcEquipment() {

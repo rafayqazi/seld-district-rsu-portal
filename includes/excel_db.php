@@ -33,7 +33,38 @@ class ExcelDB {
             ]
         ],
         'schools' => [
-            'headers' => ['id', 'semis_code', 'school_name', 'head_master', 'cnic', 'phone', 'address', 'level', 'gender', 'taluka', 'enrollment', 'enrollment_boys', 'enrollment_girls', 'attendance_pct', 'status', 'status_badge', 'classrooms', 'teachers', 'non_teaching', 'facility_electricity', 'facility_water', 'facility_toilets', 'facility_boundary_wall', 'facility_internet', 'building_structure', 'drainage_sewerage', 'flood_prone', 'furniture_condition', 'boards_total', 'boards_functional', 'boards_non_functional', 'benches_total', 'benches_functional', 'benches_non_functional', 'fans_total', 'fans_functional', 'fans_non_functional'],
+            'headers' => [
+                'id', 'semis_code', 'school_name', 'head_master', 'cnic', 'phone', 'address', 'level', 'gender', 'taluka',
+                'enrollment', 'enrollment_boys', 'enrollment_girls', 'attendance_pct', 'status', 'status_badge', 'classrooms',
+                'teachers', 'non_teaching', 'facility_electricity', 'facility_water', 'facility_toilets', 'facility_boundary_wall',
+                'facility_internet', 'building_structure', 'drainage_sewerage', 'flood_prone', 'furniture_condition',
+                'boards_total', 'boards_functional', 'boards_non_functional', 'benches_total', 'benches_functional',
+                'benches_non_functional', 'fans_total', 'fans_functional', 'fans_non_functional',
+                'location_type', 'medium', 'shift', 'local_council', 'enrollment_sindhi', 'school_administration',
+                'ddo_cost_center', 'surrounding_schools', 'adopted_school', 'is_campus',
+                'has_building', 'building_ownership', 'construction_type', 'building_condition', 'total_rooms', 'area_sqft',
+                'toilet_blocks_count',
+                'facility_handwash', 'facility_soap', 'facility_science_lab', 'facility_library',
+                'facility_computer_lab', 'facility_playground', 'facility_mhm_disposal',
+                'inventory_blackboards_working', 'inventory_blackboards_repairable',
+                'inventory_whiteboards_working', 'inventory_whiteboards_repairable',
+                'inventory_smart_boards_working', 'inventory_smart_boards_repairable',
+                'inventory_student_chairs_working', 'inventory_student_chairs_repairable',
+                'inventory_student_benches_working', 'inventory_student_benches_repairable',
+                'inventory_two_seater_desks_working', 'inventory_two_seater_desks_repairable',
+                'inventory_three_seater_desks_working', 'inventory_three_seater_desks_repairable',
+                'inventory_teacher_tables_working', 'inventory_teacher_tables_repairable',
+                'inventory_teacher_chairs_working', 'inventory_teacher_chairs_repairable',
+                'inventory_almirahs_working', 'inventory_almirahs_repairable',
+                'inventory_computers_working', 'inventory_computers_repairable',
+                'enrollment_ecce_boys', 'enrollment_ecce_girls', 'enrollment_katchi_boys', 'enrollment_katchi_girls',
+                'enrollment_grade_1_boys', 'enrollment_grade_1_girls', 'enrollment_grade_2_boys', 'enrollment_grade_2_girls',
+                'enrollment_grade_3_boys', 'enrollment_grade_3_girls', 'enrollment_grade_4_boys', 'enrollment_grade_4_girls',
+                'enrollment_grade_5_boys', 'enrollment_grade_5_girls',
+                'smc_funds_received', 'smc_amount_received', 'smc_amount_utilized',
+                'data_provider_name', 'data_provider_designation', 'data_provider_contact',
+                'adp_no', 'adp_description', 'adp_package', 'adp_progress', 'logo'
+            ],
             'seeds' => [
                 ['1', '403010001', 'Government Primary School Model City, Tando Allahyar', 'Muhammad Ishaq Memon', '41302-1849201-3', '+92 300 1234567', 'Station Road, City Area, Tando Allahyar', 'Primary', 'Co-education', 'Tando Allahyar', '342', '180', '162', '93%', 'Good', 'badge-good', '6', '8', '2', 'Solar + Grid', 'Filtered Plant', 'Functional Blocks', 'Secured & Complete', 'Broadband / 4G', 'Good Condition', 'Functional Drainage', 'No', 'Adequate', '8', '7', '1', '90', '80', '10', '16', '14', '2'],
                 ['2', '403010002', 'Government Girls Elementary School B, Jhando Mari', 'Nusrat Parveen Laghari', '41302-7654321-2', '+92 301 2345678', 'Main Bazar, Jhando Mari', 'Middle', 'Girls', 'Jhando Mari', '218', '0', '218', '84%', 'Needs Attention', 'badge-attention', '5', '6', '2', 'Grid Only', 'Handpump / Tap', 'Needs Repair', 'Partial / Damaged', 'Unavailable / None', 'Needs Repair', 'Functional Drainage', 'No', 'Adequate', '6', '4', '2', '55', '45', '10', '10', '7', '3'],
@@ -153,8 +184,81 @@ class ExcelDB {
             $filePath = self::getFilePath($tableName);
             if (!file_exists($filePath)) {
                 self::seedTable($tableName);
+            } elseif ($tableName === 'schools') {
+                self::migrateSchoolsSchema($filePath, $schema['headers']);
             }
         }
+    }
+
+    /**
+     * Aligns school CSV headers with the current schema while retaining existing records.
+     */
+    private static function migrateSchoolsSchema(string $filePath, array $schemaHeaders): void {
+        $fp = fopen($filePath, 'c+');
+        if (!$fp) {
+            throw new RuntimeException('Unable to read schools CSV for schema migration.');
+        }
+
+        if (!flock($fp, LOCK_EX)) {
+            fclose($fp);
+            throw new RuntimeException('Unable to lock schools CSV for schema migration.');
+        }
+
+        $bom = fread($fp, 3);
+        if ($bom !== "\xEF\xBB\xBF") {
+            rewind($fp);
+        }
+        $existingHeaders = fgetcsv($fp);
+        $existingHeaders = $existingHeaders
+            ? array_map(static fn($header) => trim((string)$header), $existingHeaders)
+            : [];
+        $obsoleteHeaders = [
+            'staff_designation_1',
+            'staff_designation_1_male',
+            'staff_designation_1_female',
+            'staff_designation_2',
+            'staff_designation_2_male',
+            'staff_designation_2_female',
+        ];
+        $hasObsoleteColumns = !empty(array_intersect($obsoleteHeaders, $existingHeaders));
+        if ($existingHeaders && count(array_diff($schemaHeaders, $existingHeaders)) === 0 && !$hasObsoleteColumns) {
+            flock($fp, LOCK_UN);
+            fclose($fp);
+            return;
+        }
+
+        $rows = [];
+        while (($data = fgetcsv($fp)) !== false) {
+            if (count($data) === 1 && $data[0] === null) {
+                continue;
+            }
+            $row = [];
+            foreach ($existingHeaders as $index => $header) {
+                $row[$header] = $data[$index] ?? '';
+            }
+            $rows[] = $row;
+        }
+
+        rewind($fp);
+        if (!ftruncate($fp, 0) || fwrite($fp, "\xEF\xBB\xBF") === false || fputcsv($fp, $schemaHeaders) === false) {
+            flock($fp, LOCK_UN);
+            fclose($fp);
+            throw new RuntimeException('Unable to write migrated schools CSV schema.');
+        }
+        foreach ($rows as $row) {
+            $line = [];
+            foreach ($schemaHeaders as $header) {
+                $line[] = $row[$header] ?? '';
+            }
+            if (fputcsv($fp, $line) === false) {
+                flock($fp, LOCK_UN);
+                fclose($fp);
+                throw new RuntimeException('Unable to write migrated school record.');
+            }
+        }
+        fflush($fp);
+        flock($fp, LOCK_UN);
+        fclose($fp);
     }
 
     /**
@@ -1102,13 +1206,21 @@ class ExcelDB {
                 'category' => 'Dangerous Building Structure',
                 'severity' => 'Critical',
                 'details'  => 'Building structure reported as Dangerous or Unsafe by Head Master/Admin.',
-                'trigger'  => fn() => in_array($school['building_structure'] ?? '', ['Dangerous / Unsafe', 'Condemned / Closed']),
+                'trigger'  => fn() => in_array($school['building_structure'] ?? '', ['Dangerous / Unsafe', 'Condemned / Closed'], true)
+                    || in_array(strtolower(trim($school['building_condition'] ?? '')), ['dangerous', 'unsafe'], true),
             ],
             [
                 'category' => 'Damaged Classrooms / Roof',
                 'severity' => 'High',
                 'details'  => 'Building structure reported as needing repair — classrooms or roof may be in disrepair.',
-                'trigger'  => fn() => ($school['building_structure'] ?? '') === 'Needs Repair',
+                'trigger'  => fn() => ($school['building_structure'] ?? '') === 'Needs Repair'
+                    || strtolower(trim($school['building_condition'] ?? '')) === 'needs repair',
+            ],
+            [
+                'category' => 'No School Building',
+                'severity' => 'High',
+                'details'  => 'School reports having no building available for instruction.',
+                'trigger'  => fn() => strtolower(trim($school['has_building'] ?? '')) === 'no',
             ],
             [
                 'category' => 'No Boundary Wall',

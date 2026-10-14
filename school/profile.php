@@ -14,6 +14,95 @@ $page_title  = 'Edit School Profile & Facilities — ' . e($school_name);
 $notification = '';
 $notification_type = 'success';
 $available_talukas = ExcelDB::getTalukas();
+$profileTextFields = [
+    'medium' => 'Medium of Instruction',
+    'local_council' => 'UC / TC / MC',
+    'school_administration' => 'School Administration / Designation',
+    'ddo_cost_center' => 'DDO Cost Center',
+    'building_ownership' => 'Building Ownership',
+    'construction_type' => 'Construction Type',
+    'data_provider_name' => 'Data Provider Name',
+    'data_provider_designation' => 'Data Provider Designation',
+    'data_provider_contact' => 'Data Provider Contact',
+    'adp_no' => 'ADP Scheme No.',
+    'adp_description' => 'ADP Scheme Description',
+    'adp_package' => 'ADP Package',
+    'adp_progress' => 'ADP Progress',
+];
+$profileNumberFields = [
+    'enrollment_sindhi' => 'Sindhi Enrollment',
+    'surrounding_schools' => 'Total Surrounding Schools',
+    'total_rooms' => 'Total Rooms',
+    'area_sqft' => 'School Area (sqft)',
+    'toilet_blocks_count' => 'Number of Toilet Blocks',
+];
+$profileSelectFields = [
+    'location_type' => ['Rural', 'Urban'],
+    'shift' => ['Morning', 'Afternoon', 'Evening', 'Double Shift'],
+    'adopted_school' => ['Yes', 'No'],
+    'is_campus' => ['Yes', 'No'],
+    'has_building' => ['Yes', 'No'],
+    'building_ownership' => ['Government Building', 'Private Building', 'Rented', 'Other'],
+    'building_condition' => ['Satisfactory', 'Needs Repair', 'Dangerous', 'Unsafe'],
+    'facility_handwash' => ['Yes', 'No'],
+    'facility_soap' => ['Yes', 'No'],
+    'facility_science_lab' => ['Yes', 'No'],
+    'facility_library' => ['Yes', 'No'],
+    'facility_computer_lab' => ['Yes', 'No'],
+    'facility_playground' => ['Yes', 'No'],
+    'facility_mhm_disposal' => ['Yes', 'No'],
+    'smc_funds_received' => ['Yes', 'No'],
+];
+$profileChoiceLabels = [
+    'location_type' => 'Location',
+    'shift' => 'Shift',
+    'adopted_school' => 'Adopted School',
+    'is_campus' => 'Is Campus',
+    'has_building' => 'Having Building',
+    'building_condition' => 'Building Condition',
+    'facility_handwash' => 'Hand Wash',
+    'facility_soap' => 'Soap',
+    'facility_science_lab' => 'Lab / Science Lab',
+    'facility_library' => 'Library',
+    'facility_computer_lab' => 'Computer Lab',
+    'facility_playground' => 'Play Ground',
+    'facility_mhm_disposal' => 'MHM Disposal',
+    'smc_funds_received' => 'SMC Funds Received',
+];
+$inventoryItems = [
+    'blackboards' => 'Blackboards',
+    'whiteboards' => 'White boards',
+    'smart_boards' => 'Smart Board',
+    'student_chairs' => 'Student Chairs',
+    'student_benches' => 'Student Benches',
+    'two_seater_desks' => 'Two Seater Desks',
+    'three_seater_desks' => 'Three Seater Desks',
+    'teacher_tables' => 'Teachers Tables',
+    'teacher_chairs' => 'Teachers Chairs',
+    'almirahs' => 'Almirahs',
+    'computers' => 'Computers',
+];
+$gradeGroups = [
+    'ecce' => 'ECCE',
+    'katchi' => 'Katchi',
+    'grade_1' => 'I',
+    'grade_2' => 'II',
+    'grade_3' => 'III',
+    'grade_4' => 'IV',
+    'grade_5' => 'V',
+];
+$profileGradeBoys = 0;
+$profileGradeGirls = 0;
+foreach ($gradeGroups as $grade => $_label) {
+    $profileGradeBoys += max(0, (int)($current_school['enrollment_' . $grade . '_boys'] ?? 0));
+    $profileGradeGirls += max(0, (int)($current_school['enrollment_' . $grade . '_girls'] ?? 0));
+}
+$profileHasGradeEnrollment = ($profileGradeBoys + $profileGradeGirls) > 0;
+if (($profileGradeBoys + $profileGradeGirls) === 0) {
+    $profileGradeBoys = max(0, (int)($current_school['enrollment_boys'] ?? 0));
+    $profileGradeGirls = max(0, (int)($current_school['enrollment_girls'] ?? 0));
+}
+$profileEnrollmentTotal = $profileGradeBoys + $profileGradeGirls;
 
 // ─── Handle Profile Update Form Submission ──────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -31,8 +120,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $taluka  = trim($_POST['taluka'] ?? $school_taluka);
         $level   = trim($_POST['level'] ?? 'Primary');
         $gender  = trim($_POST['gender'] ?? 'Co-education');
-        $boys    = max(0, (int)($_POST['enrollment_boys'] ?? 0));
-        $girls   = max(0, (int)($_POST['enrollment_girls'] ?? 0));
+        $gradeEnrollment = [];
+        $gradeBoysTotal = 0;
+        $gradeGirlsTotal = 0;
+        foreach ($gradeGroups as $grade => $_label) {
+            foreach (['boys', 'girls'] as $studentGender) {
+                $field = 'enrollment_' . $grade . '_' . $studentGender;
+                $value = $_POST[$field] ?? 0;
+                $gradeEnrollment[$field] = is_scalar($value) && is_numeric($value) ? max(0, (int)$value) : 0;
+                if ($studentGender === 'boys') {
+                    $gradeBoysTotal += $gradeEnrollment[$field];
+                } else {
+                    $gradeGirlsTotal += $gradeEnrollment[$field];
+                }
+            }
+        }
+        $gradeEnrollmentChanged = ($_POST['grade_enrollment_changed'] ?? '0') === '1';
+        if ($gradeEnrollmentChanged) {
+            $boys = $gradeBoysTotal;
+            $girls = $gradeGirlsTotal;
+        } else {
+            $boys = max(0, (int)($current_school['enrollment_boys'] ?? 0));
+            $girls = max(0, (int)($current_school['enrollment_girls'] ?? 0));
+            if ($profileHasGradeEnrollment) {
+                $boys = $profileGradeBoys;
+                $girls = $profileGradeGirls;
+            } elseif (
+                (!isset($current_school['enrollment_boys']) || $current_school['enrollment_boys'] === '')
+                && (!isset($current_school['enrollment_girls']) || $current_school['enrollment_girls'] === '')
+            ) {
+                $existingTotal = max(0, (int)($current_school['enrollment'] ?? 0));
+                if (($current_school['gender'] ?? '') === 'Boys') {
+                    $boys = $existingTotal;
+                    $girls = 0;
+                } elseif (($current_school['gender'] ?? '') === 'Girls') {
+                    $boys = 0;
+                    $girls = $existingTotal;
+                } else {
+                    $boys = (int)round($existingTotal * 0.52);
+                    $girls = $existingTotal - $boys;
+                }
+            }
+            if (array_key_exists('enrollment_boys', $_POST) && array_key_exists('enrollment_girls', $_POST)) {
+                $boys = max(0, (int)$_POST['enrollment_boys']);
+                $girls = max(0, (int)$_POST['enrollment_girls']);
+            }
+        }
         $enroll  = $boys + $girls;
         if ($enroll === 0 && isset($_POST['enrollment'])) {
             $enroll = max(0, (int)$_POST['enrollment']);
@@ -117,6 +250,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'fans_functional'        => (string)$fans_func,
                 'fans_non_functional'    => (string)$fans_non_func,
             ];
+
+            foreach ($profileTextFields as $field => $_label) {
+                $value = $_POST[$field] ?? '';
+                $updateData[$field] = is_scalar($value) ? trim((string)$value) : '';
+            }
+            foreach ($profileNumberFields as $field => $_label) {
+                $value = $_POST[$field] ?? 0;
+                $updateData[$field] = is_scalar($value) && is_numeric($value) ? (string)max(0, (int)$value) : '0';
+            }
+            foreach ($profileSelectFields as $field => $options) {
+                $value = $_POST[$field] ?? '';
+                $submittedValue = is_scalar($value) ? trim((string)$value) : '';
+                $updateData[$field] = in_array($submittedValue, $options, true) ? $submittedValue : '';
+            }
+            foreach (['smc_amount_received', 'smc_amount_utilized'] as $field) {
+                $amount = $_POST[$field] ?? '';
+                $updateData[$field] = is_numeric($amount)
+                    ? rtrim(rtrim(number_format(max(0, (float)$amount), 2, '.', ''), '0'), '.')
+                    : '';
+            }
+            foreach ($inventoryItems as $item => $_label) {
+                foreach (['working', 'repairable'] as $condition) {
+                    $field = 'inventory_' . $item . '_' . $condition;
+                    $value = $_POST[$field] ?? 0;
+                    $updateData[$field] = is_scalar($value) && is_numeric($value) ? (string)max(0, (int)$value) : '0';
+                }
+            }
+            foreach ($gradeGroups as $grade => $_label) {
+                foreach (['boys', 'girls'] as $gender) {
+                    $field = 'enrollment_' . $grade . '_' . $gender;
+                    if ($gradeEnrollmentChanged) {
+                        $updateData[$field] = (string)$gradeEnrollment[$field];
+                    }
+                }
+            }
 
             // Handle School Logo Upload
             if (isset($_FILES['school_logo']) && $_FILES['school_logo']['error'] === UPLOAD_ERR_OK) {
@@ -271,6 +439,7 @@ $current_school = ExcelDB::getSchoolBySemis($school_semis) ?? $current_school;
         <form method="POST" action="<?= BASE_URL ?>/school/profile.php" enctype="multipart/form-data" class="space-y-6">
           <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>"/>
           <input type="hidden" name="save_school_profile" value="1"/>
+          <input type="hidden" name="grade_enrollment_changed" id="grade_enrollment_changed" value="0"/>
 
           <!-- 1. School Basic Information -->
           <div class="bg-surface border border-border rounded-xl p-5 sm:p-6 shadow-xs space-y-4">
@@ -328,28 +497,7 @@ $current_school = ExcelDB::getSchoolBySemis($school_semis) ?? $current_school;
               </div>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
-              <div>
-                <label class="block text-xs font-semibold text-textMain mb-1.5 flex items-center justify-between">
-                  <span>Boys Enrolled</span>
-                  <span class="text-[10px] text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded font-bold">Boys</span>
-                </label>
-                <input type="number" id="enrollment_boys" name="enrollment_boys" min="0" value="<?= (int)($current_school['enrollment_boys'] ?? 0) ?>" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:border-govGreen font-mono" oninput="calcTotalEnrollment()"/>
-              </div>
-              <div>
-                <label class="block text-xs font-semibold text-textMain mb-1.5 flex items-center justify-between">
-                  <span>Girls Enrolled</span>
-                  <span class="text-[10px] text-pink-700 bg-pink-50 px-1.5 py-0.5 rounded font-bold">Girls</span>
-                </label>
-                <input type="number" id="enrollment_girls" name="enrollment_girls" min="0" value="<?= (int)($current_school['enrollment_girls'] ?? 0) ?>" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:border-govGreen font-mono" oninput="calcTotalEnrollment()"/>
-              </div>
-              <div>
-                <label class="block text-xs font-semibold text-textMain mb-1.5 flex items-center justify-between">
-                  <span>Total Enrolled</span>
-                  <span class="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-bold">Total</span>
-                </label>
-                <input type="number" id="total_enrollment" name="enrollment" min="0" readonly value="<?= (int)($current_school['enrollment'] ?? 0) ?>" class="w-full text-xs font-bold text-emerald-800 border border-emerald-300 rounded-lg px-3 py-2 bg-emerald-50/50 cursor-not-allowed font-mono"/>
-              </div>
+            <div class="grid grid-cols-1 gap-4">
               <div>
                 <label class="block text-xs font-semibold text-textMain mb-1.5">Operational Status</label>
                 <select name="status" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:border-govGreen">
@@ -483,52 +631,6 @@ $current_school = ExcelDB::getSchoolBySemis($school_semis) ?? $current_school;
               </div>
             </div>
 
-            <!-- Extended Infrastructure Assessment -->
-            <div class="pt-3 border-t border-slate-200 space-y-3">
-              <div class="text-xs font-bold text-govNavy flex items-center gap-2">
-                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                Extended Infrastructure Conditions
-                <span class="text-[10px] font-normal text-danger bg-red-50 px-1.5 py-0.5 rounded border border-red-200">Enables Auto-Risk Flagging</span>
-              </div>
-              <p class="text-[11px] text-muted">Report accurate conditions below. Adverse conditions will automatically flag this school in the District At-Risk Registry for admin attention.</p>
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-xs font-semibold text-textMain mb-1.5">Building Structure Condition</label>
-                  <select name="building_structure" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:border-govGreen">
-                    <?php foreach (['Good Condition', 'Needs Repair', 'Dangerous / Unsafe', 'Condemned / Closed'] as $opt): ?>
-                      <option value="<?= $opt ?>" <?= ($current_school['building_structure'] ?? 'Good Condition') === $opt ? 'selected' : '' ?>><?= $opt ?></option>
-                    <?php endforeach; ?>
-                  </select>
-                  <span class="text-[10px] text-muted block mt-1">Main classroom structural integrity</span>
-                </div>
-                <div>
-                  <label class="block text-xs font-semibold text-textMain mb-1.5">Drainage / Sewerage System</label>
-                  <select name="drainage_sewerage" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:border-govGreen">
-                    <?php foreach (['Functional Drainage', 'Partial Drainage', 'Broken / None'] as $opt): ?>
-                      <option value="<?= $opt ?>" <?= ($current_school['drainage_sewerage'] ?? 'Functional Drainage') === $opt ? 'selected' : '' ?>><?= $opt ?></option>
-                    <?php endforeach; ?>
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-xs font-semibold text-textMain mb-1.5">Is School in Flood-Prone Area?</label>
-                  <select name="flood_prone" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:border-govGreen">
-                    <?php foreach (['No', 'Yes'] as $opt): ?>
-                      <option value="<?= $opt ?>" <?= ($current_school['flood_prone'] ?? 'No') === $opt ? 'selected' : '' ?>><?= $opt ?></option>
-                    <?php endforeach; ?>
-                  </select>
-                  <span class="text-[10px] text-danger block mt-1 font-semibold">'Yes' will escalate to Critical risk automatically.</span>
-                </div>
-                <div>
-                  <label class="block text-xs font-semibold text-textMain mb-1.5">Furniture &amp; Equipment Status</label>
-                  <select name="furniture_condition" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:border-govGreen">
-                    <?php foreach (['Adequate', 'Shortage', 'None Available'] as $opt): ?>
-                      <option value="<?= $opt ?>" <?= ($current_school['furniture_condition'] ?? 'Adequate') === $opt ? 'selected' : '' ?>><?= $opt ?></option>
-                    <?php endforeach; ?>
-                  </select>
-                </div>
-              </div>
-            </div>
-
             <!-- Classroom Equipment & Assets Inventory -->
             <div class="pt-3 border-t border-slate-200 space-y-3">
               <div class="text-xs font-bold text-govNavy flex items-center justify-between">
@@ -652,6 +754,275 @@ $current_school = ExcelDB::getSchoolBySemis($school_semis) ?? $current_school;
 
           </div>
 
+          <!-- Census fields captured in the SELD school profile references -->
+          <div class="bg-surface border border-border rounded-xl p-5 sm:p-6 shadow-xs space-y-5">
+            <div class="border-b border-border pb-3">
+              <h2 class="text-sm font-bold text-textMain">4. School Census &amp; Administrative Details</h2>
+              <p class="text-xs text-muted">Additional information from the official school profile and census sheets</p>
+            </div>
+
+            <div class="space-y-3">
+              <h3 class="text-xs font-bold text-govNavy">School Details</h3>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <?php foreach (['location_type', 'shift', 'adopted_school', 'is_campus'] as $field): ?>
+                  <div>
+                    <label class="block text-xs font-semibold text-textMain mb-1.5"><?= e($profileChoiceLabels[$field]) ?></label>
+                    <select name="<?= e($field) ?>" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background">
+                      <option value="">Select</option>
+                      <?php foreach ($profileSelectFields[$field] as $option): ?>
+                        <option value="<?= e($option) ?>" <?= ($current_school[$field] ?? '') === $option ? 'selected' : '' ?>><?= e($option) ?></option>
+                      <?php endforeach; ?>
+                    </select>
+                  </div>
+                <?php endforeach; ?>
+                <?php foreach (['medium', 'local_council', 'school_administration', 'ddo_cost_center'] as $field): ?>
+                  <div>
+                    <label class="block text-xs font-semibold text-textMain mb-1.5"><?= e($profileTextFields[$field]) ?></label>
+                    <input type="text" name="<?= e($field) ?>" value="<?= e($current_school[$field] ?? '') ?>" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background"/>
+                  </div>
+                <?php endforeach; ?>
+                <?php foreach (['enrollment_sindhi', 'surrounding_schools'] as $field): ?>
+                  <div>
+                    <label class="block text-xs font-semibold text-textMain mb-1.5"><?= e($profileNumberFields[$field]) ?></label>
+                    <input type="number" min="0" name="<?= e($field) ?>" value="<?= (int)($current_school[$field] ?? 0) ?>" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background"/>
+                  </div>
+                <?php endforeach; ?>
+              </div>
+            </div>
+
+            <div class="space-y-3 border-t border-border pt-4">
+              <h3 class="text-xs font-bold text-govNavy">Building Status</h3>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <?php foreach (['has_building', 'building_ownership', 'building_condition'] as $field): ?>
+                  <div>
+                    <label class="block text-xs font-semibold text-textMain mb-1.5"><?= e($profileChoiceLabels[$field] ?? $profileTextFields[$field]) ?></label>
+                    <select name="<?= e($field) ?>" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background">
+                      <option value="">Select</option>
+                      <?php foreach ($profileSelectFields[$field] as $option): ?>
+                        <option value="<?= e($option) ?>" <?= ($current_school[$field] ?? '') === $option ? 'selected' : '' ?>><?= e($option) ?></option>
+                      <?php endforeach; ?>
+                    </select>
+                  </div>
+                <?php endforeach; ?>
+                <?php foreach (['construction_type'] as $field): ?>
+                  <div>
+                    <label class="block text-xs font-semibold text-textMain mb-1.5"><?= e($profileTextFields[$field]) ?></label>
+                    <input type="text" name="<?= e($field) ?>" value="<?= e($current_school[$field] ?? '') ?>" placeholder="e.g. Pakka / RCC / Tier guard" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background"/>
+                  </div>
+                <?php endforeach; ?>
+                <?php foreach (['total_rooms', 'area_sqft', 'toilet_blocks_count'] as $field): ?>
+                  <div>
+                    <label class="block text-xs font-semibold text-textMain mb-1.5"><?= e($profileNumberFields[$field]) ?></label>
+                    <input type="number" min="0" name="<?= e($field) ?>" value="<?= (int)($current_school[$field] ?? 0) ?>" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background"/>
+                  </div>
+                <?php endforeach; ?>
+              </div>
+            </div>
+
+            <div class="space-y-3 border-t border-border pt-4">
+              <h3 class="text-xs font-bold text-govNavy">Basic Facilities</h3>
+              <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                <?php foreach (['facility_handwash', 'facility_soap', 'facility_science_lab', 'facility_library', 'facility_computer_lab', 'facility_playground', 'facility_mhm_disposal'] as $field): ?>
+                  <label class="border border-border rounded-lg p-3 text-center">
+                    <span class="block text-[11px] font-semibold mb-2"><?= e($profileChoiceLabels[$field]) ?></span>
+                    <select name="<?= e($field) ?>" class="w-full text-xs border border-border rounded px-2 py-1.5 bg-background">
+                      <option value="">Select</option>
+                      <?php foreach ($profileSelectFields[$field] as $option): ?>
+                        <option value="<?= e($option) ?>" <?= ($current_school[$field] ?? '') === $option ? 'selected' : '' ?>><?= e($option) ?></option>
+                      <?php endforeach; ?>
+                    </select>
+                  </label>
+                <?php endforeach; ?>
+              </div>
+              <p class="text-[10px] text-muted">Drinking water, toilets, electricity, and boundary wall are captured in the facilities section above.</p>
+            </div>
+
+            <div class="space-y-3 border-t border-border pt-4">
+              <h3 class="text-xs font-bold text-govNavy">Furniture &amp; Equipment Inventory</h3>
+              <div class="overflow-x-auto">
+                <table class="w-full min-w-[600px] text-xs border border-border">
+                  <thead class="bg-slate-700 text-white">
+                    <tr><th class="p-2 text-left">Items</th><th class="p-2">Working</th><th class="p-2">Repairable</th><th class="p-2">Total</th></tr>
+                  </thead>
+                  <tbody>
+                    <?php foreach ($inventoryItems as $item => $label):
+                      $workingKey = 'inventory_' . $item . '_working';
+                      $repairableKey = 'inventory_' . $item . '_repairable';
+                      $itemTotal = (int)($current_school[$workingKey] ?? 0) + (int)($current_school[$repairableKey] ?? 0);
+                    ?>
+                      <tr class="border-t border-border">
+                        <td class="p-2 font-medium"><?= e($label) ?></td>
+                        <td class="p-2"><input type="number" min="0" name="<?= e($workingKey) ?>" value="<?= (int)($current_school[$workingKey] ?? 0) ?>" class="w-20 mx-auto border border-border rounded px-2 py-1.5" data-inventory="<?= e($item) ?>" oninput="calcInventoryTotal('<?= e($item) ?>')"/></td>
+                        <td class="p-2"><input type="number" min="0" name="<?= e($repairableKey) ?>" value="<?= (int)($current_school[$repairableKey] ?? 0) ?>" class="w-20 mx-auto border border-border rounded px-2 py-1.5" data-inventory="<?= e($item) ?>" oninput="calcInventoryTotal('<?= e($item) ?>')"/></td>
+                        <td class="p-2 text-center font-semibold" id="inventory-total-<?= e($item) ?>"><?= $itemTotal ?></td>
+                      </tr>
+                    <?php endforeach; ?>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="space-y-3 border-t border-border pt-4">
+              <div>
+                <h3 class="text-xs font-bold text-govNavy">Enrollment by Grade</h3>
+                <p class="text-[10px] text-muted mt-1">Boys, girls, and total enrollment are calculated from the grade entries below.</p>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div class="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                  <div class="text-[10px] font-semibold uppercase text-blue-700">Boys Enrolled</div>
+                  <div class="text-xl font-bold text-blue-900" id="grade-boys-summary"><?= number_format($profileGradeBoys) ?></div>
+                </div>
+                <div class="rounded-lg border border-pink-200 bg-pink-50 p-3">
+                  <div class="text-[10px] font-semibold uppercase text-pink-700">Girls Enrolled</div>
+                  <div class="text-xl font-bold text-pink-900" id="grade-girls-summary"><?= number_format($profileGradeGirls) ?></div>
+                </div>
+                <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                  <div class="text-[10px] font-semibold uppercase text-emerald-700">Total Enrolled</div>
+                  <div class="text-xl font-bold text-emerald-900" id="grade-total-summary"><?= number_format($profileEnrollmentTotal) ?></div>
+                </div>
+              </div>
+              <?php if (!$profileHasGradeEnrollment && $profileEnrollmentTotal > 0): ?>
+                <p class="text-[10px] text-amber-700">The totals above are from the existing school record. Enter the grade-wise figures below to make the grade table the source for these totals.</p>
+              <?php endif; ?>
+              <div class="overflow-x-auto">
+                <table class="w-full min-w-[600px] text-xs border border-border">
+                  <thead class="bg-emerald-700 text-white">
+                    <tr><th class="p-2"></th><th class="p-2" colspan="2">Pre-Primary Classes</th><th class="p-2" colspan="5">Primary Classes</th><th class="p-2" rowspan="2">Total</th></tr>
+                    <tr><th class="p-2 text-left">Grade</th><th class="p-2">ECCE</th><th class="p-2">Katchi</th><th class="p-2">I</th><th class="p-2">II</th><th class="p-2">III</th><th class="p-2">IV</th><th class="p-2">V</th></tr>
+                  </thead>
+                  <tbody>
+                    <?php
+                    $gradeBoysTotal = 0;
+                    $gradeGirlsTotal = 0;
+                    $gradeTotals = [];
+                    foreach (['boys' => 'Boys', 'girls' => 'Girls'] as $studentGender => $genderLabel): ?>
+                      <tr class="border-t border-border">
+                        <td class="p-2 font-medium"><?= e($genderLabel) ?></td>
+                        <?php foreach ($gradeGroups as $grade => $_gradeLabel):
+                          $field = 'enrollment_' . $grade . '_' . $studentGender;
+                          $gradeCount = max(0, (int)($current_school[$field] ?? 0));
+                          $gradeTotals[$grade][$studentGender] = $gradeCount;
+                          if ($studentGender === 'boys') $gradeBoysTotal += $gradeCount;
+                          else $gradeGirlsTotal += $gradeCount;
+                        ?>
+                          <td class="p-2"><input type="number" min="0" name="<?= e($field) ?>" value="<?= $gradeCount ?>" class="w-16 mx-auto border border-border rounded px-2 py-1.5 text-center" data-grade="<?= e($grade) ?>" data-gender="<?= e($studentGender) ?>" oninput="calcGradeEnrollment('<?= e($grade) ?>')"/></td>
+                        <?php endforeach; ?>
+                        <td class="p-2 text-center font-semibold" id="grade-<?= e($studentGender) ?>-total"><?= $studentGender === 'boys' ? $gradeBoysTotal : $gradeGirlsTotal ?></td>
+                      </tr>
+                    <?php
+                    endforeach;
+                    ?>
+                    <tr class="border-t border-border bg-slate-50 font-semibold">
+                      <td class="p-2">Total</td>
+                      <?php foreach ($gradeGroups as $grade => $_gradeLabel): ?>
+                        <td class="p-2 text-center" id="grade-total-<?= e($grade) ?>"><?= (int)($gradeTotals[$grade]['boys'] ?? 0) + (int)($gradeTotals[$grade]['girls'] ?? 0) ?></td>
+                      <?php endforeach; ?>
+                      <td class="p-2 text-center" id="grade-overall-total"><?= $gradeBoysTotal + $gradeGirlsTotal ?></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 border-t border-border pt-4">
+              <div class="space-y-3">
+                <h3 class="text-xs font-bold text-govNavy">SMC Funds</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label class="block text-xs font-semibold text-textMain mb-1.5">Funds Received</label>
+                    <select name="smc_funds_received" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background">
+                      <option value="">Select</option>
+                      <?php foreach ($profileSelectFields['smc_funds_received'] as $option): ?>
+                        <option value="<?= e($option) ?>" <?= ($current_school['smc_funds_received'] ?? '') === $option ? 'selected' : '' ?>><?= e($option) ?></option>
+                      <?php endforeach; ?>
+                    </select>
+                  </div>
+                  <?php foreach (['smc_amount_received' => 'Amount Received (Rs)', 'smc_amount_utilized' => 'Total Utilized (Rs)'] as $field => $label): ?>
+                    <div>
+                      <label class="block text-xs font-semibold text-textMain mb-1.5"><?= e($label) ?></label>
+                      <input type="number" min="0" step="0.01" name="<?= e($field) ?>" value="<?= e($current_school[$field] ?? '') ?>" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background"/>
+                    </div>
+                  <?php endforeach; ?>
+                </div>
+              </div>
+              <div class="space-y-3">
+                <h3 class="text-xs font-bold text-govNavy">Principal / HM / Data Provider</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <?php foreach (['data_provider_name', 'data_provider_designation', 'data_provider_contact'] as $field): ?>
+                    <div>
+                      <label class="block text-xs font-semibold text-textMain mb-1.5"><?= e($profileTextFields[$field]) ?></label>
+                      <input type="text" name="<?= e($field) ?>" value="<?= e($current_school[$field] ?? '') ?>" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background"/>
+                    </div>
+                  <?php endforeach; ?>
+                </div>
+              </div>
+            </div>
+
+            <div class="space-y-3 border-t border-border pt-4">
+              <h3 class="text-xs font-bold text-govNavy">ADP Scheme Details</h3>
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <?php foreach (['adp_no', 'adp_description', 'adp_package', 'adp_progress'] as $field): ?>
+                  <div>
+                    <label class="block text-xs font-semibold text-textMain mb-1.5"><?= e($profileTextFields[$field]) ?></label>
+                    <?php if ($field === 'adp_description'): ?>
+                      <textarea name="<?= e($field) ?>" rows="2" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background"><?= e($current_school[$field] ?? '') ?></textarea>
+                    <?php else: ?>
+                      <input type="text" name="<?= e($field) ?>" value="<?= e($current_school[$field] ?? '') ?>" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background"/>
+                    <?php endif; ?>
+                  </div>
+                <?php endforeach; ?>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-surface border border-rose-200 rounded-xl p-5 sm:p-6 shadow-xs space-y-4">
+            <div class="border-b border-rose-200 pb-3">
+              <h2 class="text-sm font-bold text-textMain flex items-center gap-2">
+                Extended Infrastructure Conditions
+                <span class="text-[10px] font-normal text-danger bg-red-50 px-1.5 py-0.5 rounded border border-red-200">Risk Flagging</span>
+              </h2>
+              <p class="text-[11px] text-muted mt-1">These infrastructure conditions are checked against the District At-Risk Registry after saving.</p>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-textMain mb-1.5">Building Structure Condition</label>
+                <select name="building_structure" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:border-govGreen">
+                  <?php foreach (['Good Condition', 'Needs Repair', 'Dangerous / Unsafe', 'Condemned / Closed'] as $opt): ?>
+                    <option value="<?= $opt ?>" <?= ($current_school['building_structure'] ?? 'Good Condition') === $opt ? 'selected' : '' ?>><?= $opt ?></option>
+                  <?php endforeach; ?>
+                </select>
+                <span class="text-[10px] text-muted block mt-1">Dangerous/condemned and needs-repair conditions are risk-flagged.</span>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-textMain mb-1.5">Drainage / Sewerage System</label>
+                <select name="drainage_sewerage" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:border-govGreen">
+                  <?php foreach (['Functional Drainage', 'Partial Drainage', 'Broken / None'] as $opt): ?>
+                    <option value="<?= $opt ?>" <?= ($current_school['drainage_sewerage'] ?? 'Functional Drainage') === $opt ? 'selected' : '' ?>><?= $opt ?></option>
+                  <?php endforeach; ?>
+                </select>
+                <span class="text-[10px] text-muted block mt-1">Broken or absent drainage is flagged.</span>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-textMain mb-1.5">Is School in Flood-Prone Area?</label>
+                <select name="flood_prone" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:border-govGreen">
+                  <?php foreach (['No', 'Yes'] as $opt): ?>
+                    <option value="<?= $opt ?>" <?= ($current_school['flood_prone'] ?? 'No') === $opt ? 'selected' : '' ?>><?= $opt ?></option>
+                  <?php endforeach; ?>
+                </select>
+                <span class="text-[10px] text-danger block mt-1 font-semibold">'Yes' is flagged as Critical risk.</span>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-textMain mb-1.5">Furniture &amp; Equipment Status</label>
+                <select name="furniture_condition" class="w-full text-xs border border-border rounded-lg px-3 py-2 bg-background focus:outline-none focus:border-govGreen">
+                  <?php foreach (['Adequate', 'Shortage', 'None Available'] as $opt): ?>
+                    <option value="<?= $opt ?>" <?= ($current_school['furniture_condition'] ?? 'Adequate') === $opt ? 'selected' : '' ?>><?= $opt ?></option>
+                  <?php endforeach; ?>
+                </select>
+                <span class="text-[10px] text-muted block mt-1">No available furniture is flagged as a Medium risk.</span>
+              </div>
+            </div>
+          </div>
+
           <!-- Action Buttons -->
           <div class="flex items-center justify-end gap-3 pt-2">
             <a href="<?= BASE_URL ?>/school/dashboard.php" class="btn-secondary text-xs font-semibold px-4 py-2.5 rounded-lg">
@@ -672,13 +1043,6 @@ $current_school = ExcelDB::getSchoolBySemis($school_semis) ?? $current_school;
   </div>
 
   <script>
-    function calcTotalEnrollment() {
-      const b = parseInt(document.getElementById('enrollment_boys')?.value) || 0;
-      const g = parseInt(document.getElementById('enrollment_girls')?.value) || 0;
-      const tot = document.getElementById('total_enrollment');
-      if (tot) tot.value = b + g;
-    }
-
     function calcEquipmentTotals() {
       // Boards
       const bf = parseInt(document.getElementById('boards_functional')?.value) || 0;
@@ -698,6 +1062,36 @@ $current_school = ExcelDB::getSchoolBySemis($school_semis) ?? $current_school;
       const ftot = document.getElementById('fans_total');
       if (ftot) ftot.value = ff + fnf;
     }
+
+    function calcInventoryTotal(item) {
+      const counts = document.querySelectorAll(`[data-inventory="${item}"]`);
+      const total = Array.from(counts).reduce((sum, input) => sum + (parseInt(input.value) || 0), 0);
+      const totalCell = document.getElementById(`inventory-total-${item}`);
+      if (totalCell) totalCell.textContent = total;
+    }
+
+    function calcGradeEnrollment(grade) {
+      document.getElementById('grade_enrollment_changed').value = '1';
+      const boys = parseInt(document.querySelector(`[data-grade="${grade}"][data-gender="boys"]`)?.value) || 0;
+      const girls = parseInt(document.querySelector(`[data-grade="${grade}"][data-gender="girls"]`)?.value) || 0;
+      const gradeTotal = document.getElementById(`grade-total-${grade}`);
+      if (gradeTotal) gradeTotal.textContent = boys + girls;
+
+      let boysTotal = 0;
+      let girlsTotal = 0;
+      document.querySelectorAll('[data-grade][data-gender="boys"]').forEach(input => boysTotal += parseInt(input.value) || 0);
+      document.querySelectorAll('[data-grade][data-gender="girls"]').forEach(input => girlsTotal += parseInt(input.value) || 0);
+      document.getElementById('grade-boys-total').textContent = boysTotal;
+      document.getElementById('grade-girls-total').textContent = girlsTotal;
+      document.getElementById('grade-overall-total').textContent = boysTotal + girlsTotal;
+      document.getElementById('grade-boys-summary').textContent = boysTotal.toLocaleString();
+      document.getElementById('grade-girls-summary').textContent = girlsTotal.toLocaleString();
+      document.getElementById('grade-total-summary').textContent = (boysTotal + girlsTotal).toLocaleString();
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      document.querySelectorAll('[data-inventory]').forEach(input => calcInventoryTotal(input.dataset.inventory));
+    });
 
     function openSidebar() {
       const s = document.getElementById('sidebar');

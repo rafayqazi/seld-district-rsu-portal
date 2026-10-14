@@ -33,6 +33,7 @@ LSU-PORTAL/
 │   ├── schools.php                # School directory, search, filters, CSV import, credentials modal
 │   ├── school-profile.php         # Single school deep-dive profile + inline edit modals (auto-flags risks)
 │   ├── at-risk-schools.php        # Infrastructure risk registry (auto-populated from school profiles)
+│   ├── facility-map.php           # Tando Allahyar facility availability map by taluka
 │   ├── complaints.php             # GRM complaint inbox and reply management
 │   ├── messages.php               # Admin Direct Messaging — initiate conversations with any school
 │   ├── message-thread.php         # Admin message thread view — reply & close/reopen conversation
@@ -64,6 +65,7 @@ LSU-PORTAL/
 │   ├── auth.php                   # Authentication check, session security, CSRF helpers
 │   ├── excel_db.php               # ExcelDB class (CSV engine + autoFlagSchoolRisks)
 │   ├── forms.php                  # Shared form validation and deadline helpers
+│   ├── facility_map.php           # Facility status and taluka aggregation for the district map
 │   ├── sidebar.php                # Admin navigation sidebar with $active_page indicator
 │   ├── header.php                 # Top app bar (district badge, profile, notifications)
 │   └── footer.php                 # Standard copyright and department footer
@@ -196,9 +198,9 @@ The portal follows the Sindh Government District Education aesthetic:
 | `level` | enum | Primary / Middle / Secondary / Higher Secondary |
 | `gender` | enum | Co-education / Boys / Girls |
 | `taluka` | string | Administrative sub-division |
-| `enrollment` | int | Total enrolled students (auto-sum = `enrollment_boys + enrollment_girls`) |
-| `enrollment_boys` | int | **NEW** Boys enrolled count |
-| `enrollment_girls` | int | **NEW** Girls enrolled count |
+| `enrollment` | int | Total enrolled students; when grade-wise figures are entered, sum of all grade boys and girls |
+| `enrollment_boys` | int | Boys enrolled count, derived from grade-wise entries when available |
+| `enrollment_girls` | int | Girls enrolled count, derived from grade-wise entries when available |
 | `attendance_pct` | string | Stored but not actively tracked after 2026-09-29 |
 | `status` | enum | Active / Good / Needs Attention / Not Reporting |
 | `status_badge` | string | CSS badge class |
@@ -215,11 +217,31 @@ The portal follows the Sindh Government District Education aesthetic:
 | `flood_prone` | enum | **NEW** No / Yes |
 | `furniture_condition` | enum | **NEW** Adequate / Shortage / None Available |
 
+### School Census Profile Fields (`schools.csv`)
+The School Portal profile stores the additional SELD school-census information below in the `schools` table. Existing CSV records are preserved and receive blank values for newly added columns during the ExcelDB schema migration; obsolete duplicate designation-wise census columns are removed.
+
+| Field Group | Stored Information |
+|---|---|
+| School details | Rural/Urban location, medium, shift, UC/TC/MC, Sindhi enrollment, school administration designation, DDO cost center, surrounding-school count, adopted-school status, and campus status |
+| Building status | Building availability, ownership, construction type, condition, total rooms, classroom count, toilet-block count, and area in square feet |
+| Staff | Staff members are managed through the separate School Staff module; no duplicate designation-wise staff census inputs are used |
+| Basic facilities | Hand-wash, soap, science lab, library, computer lab, playground, and MHM disposal availability; existing water, toilets, electricity, and boundary-wall fields remain in use |
+| Furniture and equipment inventory | Working and repairable counts for blackboards, whiteboards, smart boards, student chairs/benches, two-/three-seater desks, teachers' tables/chairs, almirahs, and computers |
+| Grade-wise enrollment | Boys and girls counts for ECCE, Katchi, and Grades I–V; when edited, these grade values calculate school boys, girls, and total enrollment across School and Admin portals |
+| SMC funds | Funds-received status, amount received, and amount utilized |
+| Data provider and ADP | Data provider name/designation/contact and ADP number, description, package, and progress |
+
 ### Auto-Risk Flagging Engine
 - **Method:** `ExcelDB::autoFlagSchoolRisks(string $semisCode): int`
 - **Trigger:** Called automatically after every facility save from both Admin (`admin/school-profile.php`) and School HM (`school/profile.php`).
-- **Behavior:** Evaluates 10 infrastructure rules against current school data. Inserts new `school_risks` records for newly-detected issues. Does **not** duplicate existing unresolved risks for the same school+category. Admin manually marks risks as 'Resolved'.
-- **Risk Rules:** Dangerous building → Critical; No boundary wall → High; Partial wall → Medium; No water → High; No toilets → High; No electricity → High; No drainage → Medium; Flood prone → Critical; No furniture → Medium; Needs repair building → High.
+- **Behavior:** Evaluates 11 infrastructure rules against current school data. Building condition entries from the census profile are evaluated alongside the extended infrastructure condition. Inserts new `school_risks` records for newly-detected issues. Does **not** duplicate existing unresolved risks for the same school+category. Admin manually marks risks as 'Resolved'.
+- **Risk Rules:** Dangerous/unsafe building → Critical; no school building → High; no boundary wall → High; partial/damaged wall → Medium; no water → High; no toilets → High; no electricity → High; no drainage → Medium; flood prone → Critical; no furniture → Medium; needs-repair building → High.
+
+### District Facilities Map (`admin/facility-map.php`)
+- The Admin-only map compares school-reported facility availability across the official Tando Allahyar, Jhando Mari, and Chambar taluka boundaries.
+- Facility options use current school profile data, including the MHM disposal Yes/No field. Availability is classified as Available, Limited, Unavailable, or Not reported. Availability percentages use schools with a known status; report coverage is displayed separately.
+- Unmatched stored taluka values (such as Nasarpur) remain in district totals and the ranked breakdown but are not assigned to an estimated map area.
+- The simplified Pakistan ADM3 (2017 tehsil) geometry is from geoBoundaries / Pathways Data Pvt. Ltd. under ODbL 1.0; attribution is shown on the map page.
 
 ### School Risks Table Schema (`school_risks.csv`)
 | Column | Description |
@@ -228,7 +250,7 @@ The portal follows the Sindh Government District Education aesthetic:
 | `semis_code` | Link to school |
 | `school_name` | Denormalized school name |
 | `taluka` | Denormalized taluka |
-| `risk_category` | One of 12 SELD-aligned categories |
+| `risk_category` | One of 13 SELD-aligned categories |
 | `severity` | Critical / High / Medium |
 | `details` | Description of the risk |
 | `reported_date` | Date flagged |
@@ -311,3 +333,6 @@ The portal follows the Sindh Government District Education aesthetic:
 | 2026-10-11 | Copilot | **Notification Badge Visibility:** Added numeric unread-count badges to Admin and School notification bells and made polling updates explicitly control badge visibility, including sidebar counts. Notification polling failures are now reported to the browser console instead of being silently swallowed. |
 | 2026-10-11 | Copilot | **Targeted School Announcement Popups:** Replaced the inactive Documents sidebar item with the Admin Announcements & Popups page. Admins can publish notices to a school or school level and close them at any time; targeted schools see active notices in a shared login popup that can be dismissed for the current login and appears again on their next login. Added the `announcements.csv` table. Popup includes the portal logo, and admins can attach validated image files to announcements. |
 | 2026-10-11 | Copilot | **Closed Announcement Deletion:** Added a confirmation-protected delete action that is available only after an announcement is closed. Deletion removes the announcement record and its associated generated upload image when applicable. |
+| 2026-10-14 | Copilot | **SELD School Census Profile Expansion:** Added screenshot-referenced school details, building status, designation-wise staff, facility availability, itemized furniture/equipment inventory, ECCE–Grade V gender enrollment, SMC funds, data-provider, and ADP scheme fields to the schools CSV schema. Added a preserving schema migration, HM profile entry fields, and an admin school-profile census view with calculated totals. |
+| 2026-10-14 | Copilot | **Grade-Driven Enrollment & Census Cleanup:** Removed duplicate designation-wise staff census inputs and obsolete CSV columns from School and Admin profile views. Added grade-wise enrollment editing to Admin, with grade totals driving school boys/girls/overall enrollment in both portals while preserving legacy aggregate values until grade data is edited. Added risk flagging for census building condition and schools reporting no building. |
+| 2026-10-14 | Copilot | **District Facilities Map:** Added an Admin-only facility availability map with taluka percentages and reporting coverage. Added the MHM disposal Yes/No field to school profile data. Official Tando Allahyar, Jhando Mari and Chambar boundaries are mapped; unmatched stored taluka labels remain in district totals and rankings without being assigned to guessed map regions. |
